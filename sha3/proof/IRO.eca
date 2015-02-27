@@ -1,0 +1,53 @@
+(* infinite random oracle: conceptually, its range consists of
+   infinite length bitstrings, all of whose bits are independently
+   chosen *)
+
+require import Int Bool List FMap FSet.
+
+type from.
+
+module type IRO = {
+  proc init() : unit
+
+  (* hash x, returning the first n bits of the result *)
+  proc hash(x : from, n : int) : bool list
+}.
+
+op take : 'a list -> int -> 'a list. (* in NewFMap ... *)
+
+module IRO : IRO = {
+  var mp : (from, bool list) map
+
+  proc init() : unit = {
+    mp = FMap.empty;
+  }
+
+  proc choose(n : int) : bool list = {
+    var b : bool;
+    var bs : bool list;
+    bs = [];
+    while (n > 0) {
+      b = $Dbool.dbool;
+      bs = b :: bs;
+      n = n - 1;
+    }
+    return bs;
+  }
+
+  proc hash(x : from, n : int) : bool list = {
+    var ys : bool list;
+    var zs : bool list;
+    if (! mem x (dom mp)) {
+      ys = choose(n);
+      mp.[x] = ys;
+    }
+    else {
+      ys = oget(mp.[x]);
+      if (n > length ys) {
+        zs = choose(n - length ys);
+        mp.[x] = ys ++ zs;
+      }
+    }
+    return take (oget mp.[x]) n;
+  }
+}.
