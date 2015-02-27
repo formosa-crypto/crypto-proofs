@@ -1,0 +1,49 @@
+require (*...*) RO.
+
+type from0, to0.
+op d0: from0 -> to0 distr.
+
+type from1, to1.
+op d1: from1 -> to1 distr.
+
+clone import RO as H with
+  type from <- from0,
+  type to   <- to0,
+  op   d    <- d0.
+
+clone import RO as G with
+  type from <- from1,
+  type to   <- to1,
+  op   d    <- d1.
+
+module type Construction (H : H.RO) = {
+  proc init()         : unit
+  proc hash(x : from1): to1
+}.
+
+module type Simulator (H : G.RO) = {
+  proc init()         : unit
+  proc hash(x : from0): to0
+}.
+
+module type Distinguisher (G : G.RO_, H : H.RO_) = {
+  proc distinguish(): bool
+}.
+
+module Indif (G : G.RO, H : H.RO, D : Distinguisher) = {
+  module D = D(G,H)
+
+  proc main(): bool = {
+    var b;
+
+    G.init();
+    H.init();
+    b = D.distinguish();
+    return b;
+  }
+}.
+
+(* A C <: Construction is indifferentiable from a random oracle if
+   there exists a P <: Simulator such that, for all D,
+     | Pr[Indif(C(G),G,D): res] - Pr[Indif(H,P(H),D): res] | is small
+  (where G and H are the concrete random oracles defined by d0 and d1) *)

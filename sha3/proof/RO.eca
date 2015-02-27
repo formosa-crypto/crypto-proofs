@@ -1,0 +1,30 @@
+require import NewFSet NewFMap.
+
+type from, to.
+
+op d: from -> to distr.
+
+module type RO = {
+  proc init()        : unit
+  proc hash(x : from): to
+}.
+
+module type RO_ = {
+  proc hash(x : from): to
+}.
+
+module type Distinguisher(G : RO_) = {
+  proc distinguish(): bool
+}.
+
+module IND(G:RO, D:Distinguisher) = {
+  module D = D(G)
+
+  proc main(): bool = {
+    var b;
+
+    G.init();
+    b = D.distinguish();
+    return b;
+  }  
+}.
