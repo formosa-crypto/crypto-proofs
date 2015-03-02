@@ -2,7 +2,7 @@
    infinite length bitstrings, all of whose bits are independently
    chosen *)
 
-require import Int Bool List FMap FSet.
+require import Option Int Bool NewList NewFMap NewFSet.
 
 type from.
 
@@ -16,10 +16,10 @@ module type IRO = {
 op take : 'a list -> int -> 'a list. (* in NewFMap ... *)
 
 module IRO : IRO = {
-  var mp : (from, bool list) map
+  var mp : (from, bool list) fmap
 
   proc init() : unit = {
-    mp = FMap.empty;
+    mp = map0;
   }
 
   proc choose(n : int) : bool list = {
@@ -37,14 +37,14 @@ module IRO : IRO = {
   proc hash(x : from, n : int) : bool list = {
     var ys : bool list;
     var zs : bool list;
-    if (! mem x (dom mp)) {
+    if (! mem (dom mp) x) {
       ys = choose(n);
       mp.[x] = ys;
     }
     else {
-      ys = oget(mp.[x]);
-      if (n > length ys) {
-        zs = choose(n - length ys);
+      ys = oget (mp.[x]);
+      if (n > size ys) {
+        zs = choose(n - size ys);
         mp.[x] = ys ++ zs;
       }
     }

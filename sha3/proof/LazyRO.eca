@@ -1,0 +1,20 @@
+require import Option NewFSet NewFMap.
+require (*..*) RO.
+
+type from, to.
+op d: to distr.
+
+clone import RO as Types with
+  type from <- from,
+  type to   <- to.
+
+module H : RO, RO_ = {
+  var m : (from, to) fmap
+
+  proc init(): unit = { m = map0; }
+
+  proc hash(x : from): to = {
+    if (!mem (dom m) x) m.[x] = $d;
+    return oget m.[x];
+  }
+}.

@@ -2,8 +2,6 @@ require import NewFSet NewFMap.
 
 type from, to.
 
-op d: from -> to distr.
-
 module type RO = {
   proc init()        : unit
   proc hash(x : from): to
