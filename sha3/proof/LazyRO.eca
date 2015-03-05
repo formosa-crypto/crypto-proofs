@@ -4,7 +4,7 @@ require (*..*) RO.
 type from, to.
 op d: to distr.
 
-clone import RO as Types with
+clone include RO with
   type from <- from,
   type to   <- to.
 

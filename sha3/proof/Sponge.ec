@@ -34,18 +34,18 @@ proof leq0_length by smt.
 
 type state = block * capacity.
 
-(** Ideal Functionality **)
-clone import IRO as Functionality with
-  type from <- block list.
-
 (** The following is just lining up type definitions and defines the
     Indifferentiability experiment. Importantly, it defines neither
     ideal primitive nor ideal functionality: only their type. **)
-clone import Indifferentiability as Main with
+clone include Indifferentiability with
   type p_in  <- state,
   type p_out <- state,
   type f_in  <- block list * int,
   type f_out <- bool list.
+
+(** Ideal Functionality **)
+clone import IRO as Functionality with
+  type from <- block list.
 
 (** Ideal Primitive for the Random Transformation case **)
 clone import LazyRO as Primitive with
@@ -59,7 +59,7 @@ clone import LazyRO as Primitive with
        - lining up names and types should be easier than it is... ***)
 op to_bits: block -> bool list.
 
-module RO_to_P (O : Types.RO) = {
+module RO_to_P (O : RO) = {
   proc init = O.init
   proc oracle = O.hash
 }.
@@ -109,7 +109,8 @@ op ftn: real.
 module P = RO_to_P(Primitive.H).
 module F = IRO_to_F(IRO).
 
-lemma TransformationLemma (D <: Distinguisher) &m:
+(* That Self is unfortunate *)
+lemma TransformationLemma (D <: Self.Distinguisher) &m:
   exists (S <: Simulator),
     `|Pr[Indif(Sponge(P),P,D).main() @ &m: res]
       - Pr[Indif(F,S(F),D).main() @ &m: res]|
