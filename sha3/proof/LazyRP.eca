@@ -1,0 +1,32 @@
+require import Option NewFSet NewFMap.
+require (*..*) RP.
+
+type D.
+op d: D distr.
+
+clone include RP with
+  type from <- D,
+  type to   <- D.
+
+module P : RP, RP_ = {
+  var m : (D, D) fmap
+  var mi: (D, D) fmap
+
+  proc init() = { m = map0; }
+
+  proc f(x) = {
+    if (!mem (dom m) x) {
+      m.[x]           <$ d;
+      mi.[oget m.[x]] <- x;
+    }
+    return oget m.[x];
+  }
+
+  proc fi(x) = {
+    if (!mem (dom mi) x) {
+      mi.[x]         <$ d;
+      m.[oget m.[x]] <- x;
+    }
+    return oget mi.[x];
+  }
+}.

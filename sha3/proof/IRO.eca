@@ -1,6 +1,6 @@
-(* infinite random oracle: conceptually, its range consists of
-   infinite length bitstrings, all of whose bits are independently
-   chosen *)
+(* infinite random oracle: it ranges over infinite length bitstrings,
+   all of whose bits are sampled uniformly and independently. We
+   obviously make it lazy. *)
 
 require import Option Int Bool NewList NewFMap NewFSet.
 
@@ -9,45 +9,33 @@ type from.
 module type IRO = {
   proc init() : unit
 
-  (* hash x, returning the first n bits of the result *)
-  proc hash(x : from, n : int) : bool list
+  (* f x, returning the first n bits of the result *)
+  proc f(x : from, n : int) : bool list
 }.
-
-op take : 'a list -> int -> 'a list. (* in NewFMap ... *)
 
 module IRO : IRO = {
   var mp : (from, bool list) fmap
 
-  proc init() : unit = {
-    mp = map0;
-  }
+  proc init() = { mp = map0; }
 
-  proc choose(n : int) : bool list = {
-    var b : bool;
-    var bs : bool list;
-    bs = [];
+  proc choose(n) = {
+    var b, bs;
+
+    bs <- [];
     while (n > 0) {
-      b = $Dbool.dbool;
-      bs = b :: bs;
-      n = n - 1;
+      b  <$ Dbool.dbool;
+      bs <- b :: bs;
+      n  <- n - 1;
     }
     return bs;
   }
 
-  proc hash(x : from, n : int) : bool list = {
-    var ys : bool list;
-    var zs : bool list;
-    if (! mem (dom mp) x) {
-      ys = choose(n);
-      mp.[x] = ys;
-    }
-    else {
-      ys = oget (mp.[x]);
-      if (n > size ys) {
-        zs = choose(n - size ys);
-        mp.[x] = ys ++ zs;
-      }
-    }
-    return take (oget mp.[x]) n;
+  proc f(x, n) = {
+    var ys, zs;
+
+    ys     <- odflt [] mp.[x];
+    zs     <@ choose (max 0 (n - size ys));
+    mp.[x] <- ys ++ zs;
+    return take n (oget mp.[x]);
   }
 }.

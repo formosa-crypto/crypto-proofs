@@ -1,0 +1,26 @@
+type from, to.
+
+module type RP = {
+  proc init()      : unit
+  proc f (x : from): to
+  proc fi(x : to  ): from
+}.
+
+module type RP_ = {
+  proc f (x : from): to
+  proc fi(x : to  ): from
+}.
+
+module type Distinguisher(G : RP_) = {
+  proc distinguish(): bool
+}.
+
+module IND(G:RP, D:Distinguisher) = {
+  proc main(): bool = {
+    var b;
+
+         G.init();
+    b <@ D(G).distinguish();
+    return b;
+  }  
+}.

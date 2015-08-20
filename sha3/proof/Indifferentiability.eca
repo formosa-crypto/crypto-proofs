@@ -35,14 +35,12 @@ module type Distinguisher (F : Functionality, P : Primitive) = {
 }.
 
 module Indif (F : Functionality, P : Primitive, D : Distinguisher) = {
-  module D = D(F,P)
-
   proc main(): bool = {
     var b;
 
-    P.init();
-    F.init();
-    b = D.distinguish();
+         P.init();
+         F.init();
+    b <@ D(F,P).distinguish();
     return b;
   }
 }.

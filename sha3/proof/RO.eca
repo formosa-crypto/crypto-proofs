@@ -1,12 +1,12 @@
 type from, to.
 
 module type RO = {
-  proc init()        : unit
-  proc hash(x : from): to
+  proc init()     : unit
+  proc f(x : from): to
 }.
 
 module type RO_ = {
-  proc hash(x : from): to
+  proc f(x : from): to
 }.
 
 module type Distinguisher(G : RO_) = {
@@ -14,13 +14,11 @@ module type Distinguisher(G : RO_) = {
 }.
 
 module IND(G:RO, D:Distinguisher) = {
-  module D = D(G)
-
   proc main(): bool = {
     var b;
 
-    G.init();
-    b = D.distinguish();
+         G.init();
+    b <@ D(G).distinguish();
     return b;
   }  
 }.

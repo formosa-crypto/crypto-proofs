@@ -11,9 +11,9 @@ clone include RO with
 module H : RO, RO_ = {
   var m : (from, to) fmap
 
-  proc init(): unit = { m = map0; }
+  proc init() = { m = map0; }
 
-  proc hash(x : from): to = {
+  proc f(x) = {
     if (!mem (dom m) x) m.[x] = $d;
     return oget m.[x];
   }
