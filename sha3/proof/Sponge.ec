@@ -1,3 +1,5 @@
+pragma +Smt:lazy.
+
 require import Option Pair Int Real NewList NewFSet NewFMap.
 require (*..*) AWord LazyRO IRO Indifferentiability.
 (* TODO: Clean up the Bitstring and Word theories
@@ -88,10 +90,12 @@ module Sponge (P : Primitive): Construction(P) = {
 
     if (size p >= 1 /\ nth witness p (size p - 1) <> Block.zeros) {
       z = [];
+      (* Absorption *)
       while (p <> []) {
         s = P.oracle(s.`1 ^ head witness p,s.`2);
         p = behead p;
       }
+      (* Squeezing *)
       while (i < n/%r) {
         z = z ++ (Self.to_bits s.`1); (* Typing by constraint would be nice *)
         s = P.oracle(s);
