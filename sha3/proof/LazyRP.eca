@@ -1,4 +1,5 @@
 require import Option NewFSet NewFMap.
+require import Dexcepted.
 require (*..*) RP.
 
 type D.
@@ -16,7 +17,7 @@ module P : RP, RP_ = {
 
   proc f(x) = {
     if (!mem (dom m) x) {
-      m.[x]           <$ d;
+      m.[x]           <$ d \ rng m;
       mi.[oget m.[x]] <- x;
     }
     return oget m.[x];
@@ -24,7 +25,7 @@ module P : RP, RP_ = {
 
   proc fi(x) = {
     if (!mem (dom mi) x) {
-      mi.[x]         <$ d;
+      mi.[x]         <$ d \ rng mi;
       m.[oget m.[x]] <- x;
     }
     return oget mi.[x];

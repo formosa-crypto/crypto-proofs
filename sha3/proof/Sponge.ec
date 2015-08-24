@@ -100,7 +100,7 @@ module IRO_to_F (O : IRO): Functionality = {
 }.
 
 (** We can now define the sponge construction **)
-module Sponge (P : Primitive): Construction(P) = {
+module Sponge (P : Primitive): Construction(P), Functionality = {
   proc init = P.init
 
   proc oracle(p : block list, n : int): bool list = {
