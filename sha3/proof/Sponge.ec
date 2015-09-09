@@ -72,7 +72,7 @@ clone import LazyRP as Primitive with
        - lining up names and types should be easier than it is... ***)
 op to_bits: block -> bool list.
 
-module RO_to_P (O : RP) = {
+module RP_to_P (O : RP) = {
   proc init = O.init
   proc oracle(q : p_query) = {
     var r;
@@ -129,11 +129,11 @@ module Sponge (P : Primitive): Construction(P), Functionality = {
       (number of queries to the primitive interface) **)
 op ftn: real.
 
-module P = RO_to_P(Primitive.P).
+module P = RP_to_P(Primitive.P).
 module F = IRO_to_F(IRO).
 
 (* That Self is unfortunate *)
-lemma TransformationLemma (D <: Self.Distinguisher) &m:
+lemma PermutationLemma (D <: Self.Distinguisher) &m:
   exists (S <: Simulator),
     `|Pr[Indif(Sponge(P),P,D).main() @ &m: res]
       - Pr[Indif(F,S(F),D).main() @ &m: res]|
