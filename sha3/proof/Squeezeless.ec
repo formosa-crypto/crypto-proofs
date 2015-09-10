@@ -158,20 +158,15 @@ module PreSimulator (F : Functionality) = {
   }
 }.
 
-module Simulator(F : Functionality) = RP_to_P(PreSimulator(F)).
-
-(** TODO: ftn is in fact a function of N
-      (number of queries to the primitive interface) **)
-op ftn: real.
-
 module P = RP_to_P(Primitive.P).
 module F = RO_to_F(H).
+module S(F : Functionality) = RP_to_P(PreSimulator(F)).
 
 (* That Self is unfortunate *)
 lemma PermutationLemma:
-  exists (S <: Simulator),
+  exists epsilon,
     forall (D <: Self.Distinguisher) &m,
     `|Pr[Indif(SqueezelessSponge(P),P,D).main() @ &m: res]
       - Pr[Indif(F,S(F),D).main() @ &m: res]|
-  < ftn.
+  < epsilon.
 proof. admit. qed.
