@@ -13,20 +13,26 @@ module P : RP, RP_ = {
   var m : (D, D) fmap
   var mi: (D, D) fmap
 
-  proc init() = { m = map0; }
+  proc init() = { m = map0; mi = map0; }
 
   proc f(x) = {
+    var y;
+
     if (!mem (dom m) x) {
-      m.[x]           <$ d \ rng m;
-      mi.[oget m.[x]] <- x;
+      y      <$ d \ rng m;
+      m.[x]  <- y;
+      mi.[y] <- x;
     }
     return oget m.[x];
   }
 
   proc fi(x) = {
+    var y;
+
     if (!mem (dom mi) x) {
-      mi.[x]         <$ d \ rng mi;
-      m.[oget m.[x]] <- x;
+      y      <$ d \ rng mi;
+      mi.[x] <- y;
+      m.[y]  <- x;
     }
     return oget mi.[x];
   }

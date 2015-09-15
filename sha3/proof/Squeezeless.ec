@@ -6,7 +6,7 @@ require import Option Pair Int Real NewList NewFSet NewFMap.
 require (*..*) AWord LazyRP LazyRO Indifferentiability.
 (* TODO: Clean up the Bitstring and Word theories
       -- Make use of those new versions. *)
-(*...*) import Dprod.
+(*...*) import Dprod Dexcepted.
 (* TODO: Datatype definitions and distributions should
      be properly separated and reorganized. *)
 
@@ -156,6 +156,161 @@ module PreSimulator (F : Functionality) = {
 module P = RP_to_P(Primitive.P).
 module F = RO_to_F(H).
 module S(F : Functionality) = RP_to_P(PreSimulator(F)).
+
+section.
+  declare module D : Self.Distinguisher {P, F, S, Indif}.
+
+  (** Inlining oracles into the experiment for clarity **)
+  (* TODO: Drop init from the Distinguisher parameters' signatures *)
+  local module Ideal = {
+    var ro : (block list,block) fmap
+    var m, mi : (state,state) fmap
+
+    module F = {
+      proc init(): unit = { }
+
+      proc oracle(x : block list): block = {
+        if (!mem (dom ro) x) {
+          ro.[x] <$ dblock;
+        }
+        return oget ro.[x];
+      }
+    }
+
+    module S = {
+      proc init(): unit = { }
+
+      proc f(x : state): state = {
+        var pvo, p, v, h, y;
+
+        if (!mem (dom m) x) {
+          pvo <- find_chain m x;
+          if (pvo <> None) {
+            (p,v) <- oget pvo;
+            h <@ F.oracle(rcons p v);
+            y <$ dcapacity;
+          } else {
+            (h,y) <$ dstate;
+          }
+          m.[x] <- (h,y);
+          mi.[(h,y)] <- x;
+        }
+        return oget m.[x];
+      }
+
+      proc fi(x:state) = {
+        var y;
+
+        if (!mem (dom mi) x) {
+          y <$ dstate;
+          mi.[x] <- y;
+          m.[y] <- x;
+        }
+        return oget mi.[x];
+      }
+
+      proc oracle(q : p_query): state = {
+        var r;
+
+        if (is_F q) {
+          r <@ f(get_query q);
+        } else {
+          r <@ fi(get_query q);
+        }
+        return r;
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      ro <- map0;
+      m  <- map0;
+      mi <- map0;
+      b  <@ D(F,S).distinguish();
+      return b;
+    }
+  }.
+
+  local module Concrete = {
+    var m, mi: (state,state) fmap
+
+    module P = {
+      proc init(): unit = { }
+
+      proc f(x : state): state = {
+        var y;
+
+        if (!mem (dom m) x) {
+          y <$ dstate \ (rng m);
+          m.[x]  <- y;
+          mi.[y] <- x;
+        }
+        return oget m.[x];
+      }
+
+      proc fi(x : state): state = {
+        var y;
+
+        if (!mem (dom mi) x) {
+          y <$ dstate \ (rng mi);
+          mi.[x] <- y;
+          m.[y]  <- x;
+        }
+        return oget mi.[x];
+      }
+
+      proc oracle(q : p_query): state = {
+        var r;
+
+        if (is_F q) {
+          r <@ f(get_query q);
+        } else {
+          r <@ fi(get_query q);
+        }
+        return r;
+      }
+
+    }
+
+    module C = {
+      proc init(): unit = { }
+
+      proc oracle(p : block list): block = {
+        var (sa,sc) <- (Block.zeros,Capacity.zeros);
+
+        if (size p >= 1 /\ p <> [Block.zeros]) {
+          while (p <> []) { (* Absorption *)
+            (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
+            p <- behead p;
+          }
+        }
+        return sa;          (* Squeezing phase (non-iterated) *)
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      m  <- map0;
+      mi <- map0;
+      b  <@ D(C,P).distinguish();
+      return b;
+    }    
+  }.
+
+  (** Result: The adversary's advantage in distinguishing the modular
+      defs if equal to that of distinguishing these **)
+  local lemma Inlined_pr &m:
+    `|Pr[Indif(SqueezelessSponge(P),P,D).main() @ &m: res]
+      - Pr[Indif(F,S(F),D).main() @ &m: res]|
+    = `|Pr[Concrete.main() @ &m: res]
+        - Pr[Ideal.main() @ &m: res]|.
+  proof. by do !congr; expect 2 (byequiv=> //=; proc; inline *; sim; auto). qed.
+
+  (** And now for the interesting bits **)
+  (* ... *)
+end section.
 
 (* That Self is unfortunate *)
 lemma PermutationLemma:
