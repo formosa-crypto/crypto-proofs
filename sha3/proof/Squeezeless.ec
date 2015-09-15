@@ -74,11 +74,7 @@ clone import LazyRP as Primitive with
   op   d <- dstate.
 
 (*** TODO: deal with these.
-       - bitstrings should have conversions to and from bool list
-       - the generic RO should be defined somewhere else
        - lining up names and types should be easier than it is... ***)
-op to_bits: block -> bool list.
-
 module RP_to_P (O : RP) = {
   proc init = O.init
   proc oracle(q : p_query) = {
@@ -106,13 +102,12 @@ module SqueezelessSponge (P : Primitive): Construction(P), Functionality = {
     var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
     if (size p >= 1 /\ p <> [Block.zeros]) {
-      (* Absorption *)
-      while (p <> []) {
+      while (p <> []) { (* Absorption *)
         (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
         p <- behead p;
       }
     }
-    return sa;
+    return sa;          (* Squeezing phase (non-iterated) *)
   }
 }.
 
