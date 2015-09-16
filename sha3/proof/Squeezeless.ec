@@ -311,7 +311,29 @@ section.
   (** And now for the interesting bits **)
   (** Inform the primitive interface of queries made by the
       distinguisher on its functionality interface, keep track of
-      primitive call paths. **)
+      primitive call paths in a coloured graph. **)
+  (** The following invariants should always hold at adversary
+      boundaries (they may be violated locally, but should always be
+      fixed (say, by setting bad) before returning control, and the
+      adversary should not be able to violate them himself):
+        - if paths[x] = (_,(p,v)), then following path p through m
+          from (0^r,0^c) leads to state (v,x); (in particular, this
+          implies (v,x) \in rng m;
+        - unless bad occurs (identify which ones), for every sc, there
+          is at most one sa such that (sa,sc) \in rng m;
+        - unless bad occurs (identify which ones), if paths[x] =
+          (o,(p,_)) and paths[x'] = (o',(p++p',_)), then o' <= o;
+          (todo: maybe change the direction of that order relation so
+          it corresponds to "order of appearance along paths"?)
+
+      The next step in the proof will probably be to eagerly sample
+      all values of the rate and introduce some indirection on
+      capacities so that they are only sampled (and propagated) just
+      before being given to the adversary. This is much easier to do
+      if we always sample from the full type, but I can't seem to line
+      up the defs so that introducing the colouring doesn't mess the
+      "m{1} = omap snd m{2}" invariant. This is TODO.
+   **)
   type caller = [ | I | D ].
 
   op (<=) (o1 o2 : caller) = o1 = I \/ o2 = D.
@@ -320,37 +342,11 @@ section.
     with o1 = I => o2
     with o1 = D => D.
 
-  local module InstrumentedConcrete = {
+  local module Game0 = {
     var m, mi               : (state,caller * state) fmap
     var paths               : (capacity,caller * (block list * block)) fmap
     var bext, bred          : bool
     var bcoll, bsuff, bmitm : bool
-
-    module P = {
-      var m, mi : (state,state) fmap
-
-      proc f(x : state): state = {
-        var y;
-
-        if (!mem (dom m) x) {
-          y <$ dstate \ (rng m);
-          m.[x]  <- y;
-          mi.[y] <- x;
-        }
-        return oget m.[x];
-      }
-
-      proc fi(x : state): state = {
-        var y;
-
-        if (!mem (dom mi) x) {
-          y <$ dstate \ (rng mi);
-          mi.[x] <- y;
-          m.[y]  <- x;
-        }
-        return oget mi.[x];
-      }
-    }
 
     module S = {
       (** Inner interface **)
@@ -361,7 +357,7 @@ section.
         bext <- bext \/ (o' <= o);
 
         if (!mem (dom m) x) {
-          y      <@ P.f(x);
+          y <$ dstate \ (image snd (rng m));
           if (mem (dom paths) x.`2) {
             (o',pv)      <- oget paths.[x.`2];
             (p,v)        <- pv;
@@ -384,7 +380,7 @@ section.
         var o', y;
 
         if (!mem (dom mi) x) {
-          y      <@ P.fi(x);
+          y <$ dstate \ (image snd (rng mi));
           mi.[x] <- (D,y);
           m.[y]  <- (D,x);
           bmitm  <- bmitm \/ (mem (dom paths) y.`2);
@@ -432,16 +428,15 @@ section.
     proc main(): bool = {
       var b;
 
-      P.m   <- map0;
-      P.mi  <- map0;
       m     <- map0;
       mi    <- map0;
-      paths <- map0;
       bext  <- false;
       bred  <- false;
       bcoll <- false;
       bsuff <- false;
       bmitm <- false;
+      (* the empty path is initially known by the adversary to lead to capacity 0^c *)
+      paths <- map0.[Capacity.zeros <- (D,([<:block>],Block.zeros))];
       b     <@ D(C,S).distinguish();
       return b;
     }    
@@ -450,68 +445,80 @@ section.
   (** Result: the instrumented system and the concrete system are
       perfectly equivalent **)
   (** This proof is done brutally because it is *just* program verification. *)
-  local equiv Instrumented_P_S_eq:
-    Concrete.P.f ~ InstrumentedConcrete.S.f:
+  local equiv Game0_P_S_eq:
+    Concrete.P.f ~ Game0.S.f:
          arg{1} = arg{2}.`2
-      /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
-      /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-      /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+      /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+      /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
       /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
       ==> ={res}
-          /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
-          /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-          /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+          /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+          /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
           /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
   proof.
-    proc. inline *. sp; if; 1:smt.
-      rcondt{2} 2; 1:by auto.
-      by auto; progress; expect 5 smt.
+    proc. inline *.
+    conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
+               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+               /\ image snd (rng Game0.m{2}) = rng Concrete.m{1} (* Helper *)
+               ==> _).
+      progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
+        by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H h.
+      by rewrite H=> h; exists (oget Game0.m{2}.[t]); smt.
+    sp; if; 1:smt.
+      by auto; progress; expect 7 smt.
     by auto; progress; expect 3 smt.
   qed.
 
-  local equiv Instrumented_Pi_Si_eq:
-    Concrete.P.fi ~ InstrumentedConcrete.S.fi:
+  local equiv Game0_Pi_Si_eq:
+    Concrete.P.fi ~ Game0.S.fi:
          ={arg}
-      /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
-      /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-      /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+      /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+      /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
       /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
       ==> ={res}
-          /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
-          /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-          /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+          /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+          /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
           /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
   proof.
-    proc. inline *. sp; if; 1:smt.
-      rcondt{2} 2; 1:by auto.
-      by auto; progress; expect 5 smt.
+    proc. inline *.
+    conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
+               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+               /\ image snd (rng Game0.mi{2}) = rng Concrete.mi{1} (* Helper *)
+               ==> _).
+      progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
+        by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H0 h.
+      by rewrite H0=> h; exists (oget Game0.mi{2}.[t]); smt.
+    sp; if; 1:smt.
+      by auto; progress; expect 7 smt.
     by auto; progress; expect 3 smt.
   qed.
 
-  local lemma Instrumented_pr &m:
+  local lemma Game0_pr &m:
     `|Pr[Concrete.main() @ &m: res]
       - Pr[Ideal.main() @ &m: res]|
-    = `|Pr[InstrumentedConcrete.main() @ &m: res]
+    = `|Pr[Game0.main() @ &m: res]
         - Pr[Ideal.main() @ &m: res]|.
   proof.
     do !congr.
     byequiv=> //=.
     proc.
-    call (_:    ={m,mi}(Concrete,InstrumentedConcrete.P)
-             /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-             /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+    call (_:    (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+             /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
              /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
       proc; if=> //=.
-        by call Instrumented_P_S_eq.
-        by call Instrumented_Pi_Si_eq.
+        by call Game0_P_S_eq.
+        by call Game0_Pi_Si_eq.
         proc. sp; if=> //=.
         while (   ={sa,sc,p}
-               /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
-               /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
-               /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
                /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
           inline Concrete.P.oracle. rcondt{1} 2; 1:by auto.
-          wp; call Instrumented_P_S_eq.
+          wp; call Game0_P_S_eq.
           by auto.
         by auto.
     by auto; smt.
