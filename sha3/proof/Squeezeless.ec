@@ -308,6 +308,81 @@ section.
         - Pr[Ideal.main() @ &m: res]|.
   proof. by do !congr; expect 2 (byequiv=> //=; proc; inline *; sim; auto). qed.
 
+  (** An intermediate game where we don't care about the permutation
+      being a bijection anymore... **)
+  local module Concrete_F = {
+    var m, mi: (state,state) fmap
+
+    module P = {
+      proc init(): unit = { }
+
+      proc f(x : state): state = {
+        var y;
+
+        if (!mem (dom m) x) {
+          y <$ dstate;
+          m.[x]  <- y;
+          mi.[y] <- x;
+        }
+        return oget m.[x];
+      }
+
+      proc fi(x : state): state = {
+        var y;
+
+        if (!mem (dom mi) x) {
+          y <$ dstate;
+          mi.[x] <- y;
+          m.[y]  <- x;
+        }
+        return oget mi.[x];
+      }
+
+      proc oracle(q : p_query): state = {
+        var r;
+
+        if (is_F q) {
+          r <@ f(get_query q);
+        } else {
+          r <@ fi(get_query q);
+        }
+        return r;
+      }
+
+    }
+
+    module C = {
+      proc init(): unit = { }
+
+      proc oracle(p : block list): block = {
+        var (sa,sc) <- (Block.zeros,Capacity.zeros);
+
+        if (size p >= 1 /\ p <> [Block.zeros]) {
+          while (p <> []) { (* Absorption *)
+            (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
+            p <- behead p;
+          }
+        }
+        return sa;          (* Squeezing phase (non-iterated) *)
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      m  <- map0;
+      mi <- map0;
+      b  <@ D(C,P).distinguish();
+      return b;
+    }
+  }.
+
+  (** Result (expected): The distance between Concrete and Concrete_F
+      is bounded by N^2/|state|, where N is the total cost (in terms
+      of queries to P and P^-1) of the adversary's queries **)
+
+                 (** TODO: express and prove **)
+
   (** And now for the interesting bits **)
   (** Inform the primitive interface of queries made by the
       distinguisher on its functionality interface, keep track of
@@ -329,10 +404,9 @@ section.
       The next step in the proof will probably be to eagerly sample
       all values of the rate and introduce some indirection on
       capacities so that they are only sampled (and propagated) just
-      before being given to the adversary. This is much easier to do
-      if we always sample from the full type, but I can't seem to line
-      up the defs so that introducing the colouring doesn't mess the
-      "m{1} = omap snd m{2}" invariant. This is TODO.
+      before being given to the adversary. This is easier to do if all
+      samplings are independent, hence the move away from a random
+      permutation. Some side-effects remain worrying.
    **)
   type caller = [ | I | D ].
 
@@ -351,13 +425,13 @@ section.
     module S = {
       (** Inner interface **)
       proc f(o : caller, x : state): state = {
-        var o', y, pv, p, v;
+        var o', y, pv, p, v, x';
 
         o' <- oapp fst D paths.[x.`2];
         bext <- bext \/ (o' <= o);
 
         if (!mem (dom m) x) {
-          y <$ dstate \ (image snd (rng m));
+          y <$ dstate;
           if (mem (dom paths) x.`2) {
             (o',pv)      <- oget paths.[x.`2];
             (p,v)        <- pv;
@@ -368,27 +442,32 @@ section.
           m.[x]  <- (o,y);
           mi.[y] <- (o,x);
         } else {
-          (o',y) <- oget m.[x];
-          o'     <- max o o';
-          m.[x]  <- (o',y);
-          mi.[y] <- (o',x);
+          (o',y)  <- oget m.[x];
+          m.[x]   <- (max o o',y);
+          if (mem (dom mi) y) {
+            (o',x') <- oget mi.[y];
+            mi.[y]  <- (max o o',x');
+          }
         }
         return snd (oget m.[x]);
       }
 
       proc fi(x : state): state = {
-        var o', y;
+        var o', y, x';
 
         if (!mem (dom mi) x) {
-          y <$ dstate \ (image snd (rng mi));
+          y <$ dstate;
           mi.[x] <- (D,y);
           m.[y]  <- (D,x);
           bmitm  <- bmitm \/ (mem (dom paths) y.`2);
         } else {
-          (o',y) <- oget mi.[x];
-          bred   <- bred \/ o' = I;
-          mi.[x] <- (D,y);
-          m.[y]  <- (D,x);
+          (o',y)  <- oget mi.[x];
+          bred    <- bred \/ o' = I;
+          mi.[x]  <- (D,y);
+          if (mem (dom m) y) {
+            (o',x') <- oget m.[y];
+            m.[y]   <- (D,x');
+          }
         }
         return snd (oget mi.[x]);
       }
@@ -446,59 +525,53 @@ section.
       perfectly equivalent **)
   (** This proof is done brutally because it is *just* program verification. *)
   local equiv Game0_P_S_eq:
-    Concrete.P.f ~ Game0.S.f:
+    Concrete_F.P.f ~ Game0.S.f:
          arg{1} = arg{2}.`2
-      /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-      /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-      /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+      /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+      /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
       ==> ={res}
-          /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-          /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
+          /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2}).
   proof.
     proc. inline *.
     conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
-               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
-               /\ image snd (rng Game0.m{2}) = rng Concrete.m{1} (* Helper *)
+               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ image snd (rng Game0.m{2}) = rng Concrete_F.m{1} (* Helper *)
                ==> _).
       progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
         by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H h.
       by rewrite H=> h; exists (oget Game0.m{2}.[t]); smt.
     sp; if; 1:smt.
-      by auto; progress; expect 7 smt.
-    by auto; progress; expect 3 smt.
+      by auto; progress; expect 3 smt.
+    by auto; progress; expect 5 smt.
   qed.
 
   local equiv Game0_Pi_Si_eq:
-    Concrete.P.fi ~ Game0.S.fi:
+    Concrete_F.P.fi ~ Game0.S.fi:
          ={arg}
-      /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-      /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-      /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+      /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+      /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
       ==> ={res}
-          /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-          /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
+          /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2}).
   proof.
     proc. inline *.
     conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
-               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
-               /\ image snd (rng Game0.mi{2}) = rng Concrete.mi{1} (* Helper *)
+               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ image snd (rng Game0.mi{2}) = rng Concrete_F.mi{1} (* Helper *)
                ==> _).
       progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
         by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H0 h.
       by rewrite H0=> h; exists (oget Game0.mi{2}.[t]); smt.
     sp; if; 1:smt.
-      by auto; progress; expect 7 smt.
-    by auto; progress; expect 3 smt.
+      by auto; progress; expect 3 smt.
+    by auto; progress; expect 5 smt.
   qed.
 
   local lemma Game0_pr &m:
-    `|Pr[Concrete.main() @ &m: res]
+    `|Pr[Concrete_F.main() @ &m: res]
       - Pr[Ideal.main() @ &m: res]|
     = `|Pr[Game0.main() @ &m: res]
         - Pr[Ideal.main() @ &m: res]|.
@@ -506,18 +579,16 @@ section.
     do !congr.
     byequiv=> //=.
     proc.
-    call (_:    (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-             /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-             /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
+    call (_:    (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+             /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})).
       proc; if=> //=.
         by call Game0_P_S_eq.
         by call Game0_Pi_Si_eq.
         proc. sp; if=> //=.
         while (   ={sa,sc,p}
-               /\ (forall x, Concrete.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
-          inline Concrete.P.oracle. rcondt{1} 2; 1:by auto.
+               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
+               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})).
+          inline Concrete_F.P.oracle. rcondt{1} 2; 1:by auto.
           wp; call Game0_P_S_eq.
           by auto.
         by auto.
