@@ -2,7 +2,7 @@
     functionality is a fixed-output-length random oracle whose output
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
-require import Option Pair Int Real NewList NewFSet NewFMap.
+require import Fun Option Pair Int Real NewList NewFSet NewFMap Utils.
 require (*..*) AWord LazyRP LazyRO Indifferentiability.
 (* TODO: Clean up the Bitstring and Word theories
       -- Make use of those new versions. *)
@@ -158,7 +158,7 @@ module F = RO_to_F(H).
 module S(F : Functionality) = RP_to_P(PreSimulator(F)).
 
 section.
-  declare module D : Self.Distinguisher {P, F, S, Indif}.
+  declare module D : Self.Distinguisher {P, F, S}.
 
   (** Inlining oracles into the experiment for clarity **)
   (* TODO: Drop init from the Distinguisher parameters' signatures *)
@@ -309,7 +309,213 @@ section.
   proof. by do !congr; expect 2 (byequiv=> //=; proc; inline *; sim; auto). qed.
 
   (** And now for the interesting bits **)
-  (* ... *)
+  (** Inform the primitive interface of queries made by the
+      distinguisher on its functionality interface, keep track of
+      primitive call paths. **)
+  type caller = [ | I | D ].
+
+  op (<=) (o1 o2 : caller) = o1 = I \/ o2 = D.
+
+  op max (o1 o2 : caller) =
+    with o1 = I => o2
+    with o1 = D => D.
+
+  local module InstrumentedConcrete = {
+    var m, mi               : (state,caller * state) fmap
+    var paths               : (capacity,caller * (block list * block)) fmap
+    var bext, bred          : bool
+    var bcoll, bsuff, bmitm : bool
+
+    module P = {
+      var m, mi : (state,state) fmap
+
+      proc f(x : state): state = {
+        var y;
+
+        if (!mem (dom m) x) {
+          y <$ dstate \ (rng m);
+          m.[x]  <- y;
+          mi.[y] <- x;
+        }
+        return oget m.[x];
+      }
+
+      proc fi(x : state): state = {
+        var y;
+
+        if (!mem (dom mi) x) {
+          y <$ dstate \ (rng mi);
+          mi.[x] <- y;
+          m.[y]  <- x;
+        }
+        return oget mi.[x];
+      }
+    }
+
+    module S = {
+      (** Inner interface **)
+      proc f(o : caller, x : state): state = {
+        var o', y, pv, p, v;
+
+        o' <- oapp fst D paths.[x.`2];
+        bext <- bext \/ (o' <= o);
+
+        if (!mem (dom m) x) {
+          y      <@ P.f(x);
+          if (mem (dom paths) x.`2) {
+            (o',pv)      <- oget paths.[x.`2];
+            (p,v)        <- pv;
+            bcoll        <- bcoll \/ (mem (dom paths) y.`2);
+            bsuff        <- bsuff \/ (mem (image (snd \o snd) (rng m)) y.`2);
+            paths.[y.`2] <- (max o o',(rcons p (v ^ x.`1),y.`1));
+          }
+          m.[x]  <- (o,y);
+          mi.[y] <- (o,x);
+        } else {
+          (o',y) <- oget m.[x];
+          o'     <- max o o';
+          m.[x]  <- (o',y);
+          mi.[y] <- (o',x);
+        }
+        return snd (oget m.[x]);
+      }
+
+      proc fi(x : state): state = {
+        var o', y;
+
+        if (!mem (dom mi) x) {
+          y      <@ P.fi(x);
+          mi.[x] <- (D,y);
+          m.[y]  <- (D,x);
+          bmitm  <- bmitm \/ (mem (dom paths) y.`2);
+        } else {
+          (o',y) <- oget mi.[x];
+          bred   <- bred \/ o' = I;
+          mi.[x] <- (D,y);
+          m.[y]  <- (D,x);
+        }
+        return snd (oget mi.[x]);
+      }
+
+      (** Distinguisher interface **)
+      proc init() = { }
+
+      proc oracle(q : p_query): state = {
+        var r;
+
+        if (is_F q) {
+          r <@ f(D,get_query q);
+        } else {
+          r <@ fi(get_query q);
+        }
+        return r;
+      }
+
+    }
+
+    module C = {
+      proc init(): unit = { }
+
+      proc oracle(p : block list): block = {
+        var (sa,sc) <- (Block.zeros,Capacity.zeros);
+
+        if (size p >= 1 /\ p <> [Block.zeros]) {
+          while (p <> []) {
+            (sa,sc) <@ S.f(I,(sa ^ head witness p,sc));
+            p <- behead p;
+          }
+        }
+        return sa;
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      P.m   <- map0;
+      P.mi  <- map0;
+      m     <- map0;
+      mi    <- map0;
+      paths <- map0;
+      bext  <- false;
+      bred  <- false;
+      bcoll <- false;
+      bsuff <- false;
+      bmitm <- false;
+      b     <@ D(C,S).distinguish();
+      return b;
+    }    
+  }.
+
+  (** Result: the instrumented system and the concrete system are
+      perfectly equivalent **)
+  (** This proof is done brutally because it is *just* program verification. *)
+  local equiv Instrumented_P_S_eq:
+    Concrete.P.f ~ InstrumentedConcrete.S.f:
+         arg{1} = arg{2}.`2
+      /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
+      /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+      /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+      /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+      ==> ={res}
+          /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
+          /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+          /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+          /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
+  proof.
+    proc. inline *. sp; if; 1:smt.
+      rcondt{2} 2; 1:by auto.
+      by auto; progress; expect 5 smt.
+    by auto; progress; expect 3 smt.
+  qed.
+
+  local equiv Instrumented_Pi_Si_eq:
+    Concrete.P.fi ~ InstrumentedConcrete.S.fi:
+         ={arg}
+      /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
+      /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+      /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+      /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)
+      ==> ={res}
+          /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
+          /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+          /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+          /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x).
+  proof.
+    proc. inline *. sp; if; 1:smt.
+      rcondt{2} 2; 1:by auto.
+      by auto; progress; expect 5 smt.
+    by auto; progress; expect 3 smt.
+  qed.
+
+  local lemma Instrumented_pr &m:
+    `|Pr[Concrete.main() @ &m: res]
+      - Pr[Ideal.main() @ &m: res]|
+    = `|Pr[InstrumentedConcrete.main() @ &m: res]
+        - Pr[Ideal.main() @ &m: res]|.
+  proof.
+    do !congr.
+    byequiv=> //=.
+    proc.
+    call (_:    ={m,mi}(Concrete,InstrumentedConcrete.P)
+             /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+             /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+             /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
+      proc; if=> //=.
+        by call Instrumented_P_S_eq.
+        by call Instrumented_Pi_Si_eq.
+        proc. sp; if=> //=.
+        while (   ={sa,sc,p}
+               /\ ={m,mi}(Concrete,InstrumentedConcrete.P)
+               /\ (forall x, InstrumentedConcrete.P.m.[x]{2} = omap snd (InstrumentedConcrete.m.[x]){2})
+               /\ (forall x, InstrumentedConcrete.P.mi.[x]{2} = omap snd (InstrumentedConcrete.mi.[x]){2})
+               /\ (forall x y, Concrete.m.[x]{1} = Some y <=> Concrete.mi.[y]{1} = Some x)).
+          inline Concrete.P.oracle. rcondt{1} 2; 1:by auto.
+          wp; call Instrumented_P_S_eq.
+          by auto.
+        by auto.
+    by auto; smt.
+  qed.
 end section.
 
 (* That Self is unfortunate *)
