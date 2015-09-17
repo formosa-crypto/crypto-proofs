@@ -444,10 +444,8 @@ section.
         } else {
           (o',y)  <- oget m.[x];
           m.[x]   <- (max o o',y);
-          if (mem (dom mi) y) {
-            (o',x') <- oget mi.[y];
-            mi.[y]  <- (max o o',x');
-          }
+          (o',x') <- oget mi.[y];
+          mi.[y]  <- (max o o',x');
         }
         return snd (oget m.[x]);
       }
@@ -464,10 +462,8 @@ section.
           (o',y)  <- oget mi.[x];
           bred    <- bred \/ o' = I;
           mi.[x]  <- (D,y);
-          if (mem (dom m) y) {
-            (o',x') <- oget m.[y];
-            m.[y]   <- (D,x');
-          }
+          (o',x') <- oget m.[y];
+          m.[y]   <- (D,x');
         }
         return snd (oget mi.[x]);
       }
@@ -529,22 +525,40 @@ section.
          arg{1} = arg{2}.`2
       /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
       /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+      /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+      /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
       ==> ={res}
           /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2}).
+          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+          /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+          /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x).
   proof.
     proc. inline *.
     conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
                /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
                /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
                /\ image snd (rng Game0.m{2}) = rng Concrete_F.m{1} (* Helper *)
                ==> _).
       progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
         by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H h.
       by rewrite H=> h; exists (oget Game0.m{2}.[t]); smt.
     sp; if; 1:smt.
-      by auto; progress; expect 3 smt.
-    by auto; progress; expect 5 smt.
+      auto; progress; first 3 smt.
+      + by move: H7; rewrite domP rng_set !in_fsetU !in_fset1 rem_id // => [/H1 ->|->].
+        move: H7; rewrite rng_set domP !in_fsetU !in_fset1; case (x0 = x{2})=> [->> //|x0_neq_x /=].
+      + by move=> h; apply/H2/(rng_rem_le yL).
+    auto; progress; first 2 smt.
+    (** FIXME: Refine the invariant enough that the following becomes easier to prove? **)
+    have ->: (oget Game0.m.[x]){2}.`2 = oget Concrete_F.m{1}.[x{2}] by smt.
+    move: H4; rewrite in_dom.
+    case {-1}(Concrete_F.m{1}.[x{2}]) (eq_refl Concrete_F.m{1}.[x{2}])=> //= x' h.
+    rewrite/(oget (Some _))/=.
+    have ->: (oget Game0.mi.[x']){2}.`2 = oget Concrete_F.mi{1}.[x'] by smt.
+    rewrite getP; case (x0 = x')=> [<<-/=|/= _].
+      by rewrite /snd /=; smt. (* x0 \in dom mi{1} (by H1 and h) *)
+    exact/H0.
   qed.
 
   local equiv Game0_Pi_Si_eq:
@@ -552,22 +566,40 @@ section.
          ={arg}
       /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
       /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+      /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+      /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
       ==> ={res}
           /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2}).
+          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+          /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+          /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x).
   proof.
     proc. inline *.
     conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
                /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
                /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
                /\ image snd (rng Game0.mi{2}) = rng Concrete_F.mi{1} (* Helper *)
                ==> _).
       progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
         by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H0 h.
       by rewrite H0=> h; exists (oget Game0.mi{2}.[t]); smt.
     sp; if; 1:smt.
-      by auto; progress; expect 3 smt.
-    by auto; progress; expect 5 smt.
+      auto; progress; first 3 by smt.
+      + move: H7; rewrite domP rng_set !in_fsetU !in_fset1; case (x0 = x{2})=> [->> //|x0_neq_x /=].
+        by move=> h; apply/H1/(rng_rem_le yL).
+      + by move: H7; rewrite domP rng_set !in_fsetU !in_fset1 rem_id // => [/H2 ->|->].
+    auto; progress; 1,3:smt.
+    (** FIXME: Refine the invariant enough that the following becomes easier to prove? **)
+    have ->: (oget Game0.mi.[x]){2}.`2 = oget Concrete_F.mi{1}.[x{2}] by smt.
+    move: H4; rewrite in_dom.
+    case {-1}(Concrete_F.mi{1}.[x{2}]) (eq_refl Concrete_F.mi{1}.[x{2}])=> //= x' h.
+    rewrite/(oget (Some _))/=.
+    have ->: (oget Game0.m.[x']){2}.`2 = oget Concrete_F.m{1}.[x'] by smt.
+    rewrite getP; case (x0 = x')=> [<<-/=|/= _].
+      by rewrite /snd /=; smt. (* x0 \in dom mi{1} (by H1 and h) *)
+    exact/H.    
   qed.
 
   local lemma Game0_pr &m:
@@ -580,14 +612,18 @@ section.
     byequiv=> //=.
     proc.
     call (_:    (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-             /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})).
+             /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+             /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+             /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)).
       proc; if=> //=.
         by call Game0_P_S_eq.
         by call Game0_Pi_Si_eq.
         proc. sp; if=> //=.
         while (   ={sa,sc,p}
                /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})).
+               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
+               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
+               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)).
           inline Concrete_F.P.oracle. rcondt{1} 2; 1:by auto.
           wp; call Game0_P_S_eq.
           by auto.
