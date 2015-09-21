@@ -300,7 +300,7 @@ section.
   }.
 
   (** Result: The adversary's advantage in distinguishing the modular
-      defs if equal to that of distinguishing these **)
+      defs is equal to that of distinguishing these **)
   local lemma Inlined_pr &m:
     `|Pr[Indif(SqueezelessSponge(P),P,D).main() @ &m: res]
       - Pr[Indif(F,S(F),D).main() @ &m: res]|
@@ -416,56 +416,86 @@ section.
     with o1 = I => o2
     with o1 = D => D.
 
+  pred is_pre_permutation (m mi : ('a,'a) fmap) =
+       (forall x, mem (rng m) x => mem (dom mi) x)
+    /\ (forall x, mem (rng mi) x => mem (dom m) x).
+
+  lemma half_permutation_set (m' mi' : ('a,'a) fmap) x' y':
+       (forall x, mem (rng m') x => mem (dom mi') x)
+    => (forall x, mem (rng m'.[x' <- y']) x => mem (dom mi'.[y' <- x']) x).
+  proof.
+    move=> h x0.
+    rewrite rng_set domP !in_fsetU in_fset1 => [/rng_rem_le in_rng|//=].
+    by rewrite h.
+  qed.
+
+  lemma pre_permutation_set (m mi : ('a,'a) fmap) x y:
+    is_pre_permutation m mi =>
+    is_pre_permutation m.[x <- y] mi.[y <- x].
+  proof.
+    move=> [dom_mi dom_m].
+    by split; apply/half_permutation_set.
+  qed.    
+
   local module Game0 = {
-    var m, mi               : (state,caller * state) fmap
-    var paths               : (capacity,caller * (block list * block)) fmap
+    var m, mi               : (state,state) fmap
+    var mcol, micol         : (state,caller) fmap (* colouring maps for m, mi *)
+    var paths               : (capacity,block list * block) fmap
+    var pathscol            : (capacity,caller) fmap (* colouring maps for paths *)
     var bext, bred          : bool
     var bcoll, bsuff, bmitm : bool
 
     module S = {
       (** Inner interface **)
       proc f(o : caller, x : state): state = {
-        var o', y, pv, p, v, x';
+        var o', y, pv, p, v;
 
-        o' <- oapp fst D paths.[x.`2];
+        o' <- odflt D pathscol.[x.`2];
         bext <- bext \/ (o' <= o);
 
         if (!mem (dom m) x) {
           y <$ dstate;
           if (mem (dom paths) x.`2) {
-            (o',pv)      <- oget paths.[x.`2];
-            (p,v)        <- pv;
-            bcoll        <- bcoll \/ (mem (dom paths) y.`2);
-            bsuff        <- bsuff \/ (mem (image (snd \o snd) (rng m)) y.`2);
-            paths.[y.`2] <- (max o o',(rcons p (v ^ x.`1),y.`1));
+            o'              <- oget pathscol.[x.`2];
+            pv              <- oget paths.[x.`2];
+            (p,v)           <- pv;
+            bcoll           <- bcoll \/ (mem (dom paths) y.`2);
+            bsuff           <- bsuff \/ (mem (image snd (rng m)) y.`2);
+            pathscol.[y.`2] <- max o o';
+            paths.[y.`2]    <- (rcons p (v ^ x.`1),y.`1);
           }
-          m.[x]  <- (o,y);
-          mi.[y] <- (o,x);
+          mcol.[x]  <- o;
+          m.[x]     <- y;
+          micol.[y] <- o;
+          mi.[y]    <- x;
         } else {
-          (o',y)  <- oget m.[x];
-          m.[x]   <- (max o o',y);
-          (o',x') <- oget mi.[y];
-          mi.[y]  <- (max o o',x');
+          o'        <- oget mcol.[x];
+          mcol.[x]  <- max o o';
+          y         <- oget m.[x];
+          o'        <- oget micol.[y];
+          micol.[y] <- max o o';
         }
-        return snd (oget m.[x]);
+        return oget m.[x];
       }
 
       proc fi(x : state): state = {
-        var o', y, x';
+        var o', y;
 
         if (!mem (dom mi) x) {
           y <$ dstate;
-          mi.[x] <- (D,y);
-          m.[y]  <- (D,x);
-          bmitm  <- bmitm \/ (mem (dom paths) y.`2);
+          micol.[x] <- D;
+          mi.[x]    <- y;
+          mcol.[y]  <- D;
+          m.[y]     <- x;
+          bmitm     <- bmitm \/ (mem (dom paths) y.`2);
         } else {
-          (o',y)  <- oget mi.[x];
-          bred    <- bred \/ o' = I;
-          mi.[x]  <- (D,y);
-          (o',x') <- oget m.[y];
-          m.[y]   <- (D,x');
+          o'        <- oget micol.[x];
+          bred      <- bred \/ o' = I;
+          y         <- oget mi.[x];
+          micol.[x] <- D;
+          mcol.[y]  <- D;
         }
-        return snd (oget mi.[x]);
+        return oget mi.[x];
       }
 
       (** Distinguisher interface **)
@@ -503,103 +533,53 @@ section.
     proc main(): bool = {
       var b;
 
-      m     <- map0;
-      mi    <- map0;
-      bext  <- false;
-      bred  <- false;
-      bcoll <- false;
-      bsuff <- false;
-      bmitm <- false;
+      mcol     <- map0;
+      m        <- map0;
+      micol    <- map0;
+      mi       <- map0;
+      bext     <- false;
+      bred     <- false;
+      bcoll    <- false;
+      bsuff    <- false;
+      bmitm    <- false;
       (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-      paths <- map0.[Capacity.zeros <- (D,([<:block>],Block.zeros))];
-      b     <@ D(C,S).distinguish();
+      pathscol <- map0.[Capacity.zeros <- D];
+      paths    <- map0.[Capacity.zeros <- ([<:block>],Block.zeros)];
+      b        <@ D(C,S).distinguish();
       return b;
     }    
   }.
 
   (** Result: the instrumented system and the concrete system are
       perfectly equivalent **)
-  (** This proof is done brutally because it is *just* program verification. *)
   local equiv Game0_P_S_eq:
     Concrete_F.P.f ~ Game0.S.f:
          arg{1} = arg{2}.`2
-      /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-      /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-      /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-      /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
+      /\ ={m,mi}(Concrete_F,Game0)
+      /\ is_pre_permutation (Concrete_F.m){1} (Concrete_F.mi){1}
       ==> ={res}
-          /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-          /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-          /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x).
+          /\ ={m,mi}(Concrete_F,Game0)
+          /\ is_pre_permutation (Concrete_F.m){1} (Concrete_F.mi){1}.
   proof.
     proc. inline *.
-    conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
-               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
-               /\ image snd (rng Game0.m{2}) = rng Concrete_F.m{1} (* Helper *)
-               ==> _).
-      progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
-        by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H h.
-      by rewrite H=> h; exists (oget Game0.m{2}.[t]); smt.
-    sp; if; 1:smt.
-      auto; progress; first 3 smt.
-      + by move: H7; rewrite domP rng_set !in_fsetU !in_fset1 rem_id // => [/H1 ->|->].
-        move: H7; rewrite rng_set domP !in_fsetU !in_fset1; case (x0 = x{2})=> [->> //|x0_neq_x /=].
-      + by move=> h; apply/H2/(rng_rem_le yL).
-    auto; progress; first 2 smt.
-    (** FIXME: Refine the invariant enough that the following becomes easier to prove? **)
-    have ->: (oget Game0.m.[x]){2}.`2 = oget Concrete_F.m{1}.[x{2}] by smt.
-    move: H4; rewrite in_dom.
-    case {-1}(Concrete_F.m{1}.[x{2}]) (eq_refl Concrete_F.m{1}.[x{2}])=> //= x' h.
-    rewrite/(oget (Some _))/=.
-    have ->: (oget Game0.mi.[x']){2}.`2 = oget Concrete_F.mi{1}.[x'] by smt.
-    rewrite getP; case (x0 = x')=> [<<-/=|/= _].
-      by rewrite /snd /=; smt. (* x0 \in dom mi{1} (by H1 and h) *)
-    exact/H0.
+    sp; if=> //=; 2:by auto.
+    auto; progress [-split].
+    by rewrite pre_permutation_set.
   qed.
 
   local equiv Game0_Pi_Si_eq:
     Concrete_F.P.fi ~ Game0.S.fi:
          ={arg}
-      /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-      /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-      /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-      /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
+      /\ ={m,mi}(Concrete_F,Game0)
+      /\ is_pre_permutation (Concrete_F.m){1} (Concrete_F.mi){1}
       ==> ={res}
-          /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-          /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-          /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-          /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x).
+          /\ ={m,mi}(Concrete_F,Game0)
+          /\ is_pre_permutation (Concrete_F.m){1} (Concrete_F.mi){1}.
   proof.
     proc. inline *.
-    conseq (_:    x{1} = x{2} (* FIXME: conseq extend *)
-               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)
-               /\ image snd (rng Game0.mi{2}) = rng Concrete_F.mi{1} (* Helper *)
-               ==> _).
-      progress. apply fsetP=> x; rewrite imageP in_rng; split=> [[[o s]]|[t]].
-        by rewrite in_rng /snd /= => [[t h] ->>] {s}; exists t; rewrite H0 h.
-      by rewrite H0=> h; exists (oget Game0.mi{2}.[t]); smt.
-    sp; if; 1:smt.
-      auto; progress; first 3 by smt.
-      + move: H7; rewrite domP rng_set !in_fsetU !in_fset1; case (x0 = x{2})=> [->> //|x0_neq_x /=].
-        by move=> h; apply/H1/(rng_rem_le yL).
-      + by move: H7; rewrite domP rng_set !in_fsetU !in_fset1 rem_id // => [/H2 ->|->].
-    auto; progress; 1,3:smt.
-    (** FIXME: Refine the invariant enough that the following becomes easier to prove? **)
-    have ->: (oget Game0.mi.[x]){2}.`2 = oget Concrete_F.mi{1}.[x{2}] by smt.
-    move: H4; rewrite in_dom.
-    case {-1}(Concrete_F.mi{1}.[x{2}]) (eq_refl Concrete_F.mi{1}.[x{2}])=> //= x' h.
-    rewrite/(oget (Some _))/=.
-    have ->: (oget Game0.m.[x']){2}.`2 = oget Concrete_F.m{1}.[x'] by smt.
-    rewrite getP; case (x0 = x')=> [<<-/=|/= _].
-      by rewrite /snd /=; smt. (* x0 \in dom mi{1} (by H1 and h) *)
-    exact/H.    
+    sp; if=> //=; 2:by auto.
+    auto; progress [-split].
+    by rewrite pre_permutation_set.
   qed.
 
   local lemma Game0_pr &m:
@@ -611,23 +591,222 @@ section.
     do !congr.
     byequiv=> //=.
     proc.
-    call (_:    (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-             /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-             /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-             /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)).
+    call (_:    ={m,mi}(Concrete_F,Game0)
+             /\ is_pre_permutation Concrete_F.m{1} Concrete_F.mi{1}).
       proc; if=> //=.
-        by call Game0_P_S_eq.
-        by call Game0_Pi_Si_eq.
-        proc. sp; if=> //=.
+      + by call Game0_P_S_eq.
+      + by call Game0_Pi_Si_eq.
+      + proc. sp; if=> //=.
         while (   ={sa,sc,p}
-               /\ (forall x, Concrete_F.m.[x]{1} = omap snd (Game0.m.[x]){2})
-               /\ (forall x, Concrete_F.mi.[x]{1} = omap snd (Game0.mi.[x]){2})
-               /\ (forall x, mem (rng Concrete_F.m){1} x => mem (dom Concrete_F.mi){1} x)
-               /\ (forall x, mem (rng Concrete_F.mi){1} x => mem (dom Concrete_F.m){1} x)).
+               /\ ={m,mi}(Concrete_F,Game0)
+               /\ is_pre_permutation Concrete_F.m{1} Concrete_F.mi{1}).
           inline Concrete_F.P.oracle. rcondt{1} 2; 1:by auto.
           wp; call Game0_P_S_eq.
           by auto.
         by auto.
+    by auto; smt.
+  qed.
+
+  (** Split the simulator map into distinct rate and capacity maps **)
+  pred map_split (m0 : (state,state) fmap) (a1 : (state,block) fmap) (c1 : (state,capacity) fmap) =
+       (forall x, mem (dom m0) x = mem (dom a1) x)
+    /\ (forall x, mem (dom m0) x = mem (dom c1) x)
+    /\ (forall x, mem (dom m0) x => m0.[x] = Some (oget a1.[x],oget c1.[x])).
+
+  lemma map_split_set m0 a1 c1 s a c:
+    map_split m0 a1 c1 =>
+    map_split m0.[s <- (a,c)] a1.[s <- a] c1.[s <- c]
+  by [].
+
+  local module Game1 = {
+    var mcol,micol          : (state,caller) fmap
+    var rate, ratei         : (state,block) fmap
+    var cap, capi           : (state,capacity) fmap
+    var pathscol            : (capacity,caller) fmap
+    var paths               : (capacity,block list * block) fmap
+    var bext, bred          : bool
+    var bcoll, bsuff, bmitm : bool
+
+    module S = {
+      (** Inner interface **)
+      proc f(o : caller, x : state): state = {
+        var o', ya, yc, pv, p, v;
+
+        o' <- odflt D pathscol.[x.`2];
+        bext <- bext \/ (o' <= o);
+
+        if (!mem (dom rate) x) {
+          (ya,yc) <$ dstate;
+          if (mem (dom paths) x.`2) {
+            o'            <- oget pathscol.[x.`2];
+            pv            <- oget paths.[x.`2];
+            (p,v)         <- pv;
+            bcoll         <- bcoll \/ (mem (dom paths) yc);
+            bsuff         <- bsuff \/ (mem (rng cap) yc);
+            pathscol.[yc] <- max o o';
+            paths.[yc]    <- (rcons p (v ^ x.`1),ya);
+          }
+          rate.[x]        <- ya;
+          ratei.[(ya,yc)] <- x.`1;
+          cap.[x]         <- yc;
+          capi.[(ya,yc)]  <- x.`2;
+          mcol.[x]        <- o;
+          micol.[(ya,yc)] <- o;
+        } else {
+          o'              <- oget mcol.[x];
+          mcol.[x]        <- max o o';
+          ya              <- oget rate.[x];
+          yc              <- oget cap.[x];
+          o'              <- oget micol.[(ya,yc)];
+          micol.[(ya,yc)] <- max o o';
+        }
+        return (oget rate.[x],oget cap.[x]);
+      }
+
+      proc fi(x : state): state = {
+        var ya, yc;
+
+        if (!mem (dom ratei) x) {
+          (ya,yc)        <$ dstate;
+          micol.[x]      <- D;
+          ratei.[x]      <- ya;
+          capi.[x]       <- yc;
+          mcol.[(ya,yc)] <- D;
+          rate.[(ya,yc)] <- x.`1;
+          cap.[(ya,yc)]  <- x.`2;
+          bmitm  <- bmitm \/ (mem (dom paths) yc);
+        } else {
+          bred           <- bred \/ oget micol.[x] = I;
+          micol.[x]      <- D;
+          ya             <- oget ratei.[x];
+          yc             <- oget capi.[x];
+          mcol.[(ya,yc)] <- D;
+        }
+        return (oget ratei.[x],oget capi.[x]);
+      }
+
+      (** Distinguisher interface **)
+      proc init() = { }
+
+      proc oracle(q : p_query): state = {
+        var r;
+
+        if (is_F q) {
+          r <@ f(D,get_query q);
+        } else {
+          r <@ fi(get_query q);
+        }
+        return r;
+      }
+
+    }
+
+    module C = {
+      proc init(): unit = { }
+
+      proc oracle(p : block list): block = {
+        var (sa,sc) <- (Block.zeros,Capacity.zeros);
+
+        if (size p >= 1 /\ p <> [Block.zeros]) {
+          while (p <> []) {
+            (sa,sc) <@ S.f(I,(sa ^ head witness p,sc));
+            p <- behead p;
+          }
+        }
+        return sa;
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      mcol     <- map0;
+      micol    <- map0;
+      rate     <- map0;
+      ratei    <- map0;
+      cap      <- map0;
+      capi     <- map0;
+      bext     <- false;
+      bred     <- false;
+      bcoll    <- false;
+      bsuff    <- false;
+      bmitm    <- false;
+      (* the empty path is initially known by the adversary to lead to capacity 0^c *)
+      pathscol <- map0.[Capacity.zeros <- D];
+      paths    <- map0.[Capacity.zeros <- ([<:block>],Block.zeros)];
+      b        <@ D(C,S).distinguish();
+      return b;
+    }    
+  }.
+
+  local equiv Game1_S_S_eq:
+    Game0.S.f ~ Game1.S.f:
+         ={arg}
+      /\ ={pathscol,paths}(Game0,Game1)
+      /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+      /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+      /\ is_pre_permutation (Game0.m){1} (Game0.mi){1}
+      ==>    ={res}
+          /\ ={pathscol,paths}(Game0,Game1)
+          /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+          /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+          /\ is_pre_permutation (Game0.m){1} (Game0.mi){1}.
+  proof.
+    proc. inline *.
+    sp; if; 1:by progress [-split]; move: H=> [->].
+      + auto; progress [-split].
+        move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
+        by rewrite !getP_eq !map_split_set ?pre_permutation_set.
+      + auto; progress [-split].
+        rewrite H H0 H1 /=.
+        by move: H=> [_ [_ ->]].
+  qed.
+
+  local equiv Game1_Si_Si_eq:
+    Game0.S.fi ~ Game1.S.fi:
+         ={arg}
+      /\ ={pathscol,paths}(Game0,Game1)
+      /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+      /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+      /\ is_pre_permutation (Game0.m){1} (Game0.mi){1}
+      ==>    ={res}
+          /\ ={pathscol,paths}(Game0,Game1)
+          /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+          /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+          /\ is_pre_permutation (Game0.m){1} (Game0.mi){1}.
+  proof.
+    proc. inline *.
+    sp; if; 1:by progress [-split]; move: H0=> [->].
+      + auto; progress [-split].
+        move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
+        by rewrite !getP_eq !map_split_set ?pre_permutation_set.
+      + auto; progress [-split].
+        rewrite H H0 H1 /=.
+        by move: H0=> [_ [_ ->]].
+  qed.
+
+  local lemma Game1_pr &m:
+    `|Pr[Game0.main() @ &m: res]
+      - Pr[Ideal.main() @ &m: res]|
+    = `|Pr[Game1.main() @ &m: res]
+        - Pr[Ideal.main() @ &m: res]|.
+  proof.
+    do !congr. byequiv=> //=; proc.
+    call (_:    ={pathscol,paths}(Game0,Game1)
+             /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+             /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+             /\ is_pre_permutation Game0.m{1} Game0.mi{1}).
+      proc; if=> //=.
+      + by call Game1_S_S_eq.
+      + by call Game1_Si_Si_eq.
+      + proc; sp; if=> //=.
+        while (   ={sa,sc,p}
+               /\ ={pathscol,paths}(Game0,Game1)
+               /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+               /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+               /\ is_pre_permutation Game0.m{1} Game0.mi{1}).
+          by wp; call Game1_S_S_eq.
+        done.
     by auto; smt.
   qed.
 end section.
