@@ -1,4 +1,4 @@
-require import Real NewFMap Fun.
+require import Fun Pair Real NewFMap.
 require (*..*) Indifferentiability LazyRO.
 
 clone import Indifferentiability as Ind1.
@@ -13,11 +13,11 @@ op padinv : Ind1.f_in -> Ind2.f_in.
 axiom cancel_pad    : cancel pad padinv.
 axiom cancel_padinv : cancel padinv pad.
 
-clone import LazyRO as RO1 
+clone import LazyRO as RO1
   with type from <- Ind1.f_in,
        type to   <- Ind1.f_out.
 
-clone import LazyRO as RO2 
+clone import LazyRO as RO2
   with type from <- Ind2.f_in,
        type to   <- Ind1.f_out,
        op d      <- RO1.d.
@@ -54,10 +54,8 @@ module DistPad(FD: Ind2.Distinguisher, F:Ind1.Functionality, P:Ind1.Primitive) =
       return r;
     }
   }
-    
-  module Dpad = FD(Fpad, P)
 
-  proc distinguish = Dpad.distinguish
+  proc distinguish = FD(Fpad,P).distinguish
 }.
 
 module SimPadinv(S:Ind1.Simulator, F2:Ind2.Functionality) = {
@@ -75,34 +73,33 @@ module SimPadinv(S:Ind1.Simulator, F2:Ind2.Functionality) = {
   proc init = S2.init
 
   proc oracle = S2.oracle
-  }.
+}.
 
 section Reduction.
-
   declare module P  : Ind1.Primitive. (* It is compatible with Ind2.Primitive *)  
   declare module C  : Ind1.Construction {P}.
   declare module S  : Ind1.Simulator{ RO1.H, RO2.H}.
 
   declare module D' : Ind2.Distinguisher{P,C, RO1.H, RO2.H, S}.
 
-  equiv ConstrDistPad: 
+  local equiv ConstrDistPad: 
       Ind2.Indif(ConstrPad(C,P), P, D').main ~ 
       Ind1.Indif(C(P), P, DistPad(D')).main : ={glob P, glob C, glob D'} ==> 
                                               ={glob P, glob C, glob D', res}.
-  proof. by proc;sim. qed.
+  proof. by sim. qed.
 
-  lemma PrConstrDistPad &m: 
+  local lemma PrConstrDistPad &m: 
       Pr[ Ind2.Indif(ConstrPad(C,P), P, D').main() @ &m : res] =
       Pr[ Ind1.Indif(C(P), P, DistPad(D')).main() @ &m : res].
   proof. by byequiv ConstrDistPad. qed.
-  
-  equiv DistH2H1:
+
+  local equiv DistH2H1:
       Ind2.Indif(HF2,SimPadinv(S,HF2),D').main ~
-      Ind1.Indif(HF1,S(HF1), DistPad(D')).main : 
-        ={glob D', glob S} ==> 
+      Ind1.Indif(HF1,S(HF1), DistPad(D')).main :
+        ={glob D', glob S} ==>
         ={glob D',glob S, res} /\ forall x, RO2.H.m{1}.[padinv x] = RO1.H.m{2}.[x].
   proof.
-    proc.  
+    proc.
     call (_: ={glob S} /\ forall x, RO2.H.m{1}.[padinv x] = RO1.H.m{2}.[x]).
     + proc *;inline *.
       call (_: forall x, RO2.H.m{1}.[padinv x] = RO1.H.m{2}.[x]);auto.
@@ -118,7 +115,7 @@ section Reduction.
     auto;progress;by rewrite !map0P.
   qed.
 
-  lemma PrDistH2H1 &m:  
+  local lemma PrDistH2H1 &m:  
       Pr[Ind2.Indif(HF2,SimPadinv(S,HF2),D').main() @ &m : res] =
       Pr[Ind1.Indif(HF1,S(HF1), DistPad(D')).main() @ &m : res].
   proof. by byequiv DistH2H1. qed.
@@ -129,6 +126,4 @@ section Reduction.
       `| Pr[ Ind1.Indif(C(P), P, DistPad(D')).main() @ &m : res] - 
          Pr[Ind1.Indif(HF1,S(HF1), DistPad(D')).main() @ &m : res] |.
   proof. by rewrite (PrConstrDistPad &m) (PrDistH2H1 &m). qed.
-
 end section Reduction.
-
