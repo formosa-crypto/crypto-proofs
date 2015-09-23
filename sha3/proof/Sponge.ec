@@ -236,7 +236,7 @@ module Truncator(F : BlockSponge): Self.Functionality = {
 
     if (size p >= 1 /\ nth witness p ( size p - 1) <> Self.Block.zeros) {
       bs <@ F.oracle(p,n /% r);
-      z <- z ++ flatten (map to_bits bs);
+      z <- flatten (map to_bits bs);
     }
 
     return take n z;
