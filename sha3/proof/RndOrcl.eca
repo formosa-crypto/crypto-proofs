@@ -10,12 +10,8 @@ module type RO = {
   proc oracle(x : from): to
 }.
 
-module type RO_ = {
-  proc oracle(x : from): to
-}.
-
-module type Distinguisher(G : RO_) = {
-  proc distinguish(): bool
+module type Distinguisher(G : RO) = {
+  proc distinguish(): bool {G.oracle}
 }.
 
 module IND(G:RO, D:Distinguisher) = {
@@ -331,7 +327,7 @@ abstract theory RestrIdeal.
       op sample <- sample, 
       op RO_dom <- univ.
 
-    local module Restr' (O:RO_) = {
+    local module Restr' (O:RO) = {
       proc init() = { }
       proc oracle(x:from) = {  
         var r <- dfl;
@@ -340,7 +336,7 @@ abstract theory RestrIdeal.
       }
     }.  
         
-    local module RD (O:RO_) = D(Restr'(O)).  
+    local module RD (O:RO) = D(Restr'(O)).  
 
     local equiv ERO_main: 
       IND(GI.ERO, RD).main ~ IND(ERO, D).main : ={glob D} ==> ={res, glob D} /\ GI.RO.m{1} = RO.m{2}.

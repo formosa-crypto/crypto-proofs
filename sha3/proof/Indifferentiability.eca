@@ -21,12 +21,12 @@ module type Functionality = {
       is playing with constructed functionality and ideal primitive or
       with ideal functionality and simulated primitive). **)
 module type Construction (P : Primitive) = {
-  proc init()          : unit  {  P.init  }
+  proc init()          : unit  {  }
   proc oracle(x : f_in): f_out { P.oracle }
 }.
 
 module type Simulator (F : Functionality) = {
-  proc init()          : unit  {  F.init  }
+  proc init()          : unit  {  }
   proc oracle(x : p_in): p_out { F.oracle }
 }.
 
