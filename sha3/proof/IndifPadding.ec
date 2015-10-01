@@ -22,16 +22,6 @@ clone import LazyRO as RO2
        type to   <- Ind1.f_out,
        op d      <- RO1.d.
 
-module HF1 = {
-  proc init = RO1.H.init
-  proc oracle = RO1.H.f
-}.
-
-module HF2 = {
-  proc init = RO2.H.init
-  proc oracle = RO2.H.f
-}.
-
 module ConstrPad (FC:Ind1.Construction, P:Ind1.Primitive) = {
   module C = FC(P)
 
@@ -83,19 +73,19 @@ section Reduction.
   declare module D' : Ind2.Distinguisher{P,C, RO1.H, RO2.H, S}.
 
   local equiv ConstrDistPad: 
-      Ind2.Indif(ConstrPad(C,P), P, D').main ~ 
-      Ind1.Indif(C(P), P, DistPad(D')).main : ={glob P, glob C, glob D'} ==> 
+      Ind2.Real(P, ConstrPad(C), D').main ~ 
+      Ind1.Real(P, C, DistPad(D')).main : ={glob P, glob C, glob D'} ==> 
                                               ={glob P, glob C, glob D', res}.
   proof. by sim. qed.
 
   local lemma PrConstrDistPad &m: 
-      Pr[ Ind2.Indif(ConstrPad(C,P), P, D').main() @ &m : res] =
-      Pr[ Ind1.Indif(C(P), P, DistPad(D')).main() @ &m : res].
+      Pr[ Ind2.Real(P,ConstrPad(C), D').main() @ &m : res] =
+      Pr[ Ind1.Real(P,C,DistPad(D')).main() @ &m : res].
   proof. by byequiv ConstrDistPad. qed.
 
   local equiv DistH2H1:
-      Ind2.Indif(HF2,SimPadinv(S,HF2),D').main ~
-      Ind1.Indif(HF1,S(HF1), DistPad(D')).main :
+      Ind2.Ideal(RO2.H, SimPadinv(S), D').main ~
+      Ind1.Ideal(RO1.H, S, DistPad(D')).main :
         ={glob D', glob S} ==>
         ={glob D',glob S, res} /\ forall x, RO2.H.m{1}.[padinv x] = RO1.H.m{2}.[x].
   proof.
@@ -116,14 +106,15 @@ section Reduction.
   qed.
 
   local lemma PrDistH2H1 &m:  
-      Pr[Ind2.Indif(HF2,SimPadinv(S,HF2),D').main() @ &m : res] =
-      Pr[Ind1.Indif(HF1,S(HF1), DistPad(D')).main() @ &m : res].
+      Pr[Ind2.Ideal(RO2.H,SimPadinv(S),D').main() @ &m : res] =
+      Pr[Ind1.Ideal(RO1.H,S, DistPad(D')).main() @ &m : res].
   proof. by byequiv DistH2H1. qed.
 
   lemma Conclusion &m:
-      `| Pr[ Ind2.Indif(ConstrPad(C,P), P, D').main() @ &m : res] -
-         Pr[Ind2.Indif(HF2,SimPadinv(S,HF2),D').main() @ &m : res] | =
-      `| Pr[ Ind1.Indif(C(P), P, DistPad(D')).main() @ &m : res] - 
-         Pr[Ind1.Indif(HF1,S(HF1), DistPad(D')).main() @ &m : res] |.
+      `| Pr[Ind2.Real (P  , ConstrPad(C), D').main() @ &m : res] -
+         Pr[Ind2.Ideal(RO2.H, SimPadinv(S), D').main() @ &m : res] | =
+      `| Pr[Ind1.Real(P   , C, DistPad(D')).main() @ &m : res] - 
+         Pr[Ind1.Ideal(RO1.H, S, DistPad(D')).main() @ &m : res] |.
   proof. by rewrite (PrConstrDistPad &m) (PrDistH2H1 &m). qed.
+
 end section Reduction.

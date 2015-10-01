@@ -45,9 +45,11 @@ module Indif (F : Functionality, P : Primitive, D : Distinguisher) = {
   }
 }.
 
+module Real(P:Primitive, C:Construction) = Indif(C(P),P).
+module Ideal(F:Functionality, S:Simulator) = Indif(F,S(F)).
 (* (C <: Construction) applied to (P <: Primitive) is indifferentiable
    from (F <: Functionality) if there exists (S <: Simulator) such
    that, for all (D <: Distinguisher),
-      | Pr[Indif(C(P),P,D): res] - Pr[Indif(F,S(F),D): res] | is small.
+      | Pr[Real(P,C,D): res] - Pr[Ideal(F,S,D): res] | is small.
    We avoid the existential by providing a concrete construction for S
    and the `small` by providing a concrete bound. *)

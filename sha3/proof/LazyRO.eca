@@ -13,7 +13,7 @@ module H : RO, RO_ = {
 
   proc init() = { m = map0; }
 
-  proc f(x) = {
+  proc oracle(x) = {
     if (!mem (dom m) x) m.[x] = $d;
     return oget m.[x];
   }
