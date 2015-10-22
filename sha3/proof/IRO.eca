@@ -2,19 +2,22 @@
    all of whose bits are sampled uniformly and independently. We
    obviously make it lazy. *)
 
-require import Option Int Bool NewList NewFMap NewFSet.
+require import Option Int Bool List FSet NewFMap.
 
-type from.
+type to, from.
+
+op valid : from -> bool.
+op dto   : to distr.
 
 module type IRO = {
   proc init() : unit
 
   (* f x, returning the first n bits of the result *)
-  proc f(x : from, n : int) : bool list
+  proc f(x : from, n : int) : to list
 }.
 
 module IRO : IRO = {
-  var mp : (from, bool list) fmap
+  var mp : (from, to list) fmap
 
   proc init() = { mp = map0; }
 
@@ -23,7 +26,7 @@ module IRO : IRO = {
 
     bs <- [];
     while (n > 0) {
-      b  <$ Dbool.dbool;
+      b  <$ dto;
       bs <- b :: bs;
       n  <- n - 1;
     }
@@ -31,11 +34,16 @@ module IRO : IRO = {
   }
 
   proc f(x, n) = {
-    var ys, zs;
+    var ys, zs, aout;
 
-    ys     <- odflt [] mp.[x];
-    zs     <@ choose (max 0 (n - size ys));
-    mp.[x] <- ys ++ zs;
-    return take n (oget mp.[x]);
+    aout <- [];
+    if (valid x) {
+      ys     <- odflt [] mp.[x];
+      zs     <@ choose (max 0 (n - size ys));
+      mp.[x] <- ys ++ zs;
+      aout   <- take n (oget mp.[x]);
+    }
+
+    return aout;
   }
 }.

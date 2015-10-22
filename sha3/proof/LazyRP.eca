@@ -1,4 +1,4 @@
-require import Option NewFSet NewFMap.
+require import Option FSet NewFMap.
 require import Dexcepted.
 require (*..*) RP.
 
