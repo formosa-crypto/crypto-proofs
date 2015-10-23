@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Option Pair Int Real List FSet NewFMap.
-require (*--*) IRO LazyRP.
+require (*--*) LazyRP.
 (*---*) import Dprod.
 
 (* -------------------------------------------------------------------- *)

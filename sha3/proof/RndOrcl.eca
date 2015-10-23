@@ -1,4 +1,4 @@
-require import NewFMap.
+require import Option FSet NewFMap.
 (* TODO move this in NewFMap *)
 lemma dom_set (m:('a,'b) fmap) a b : dom m.[a<-b] = dom m `|` fset1 a.
 proof. by apply fsetP=> x;smt. qed.
@@ -7,11 +7,11 @@ type from, to.
 
 module type RO = {
   proc init()     : unit
-  proc oracle(x : from): to
+  proc f(x : from): to
 }.
 
 module type Distinguisher(G : RO) = {
-  proc distinguish(): bool {G.oracle}
+  proc distinguish(): bool {G.f}
 }.
 
 module IND(G:RO, D:Distinguisher) = {
@@ -35,7 +35,7 @@ abstract theory Ideal.
       m <- map0;
     }
   
-    proc oracle(x : from) : to = {
+    proc f(x : from) : to = {
       var rd;
       rd <$ sample x;
       if (! mem (dom m) x) m.[x] <- rd;
@@ -47,7 +47,7 @@ abstract theory Ideal.
 
     axiom sample_ll : forall x, Distr.weight (sample x) = 1%r.
 
-    lemma oracle_ll : phoare[RO.oracle : true ==> true] = 1%r. 
+    lemma f_ll : phoare[RO.f : true ==> true] = 1%r. 
     proof. proc;auto;progress;apply sample_ll. qed.
   
   end section LL.
@@ -67,7 +67,7 @@ abstract theory GenIdeal.
       var work;
       work <- RO_dom;
       while (work <> fset0) {
-        RO.oracle(pick work);
+        RO.f(pick work);
         work = work `\` fset1 (pick work);
       }
     }
@@ -77,7 +77,7 @@ abstract theory GenIdeal.
       sample();
     }
 
-    proc oracle = RO.oracle
+    proc f = RO.f
   }.
 
   module IND_S(D:Distinguisher) = {
@@ -93,7 +93,7 @@ abstract theory GenIdeal.
   section EAGER.
 
     local lemma eager_query:
-       eager [ERO.sample(); , RO.oracle ~ ERO.oracle, ERO.sample(); :
+       eager [ERO.sample(); , RO.f ~ ERO.f, ERO.sample(); :
                  ={x,RO.m} ==> ={res,RO.m} ].
     proof.
       eager proc.
@@ -112,7 +112,7 @@ abstract theory GenIdeal.
           cut -> : mem (dom RO.m{2}) (pick work{2}) = mem (dom RO.m{1}) (pick work{2}) by rewrite !in_dom;smt.
           smt. 
         auto;progress [-split];rewrite !getP_eq;smt. 
-      inline RO.oracle.
+      inline RO.f.
       transitivity{1} { rd <$ sample x;
                         while (work <> fset0) {
                           x0  <- pick work;
@@ -170,7 +170,7 @@ abstract theory GenIdeal.
       + by progress;exists (glob D){2}.
       + proc;inline{2} ERO.sample.
         while{2} true (card work{2}). 
-        + move=> &m1 z;wp;call (oracle_ll sample_ll);auto;smt.
+        + move=> &m1 z;wp;call (f_ll sample_ll);auto;smt.
         conseq (_: _ ==> ={b,glob D}) => //;[smt | by sim].
       apply (Eager_S D).
     qed.
@@ -192,7 +192,7 @@ abstract theory FiniteIdeal.
        var work;
        work <- univ;
        while (work <> fset0) {
-         RO.oracle(pick work);
+         RO.f(pick work);
          work = work `\` fset1 (pick work);
        }
      }
@@ -202,7 +202,7 @@ abstract theory FiniteIdeal.
        sample();
      }
 
-     proc oracle(x:from):to = { return oget RO.m.[x]; }
+     proc f(x:from):to = { return oget RO.m.[x]; }
   }.
 
   module IND_S(D:Distinguisher) = {
@@ -282,9 +282,9 @@ abstract theory RestrIdeal.
 
   module Restr (O:RO) = {
     proc init = RO.init
-    proc oracle (x:from) : to = {
+    proc f (x:from) : to = {
       var r <- dfl;
-      if (test x) r <@ RO.oracle(x);
+      if (test x) r <@ RO.f(x);
       return r;
     }
   }.
@@ -294,7 +294,7 @@ abstract theory RestrIdeal.
        var work;
        work <- univ;
        while (work <> fset0) {
-         RO.oracle(pick work);
+         RO.f(pick work);
          work = work `\` fset1 (pick work);
        }
      }
@@ -304,7 +304,7 @@ abstract theory RestrIdeal.
        sample();
      }
 
-     proc oracle(x:from):to = { 
+     proc f(x:from):to = { 
        return (if test x then oget RO.m.[x] else dfl);
      }
   }.
@@ -329,9 +329,9 @@ abstract theory RestrIdeal.
 
     local module Restr' (O:RO) = {
       proc init() = { }
-      proc oracle(x:from) = {  
+      proc f(x:from) = {  
         var r <- dfl;
-        if (test x) r <@ O.oracle(x);
+        if (test x) r <@ O.f(x);
         return r;
       }
     }.  
