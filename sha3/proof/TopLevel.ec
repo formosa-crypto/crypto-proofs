@@ -4,16 +4,15 @@ require (*--*) IRO LazyRP.
 (*---*) import Dprod.
 
 (* -------------------------------------------------------------------- *)
+(* Replay Common.ec *)
 op r : { int | 0 < r } as gt0_r.
 op c : { int | 0 < c } as gt0_c.
 
-type block.    (* = {0,1}^r *)
-type capacity. (* = {0,1}^c *)
+type block.
+type capacity.
 
 op cdist : capacity distr.
 op bdist : block distr.
-
-(* isomorphic to the {0,1}^? uniform distributions *)
 
 op b0 : block.
 op c0 : capacity.
@@ -21,6 +20,8 @@ op c0 : capacity.
 op b2bits : block -> bool list.
 
 op (^) : block -> block -> block.
+
+(* -------------------------------------------------------------------- *)
 op pad : bool list -> block list.
 
 (* -------------------------------------------------------------------- *)
