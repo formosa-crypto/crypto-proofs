@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Option Pair Int Real List FSet NewFMap.
-require (*--*) LazyRP.
+require (*--*) LazyRP RndOrcl.
 (*---*) import Dprod.
 
 (* -------------------------------------------------------------------- *)
@@ -18,9 +18,7 @@ op bdist : block distr.
 op b0 : block.
 op c0 : capacity.
 
-
 op (^) : block -> block -> block.
-
 
 (* -------------------------------------------------------------------- *)
 clone import LazyRP as Perm with
@@ -29,6 +27,7 @@ clone import LazyRP as Perm with
 
   rename [module] "P" as "Perm".
 
+
 (* -------------------------------------------------------------------- *)
 module type WeirdIRO = {
   proc init(): unit
@@ -36,12 +35,20 @@ module type WeirdIRO = {
   proc f(_: block list * int): block list
 }.
 
+module type WeirdIRO_ = {
+  proc f(_: block list * int): block list
+}.
+
+op valid_query : block list -> int -> bool.
+op valid_queries : (block list) fset.
+axiom valid_queryP : forall m n, valid_query m n => mem valid_queries (m ++ n).
+
 module IdealFunctionalityThatDoesNotAbsorb = {
-  var h : (block list * int,block) fmap
+  var h : (block list,block) fmap
 
   proc init() = { h = map0; }
 
-  proc core(m : block list * int) = {
+  proc core(m : block list) = {
     if (!mem (dom h) m) {
       h.[m] <$ bdist;
     }
@@ -49,20 +56,21 @@ module IdealFunctionalityThatDoesNotAbsorb = {
   }
 
   proc f(m : block list, n : int) = {
-    var i <- 0;
+    var i <- 1;
     var j <- 1;
     var z <- [];
     var b <- b0;
 
-    if (m <> []) {
-      while (i <= size m) {
+    if (valid_query m n) {
+      while (j <= size m) {
         z <- rcons z b;
-        b <@ core(take i m,0);
-        i <- i + 1;
+        b <@ core(take j m);
+        j <- j + 1;
       }
-      while (j < n) {
+      while (i < n) {
         z <- rcons z b;
-        b <@ core(m,j);
+        m <- rcons m b0;
+        b <@ core(m);
         j <- j + 1;
       }
     }
@@ -71,27 +79,17 @@ module IdealFunctionalityThatDoesNotAbsorb = {
 }.
 
 module IdealFunctionalityThatAbsorbs = {
-  var h : (block list * int,block) fmap
-
-  proc init() = { h = map0; }
-
-  proc core (m : block list * int) = {
-    if (!mem (dom h) m) {
-      h.[m] <$ bdist;
-    }
-    return oget h.[m];
-  }
-
   proc f(m : block list, n : int) = {
     var j <- 1;
     var z <- [];
     var b;
 
-    if (m <> []) {
-      b <@ core(m,0);
+    if (valid_query m n) {
+      b <@ IdealFunctionalityThatDoesNotAbsorb.core(m);
       while (j < n) {
         z <- rcons z b;
-        b <@ core(m,j);
+        m <- rcons m b0;
+        b <@ IdealFunctionalityThatDoesNotAbsorb.core(m);
         j <- j + 1;
       }
     }
@@ -114,8 +112,8 @@ module type SIMULATOR(F : WeirdIRO) = {
   proc fi(_ : block * capacity) : block * capacity
 }.
 
-module type DISTINGUISHER(F : WeirdIRO, P : RP) = {
-  proc distinguish() : bool
+module type DISTINGUISHER(F : WeirdIRO_, P : RP_) = {
+  proc distinguish() : bool 
 }.
 
 (* -------------------------------------------------------------------- *)
@@ -141,7 +139,7 @@ module SpongeThatDoesNotAbsorb (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
     var i       <- 0;
     var l       <- size p;
 
-    if (p <> [] /\ nth witness p (size p - 1) <> b0) {
+    if (valid_query p n) {
       (* Absorption *)
       while (p <> []) {
         z       <- rcons z sa;
@@ -167,7 +165,7 @@ module SpongeThatAbsorbs (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
     var (sa,sc) <- (b0, c0);
     var i       <- 0;
 
-    if (p <> [] /\ nth witness p (size p - 1) <> b0) {
+    if (valid_query p n) {
       (* Absorption *)
       while (p <> []) {
         (sa,sc) <@ P.f(sa ^ head b0 p, sc);
@@ -185,6 +183,35 @@ module SpongeThatAbsorbs (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
 }.
 
 (* -------------------------------------------------------------------- *)
+section PROOF.
+  declare module S:SIMULATOR     { IdealFunctionalityThatDoesNotAbsorb }.
+  declare module D:DISTINGUISHER { Perm, IdealFunctionalityThatDoesNotAbsorb, S }.
+
+  (* From DoNot to Absorb *)
+
+  module MkF(F:WeirdIRO_) = {
+    proc f(m:block list, n:int) = {
+      var r = [];
+      if (valid_query m n) {
+        r <@ F.f(m,n);
+        r <- drop (size m) r;
+      }
+      return r;
+    }
+  }.
+    
+  module MkD (D:DISTINGUISHER, F:WeirdIRO, P:RP) = D(MkF(F),P).
+
+  lemma conclusion &m:
+    `| Pr[Experiment(SpongeThatDoesNotAbsorb(Perm), Perm, MkD(D)).main() @ &m : res]
+        - Pr[Experiment(IdealFunctionalityThatDoesNotAbsorb, 
+             S(IdealFunctionalityThatDoesNotAbsorb), MkD(D)).main() @ &m : res] | = 
+    `|Pr[Experiment(SpongeThatAbsorb(Perm),Perm,D).main() @ &m : res] -
+      -Pr[Experiment(IdealFunctionalityThatAbsorb, 
+          S(IdealFunctionalityThatAbsorb), D)
+
+
+
 op eps : real.
 
 axiom core:
