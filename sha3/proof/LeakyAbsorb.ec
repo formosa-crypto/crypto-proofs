@@ -18,10 +18,9 @@ op bdist : block distr.
 op b0 : block.
 op c0 : capacity.
 
-op b2bits : block -> bool list.
 
 op (^) : block -> block -> block.
-op pad : bool list -> block list.
+
 
 (* -------------------------------------------------------------------- *)
 clone import LazyRP as Perm with
