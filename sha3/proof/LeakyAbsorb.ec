@@ -30,12 +30,6 @@ clone import LazyRP as Perm with
 
   rename [module] "P" as "Perm".
 
-clone import IRO as BIRO with
-  type from                   <- block list,
-  type to                     <- block,
-  op   valid (x : block list) <- true,
-  op   dto                    <- bdist.
-
 (* -------------------------------------------------------------------- *)
 module type WeirdIRO = {
   proc init(): unit
@@ -43,12 +37,12 @@ module type WeirdIRO = {
   proc f(_: block list * int): block list
 }.
 
-module IdealFunctionality = {
-  var h : (block list,block) fmap
+module IdealFunctionalityThatDoesNotAbsorb = {
+  var h : (block list * int,block) fmap
 
   proc init() = { h = map0; }
 
-  proc core(m : block list) = {
+  proc core(m : block list * int) = {
     if (!mem (dom h) m) {
       h.[m] <$ bdist;
     }
@@ -56,14 +50,51 @@ module IdealFunctionality = {
   }
 
   proc f(m : block list, n : int) = {
-    var i <- 1;
-    var z <- [b0];
+    var i <- 0;
+    var j <- 1;
+    var z <- [];
+    var b <- b0;
+
+    if (m <> []) {
+      while (i < size m) {
+        z <- rcons z b;
+        b <@ core(take i m,0);
+        i <- i + 1;
+      }
+      while (j < n) {
+        z <- rcons z b;
+        b <@ core(m,j);
+        j <- j + 1;
+      }
+    }
+    return z;
+  }
+}.
+
+module IdealFunctionalityThatAbsorbs = {
+  var h : (block list * int,block) fmap
+
+  proc init() = { h = map0; }
+
+  proc core (m : block list * int) = {
+    if (!mem (dom h) m) {
+      h.[m] <$ bdist;
+    }
+    return oget h.[m];
+  }
+
+  proc f(m : block list, n : int) = {
+    var j <- 1;
+    var z <- [];
     var b;
 
-    m <- m ++ mkseq (fun k => b0) n;
-    while (i < size m) {
-      b <@ core(take i m);
-      z <- rcons z b;
+    if (m <> []) {
+      b <@ core(m,0);
+      while (j < n) {
+        z <- rcons z b;
+        b <@ core(m,j);
+        j <- j + 1;
+      }
     }
     return z;
   }
@@ -111,23 +142,24 @@ module SpongeThatDoesNotAbsorb (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
     var i       <- 0;
     var l       <- size p;
 
-    (* Absorption *)
-    while (p <> []) {
-      z       <- rcons z sa;
-      (sa,sc) <@ P.f(sa ^ head b0 p, sc);
-      p       <- behead p;
-    }
-    (* Squeezing *)
-    while (i < n/%r) {
-      z       <- rcons z sa;
-      (sa,sc) <@ P.f(sa,sc);
+    if (p <> [] /\ nth witness p (size p - 1) <> b0) {
+      (* Absorption *)
+      while (p <> []) {
+        z       <- rcons z sa;
+        (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+        p       <- behead p;
+      }
+      (* Squeezing *)
+      while (i < n) {
+        z       <- rcons z sa;
+        (sa,sc) <@ P.f(sa,sc);
+      }
     }
 
-    return drop l z;
+    return z;
   }
 }.
 
-(* -------------------------------------------------------------------- *)
 module SpongeThatAbsorbs (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
   proc init = P.init
 
@@ -136,15 +168,17 @@ module SpongeThatAbsorbs (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
     var (sa,sc) <- (b0, c0);
     var i       <- 0;
 
-    (* Absorption *)
-    while (p <> []) {
-      (sa,sc) <@ P.f(sa ^ head b0 p, sc);
-      p       <- behead p;
-    }
-    (* Squeezing *)
-    while (i < n/%r) {
-      z       <- rcons z sa;
-      (sa,sc) <@ P.f(sa,sc);
+    if (p <> [] /\ nth witness p (size p - 1) <> b0) {
+      (* Absorption *)
+      while (p <> []) {
+        (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+        p       <- behead p;
+      }
+      (* Squeezing *)
+      while (i < n) {
+        z       <- rcons z sa;
+        (sa,sc) <@ P.f(sa,sc);
+      }
     }
 
     return z;
@@ -158,15 +192,14 @@ axiom core:
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
       `|  Pr[Experiment(SpongeThatDoesNotAbsorb(Perm), Perm, D).main() @ &m : res]
-        - Pr[Experiment(IdealFunctionality, S(IdealFunctionality), D).main() @ &m : res]|
+        - Pr[Experiment(IdealFunctionalityThatDoesNotAbsorb, S(IdealFunctionalityThatDoesNotAbsorb), D).main() @ &m : res]|
        < eps.
-
 
 lemma top:
   exists eps',
     exists (S <: SIMULATOR),
       forall (D <: DISTINGUISHER) &m,
         `|  Pr[Experiment(SpongeThatAbsorbs(Perm), Perm, D).main() @ &m : res]
-          - Pr[Experiment(IRO, S(IRO), D).main() @ &m : res]|
+          - Pr[Experiment(IdealFunctionalityThatAbsorbs, S(IdealFunctionalityThatAbsorbs), D).main() @ &m : res]|
          < eps'.
 proof. admit. (** FILL ME IN **) qed.
