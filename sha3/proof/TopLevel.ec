@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Pair Int Real List.
-require (*--*) IRO LazyRP.
+require (*--*) IRO LazyRP Indifferentiability.
 (*---*) import Dprod.
 
 (* -------------------------------------------------------------------- *)
@@ -37,56 +37,36 @@ clone import LazyRP as Perm with
   rename [module] "P" as "Perm".
   
 (* -------------------------------------------------------------------- *)
-module type CONSTRUCTION(P : RP) = {
-  proc init() : unit
+clone include Indifferentiability.Core with
+  type Types.p     <- block * capacity,
+  type Types.f_in  <- bool list * int,
+  type Types.f_out <- bool list
 
-  proc f(bp : bool list, n : int) : bool list
-}.
-
-module type SIMULATOR(F : BIRO.IRO) = {
-  proc init() : unit
-
-  proc f(_ : block * capacity) : block * capacity
-
-  proc fi(_ : block * capacity) : block * capacity
-}.
-
-module type DISTINGUISHER(F : BIRO.IRO, P : RP) = {
-  proc distinguish() : bool
-}.
+  rename
+    [module] "Indif" as "Experiment"
+    [module] "al"  as "alIndif".
+import Types.
 
 (* -------------------------------------------------------------------- *)
-module Experiment(F : BIRO.IRO, P : RP, D : DISTINGUISHER) = {
-  proc main() : bool = {
-    var b;
-    
-    F.init();
-    P.init();
-    b <@ D(F, P).distinguish();
-
-    return b;
-  }
-}.
-
-(* -------------------------------------------------------------------- *)
+(** Spurious uninitialized variable warning on p *)
 module Sponge (P : RP) : BIRO.IRO, CONSTRUCTION(P) = {
   proc init = P.init
 
   proc f(bp : bool list, n : int): bool list = {
-    var z <- [];
-    var s <- (b0, c0);
-    var i <- 0;
-    var p <- pad bp;
+    var z       <- [];
+    var (sa,sc) <- (b0, c0);
+    var i       <- 0;
+    var p       <- pad bp;
 
     (* Absorption *)
     while (p <> []) {
-      s <@ P.f(s.`1 ^ head b0 p, s.`2);
-      p <- behead p;
+      (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+      p       <- behead p;
     }
     (* Squeezing *)
-    while (i < n/%r) {
-      z <- z ++ (b2bits s.`1);
-      s <@ P.f(s);
+    while (i < (n + r - 1) /% r) {
+      z       <- z ++ (b2bits sa);
+      (sa,sc) <@ P.f(sa,sc);
     }
 
     return take n z;

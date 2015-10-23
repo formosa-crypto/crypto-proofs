@@ -3,16 +3,21 @@ abstract theory Types.
 (** A primitive: the building block we assume ideal **)
 type p.
 
-module type Primitive = {
+(** A functionality: the target construction **)
+type f_in, f_out.
+end Types.
+
+(* -------------------------------------------------------------------- *)
+abstract theory Core.
+clone import Types.
+
+module type PRIMITIVE = {
   proc init(): unit
   proc f(x : p): p
   proc fi(x : p): p
 }.
 
-(** A functionality: the target construction **)
-type f_in, f_out.
-
-module type Functionality = {
+module type FUNCTIONALITY = {
   proc init(): unit
   proc f(x : f_in): f_out
 }.
@@ -23,27 +28,22 @@ module type Functionality = {
       functionality and returns a boolean (its guess as to whether it
       is playing with constructed functionality and ideal primitive or
       with ideal functionality and simulated primitive). **)
-module type Construction (P : Primitive) = {
-  proc init() : unit {  }
+module type CONSTRUCTION (P : PRIMITIVE) = {
+  proc init() : unit
   proc f(x : f_in): f_out { P.f }
 }.
 
-module type Simulator (F : Functionality) = {
-  proc init() : unit {  }
+module type SIMULATOR (F : FUNCTIONALITY) = {
+  proc init() : unit
   proc f(x : p) : p { F.f }
   proc fi(x : p) : p { F.f }
 }.
 
-module type Distinguisher (F : Functionality, P : Primitive) = {
+module type DISTINGUISHER (F : FUNCTIONALITY, P : PRIMITIVE) = {
   proc distinguish(): bool { P.f P.fi F.f }
 }.
-end Types.
 
-(* -------------------------------------------------------------------- *)
-abstract theory Core.
-clone import Types.
-
-module Indif (F : Functionality, P : Primitive, D : Distinguisher) = {
+module Indif (F : FUNCTIONALITY, P : PRIMITIVE, D : DISTINGUISHER) = {
   proc main(): bool = {
     var b;
 
@@ -54,11 +54,12 @@ module Indif (F : Functionality, P : Primitive, D : Distinguisher) = {
   }
 }.
 
-module Real(P:Primitive, C:Construction) = Indif(C(P),P).
-module Ideal(F:Functionality, S:Simulator) = Indif(F,S(F)).
-(* (C <: Construction) applied to (P <: Primitive) is indifferentiable
-   from (F <: Functionality) if there exists (S <: Simulator) such
-   that, for all (D <: Distinguisher),
+module Real(P : PRIMITIVE, C : CONSTRUCTION) = Indif(C(P),P).
+module Ideal(F : FUNCTIONALITY, S : SIMULATOR) = Indif(F,S(F)).
+
+(* (C <: CONSTRUCTION) applied to (P <: PRIMITIVE) is indifferentiable
+   from (F <: FUNCTIONALITY) if there exists (S <: SIMULATOR) such
+   that, for all (D <: DISTINGUISHER),
       | Pr[Real(P,C,D): res] - Pr[Ideal(F,S,D): res] | is small.
    We avoid the existential by providing a concrete construction for S
    and the `small` by providing a concrete bound. *)
