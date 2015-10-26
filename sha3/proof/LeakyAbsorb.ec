@@ -41,7 +41,7 @@ module type WeirdIRO_ = {
 
 op valid_query : block list -> int -> bool.
 op valid_queries : (block list) fset.
-axiom valid_queryP : forall m n, valid_query m n => mem valid_queries (m ++ n).
+axiom valid_queryP : forall m n, valid_query m n => mem valid_queries (m ++ map (fun x => b0) (iota_ 0 n)).
 
 module IdealFunctionalityThatDoesNotAbsorb = {
   var h : (block list,block) fmap
@@ -79,6 +79,8 @@ module IdealFunctionalityThatDoesNotAbsorb = {
 }.
 
 module IdealFunctionalityThatAbsorbs = {
+  proc init = IdealFunctionalityThatDoesNotAbsorb.init
+
   proc f(m : block list, n : int) = {
     var j <- 1;
     var z <- [];
@@ -131,7 +133,7 @@ module Experiment(F : WeirdIRO, P : RP, D : DISTINGUISHER) = {
 
 (* -------------------------------------------------------------------- *)
 module SpongeThatDoesNotAbsorb (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
-  proc init = P.init
+  proc init () = { }
 
   proc f(p : block list, n : int): block list = {
     var z       <- [];
@@ -158,7 +160,7 @@ module SpongeThatDoesNotAbsorb (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
 }.
 
 module SpongeThatAbsorbs (P : RP) : WeirdIRO, CONSTRUCTION(P) = {
-  proc init = P.init
+  proc init () = {} 
 
   proc f(p : block list, n : int): block list = {
     var z       <- [];
@@ -199,16 +201,58 @@ section PROOF.
       return r;
     }
   }.
-    
-  module MkD (D:DISTINGUISHER, F:WeirdIRO, P:RP) = D(MkF(F),P).
+
+  (* From Absord to do Not *)
+  module MkD (D:DISTINGUISHER, F:WeirdIRO_, P:RP_) = D(MkF(F),P).
+
+  module MkFdoNot (F:WeirdIRO) = {
+    proc init = F.init
+    proc f(m:block list, n:int) : block list = {
+      var i, r, tl, b;
+      r <- [];
+      if (valid_query m n) {
+        i <- 0;
+        while (i < size m - 1) {
+          b <- F.f(take i m, 1);
+          i <- i + 1;
+          r <- r ++ b;
+        }
+        tl <- F.f(m,n);
+        r  <- r ++ tl;
+      }
+      return r;
+    }
+  }.
+
+  module MkS(S:SIMULATOR, F:WeirdIRO) = S(MkFdoNot(F)).
+
+  local clone 
 
   lemma conclusion &m:
     `| Pr[Experiment(SpongeThatDoesNotAbsorb(Perm), Perm, MkD(D)).main() @ &m : res]
         - Pr[Experiment(IdealFunctionalityThatDoesNotAbsorb, 
              S(IdealFunctionalityThatDoesNotAbsorb), MkD(D)).main() @ &m : res] | = 
-    `|Pr[Experiment(SpongeThatAbsorb(Perm),Perm,D).main() @ &m : res] -
-      -Pr[Experiment(IdealFunctionalityThatAbsorb, 
-          S(IdealFunctionalityThatAbsorb), D)
+    `|Pr[Experiment(SpongeThatAbsorbs(Perm),Perm,D).main() @ &m : res] -
+      -Pr[Experiment(IdealFunctionalityThatAbsorbs, MkS(S,IdealFunctionalityThatAbsorbs), D).main() @ &m : res]|.
+  proof.
+    congr;congr.
+    + byequiv (_: ={glob D} ==> _) => //;proc;inline *.
+      call (_: ={glob Perm});1,2:(by sim); last by auto.
+      proc;inline{1}SpongeThatDoesNotAbsorb(Perm).f;sp 1 3;if=> //.
+      sp;rcondt{1} 1=> //;wp.
+      while (={glob Perm, i, sa, sc} /\ n0{1} = n{2} /\ z{1} = take (size m{1}) z{1} ++ z{2} /\ size m{1} <= size z{1}).
+      + call (_ : ={glob Perm});[by sim|auto;progress [-split];smt].
+      while (={glob Perm, p, sa,sc} /\ (size z = size m - size p){1}).
+      + wp;call (_ : ={glob Perm});[by sim|auto;progress [-split];smt].
+      by auto;progress [-split];smt. 
+    +      
+      auto. 
+
+smt. smt.
+search drop.          
+        
+sim.
+
 
 
 
