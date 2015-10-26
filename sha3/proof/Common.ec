@@ -31,7 +31,7 @@ lemma bits2wK (s : bool list) :
 proof. admit. qed.
 
 op uniform : bword distr =
-  MUniform.duniform FinType.elts.
+  MUniform.duniform FinType.enum.
 end BitWord.
 
 (* -------------------------------------------------------------------- *)

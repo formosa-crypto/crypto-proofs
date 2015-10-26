@@ -6,13 +6,10 @@ op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) distr.
 op cast: 'a NewDistr.distr -> 'a distr.
 
 (* -------------------------------------------------------------------- *)
-clone include Common.
+require import Common.
 
 (* -------------------------------------------------------------------- *)
 op valid: block list -> bool. (* is in the image of the padding function *)
-axiom valid_lb m:
-  valid m =>
-  forall n, m <> mkseq (fun k => b0) n.
 
 clone import RndOrcl as RO with
   type from                          <- block list,

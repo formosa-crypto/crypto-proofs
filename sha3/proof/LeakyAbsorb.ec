@@ -55,7 +55,7 @@ module IdealFunctionalityThatDoesNotAbsorb = {
     var b <- b0;
 
     if (m <> []) {
-      while (i < size m) {
+      while (i <= size m) {
         z <- rcons z b;
         b <@ core(take i m,0);
         i <- i + 1;

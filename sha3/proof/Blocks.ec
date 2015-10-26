@@ -5,18 +5,15 @@ require (*--*) Common IRO LazyRP Indifferentiability.
 op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) distr.
 
 (* -------------------------------------------------------------------- *)
-clone include Common.
+require import Common.
 
 (* -------------------------------------------------------------------- *)
-op valid: block list -> bool. (* is in the image of the padding function *)
-axiom valid_lb m:
-  valid m =>
-  m <> [] /\ nth witness m (size m - 1) <> b0.
+op valid: block list -> bool.
 
 clone import IRO as BIRO with
-  type from <- block list,
-  type to <- block,
-  op valid <- valid.
+  type from  <- block list,
+  type to    <- block,
+    op valid <- valid.
 
 clone import LazyRP as Perm with
   type D <- block * capacity,
