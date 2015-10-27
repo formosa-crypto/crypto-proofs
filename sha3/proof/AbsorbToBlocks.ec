@@ -75,6 +75,8 @@ module UpperFun ( F : Lower.FUNCTIONALITY ) = {
   }
 }.
 
+module UpperOfLowerBlockSponge (P : Upper.PRIMITIVE) = UpperFun(Lower.BlockSponge(P)).
+
 module Dist ( D : Upper.DISTINGUISHER, F : Lower.FUNCTIONALITY, P : Lower.PRIMITIVE ) = D(UpperFun(F),P).
 
 section.
@@ -115,6 +117,15 @@ section.
   inline Lower.BlockSponge(Lower.Perm.Perm).f.
   admit. (* Fun with loops *)
   qed.
+
+print Upper.RealIndif.
+
+  lemma Intermediate &m:
+    `|Pr[Upper.RealIndif(Upper.Perm.Perm,UpperOfLowerBlockSponge,UpperDist).main() @ &m: res]
+      - Pr[Upper.IdealIndif(UpperFun(Lower.Ideal.RO),Sim(LowerSim),UpperDist).main() @ &m: res]|
+    = `|Pr[Lower.RealIndif(Lower.Perm.Perm,Lower.BlockSponge,Dist(UpperDist)).main() @ &m: res]
+      - Pr[Lower.IdealIndif(Lower.Ideal.RO,LowerSim,Dist(UpperDist)).main() @ &m: res]|.
+  proof. admit. qed.
 
   lemma Conclusion &m:
     `|Pr[Upper.RealIndif(Upper.Perm.Perm,Upper.BlockSponge,UpperDist).main() @ &m: res]
