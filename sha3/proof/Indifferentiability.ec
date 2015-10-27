@@ -34,7 +34,7 @@ module type CONSTRUCTION (P : PRIMITIVE) = {
 }.
 
 module type SIMULATOR (F : FUNCTIONALITY) = {
-  proc init() : unit
+  proc init() : unit { F.init }
   proc f(x : p) : p { F.f }
   proc fi(x : p) : p { F.f }
 }.

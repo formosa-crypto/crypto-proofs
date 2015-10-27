@@ -2,8 +2,6 @@
 require import Option Pair Int Real List.
 require (*--*) Common IRO LazyRP Indifferentiability.
 
-op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) distr.
-
 (* -------------------------------------------------------------------- *)
 require import Common.
 
@@ -14,12 +12,6 @@ clone import IRO as BIRO with
   type from  <- block list,
   type to    <- block,
     op valid <- valid.
-
-clone import LazyRP as Perm with
-  type D <- block * capacity,
-  op   d <- bdistr * Capacity.cdistr
-
-  rename [module] "P" as "Perm".
   
 (* -------------------------------------------------------------------- *)
 clone include Indifferentiability.Core with
@@ -34,7 +26,7 @@ import Types.
 
 (* -------------------------------------------------------------------- *)
 (** Spurious uninitialized variable warning on p *)
-module BlockSponge (P : RP) : BIRO.IRO, CONSTRUCTION(P) = {
+module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
   proc init = P.init
 
   proc f(p : block list, n : int): block list = {
@@ -65,6 +57,6 @@ lemma top:
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
       `|  Pr[Experiment(BlockSponge(Perm), Perm, D).main() @ &m : res]
-        - Pr[Experiment(IRO, S(IRO), D).main() @ &m : res]|
+        - Pr[Experiment(IRO', S(IRO'), D).main() @ &m : res]|
        < eps.
 proof. admit. qed.

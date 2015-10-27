@@ -47,3 +47,75 @@ module IRO : IRO = {
     return aout;
   }
 }.
+
+pred prefix_closed (m : (from * int,to) fmap) =
+  forall x n,
+    mem (dom m) (x,n) =>
+    (forall i, 0 <= i < n =>
+      mem (dom m) (x,i)).
+
+pred prefix_closed' (m : (from * int,to) fmap) =
+  forall x n i,
+    mem (dom m) (x,n) =>
+    0 <= i < n =>
+    mem (dom m) (x,i).
+
+lemma cool m: prefix_closed m <=> prefix_closed' m
+by [].
+
+module IRO' : IRO = {
+  var mp : (from * int, to)  fmap
+  var visible : (from * int) fset
+
+  proc resample_invisible() = {
+    var work, x;
+
+    work <- dom mp `\` visible;
+    while (work <> fset0) {
+      x <- pick work;
+      mp.[x] <$ dto;
+      work <- work `\` fset1 x;
+    }
+  }
+
+  proc init() = {
+    mp <- map0;
+    visible <- fset0;
+  }
+
+  proc fill_in(x,n) = {
+    if (!mem (dom mp) (x,n)) {
+      mp.[(x,n)] <$ dto;
+    }
+    return oget mp.[(x,n)];
+  }
+
+  proc f(x, n) = {
+    var b, bs;
+    var i <- 0;
+
+    bs <- [];
+    if (valid x) {
+      visible <- visible `|` fset1 (x,n);
+      while (i < n) {
+        b <@ fill_in(x,i);
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+    }
+
+    return bs;
+  }
+
+  proc f_lazy(x, i) = {
+    var b <- witness;
+
+    if (valid x /\ 0 <= i) {
+      visible <- visible `|` fset1 (x,i);
+      b <@ fill_in(x,i);
+    }
+    return b;
+  }
+}.
+
+(** The two are equivalent **)

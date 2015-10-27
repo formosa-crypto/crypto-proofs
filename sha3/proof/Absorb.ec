@@ -2,7 +2,6 @@
 require import Option Pair Int Real List.
 require (*--*) Common LazyRP RndOrcl Indifferentiability.
 
-op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) distr.
 op cast: 'a NewDistr.distr -> 'a distr.
 
 (* -------------------------------------------------------------------- *)
@@ -16,12 +15,6 @@ clone import RndOrcl as RO with
   type to                            <- block,
     op Ideal.sample (x : block list) <- cast bdistr.
 clone import Ideal. (* ?? Nested abstract theories... we don't like them *)
-
-clone import LazyRP as Perm with
-  type D <- block * capacity,
-  op   d <- bdistr * Capacity.cdistr
-
-  rename [module] "P" as "Perm".
   
 (* -------------------------------------------------------------------- *)
 clone include Indifferentiability.Core with
@@ -35,7 +28,7 @@ clone include Indifferentiability.Core with
 import Types.
 
 (* -------------------------------------------------------------------- *)
-module BlockSponge (P : RP) : RO, CONSTRUCTION(P) = {
+module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {
   proc init = P.init
 
   proc f(p : block list): block = {

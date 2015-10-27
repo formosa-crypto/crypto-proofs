@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Fun Pair Int Real List NewDistr.
-require (*--*) FinType NewMonoid.
+require (*--*) FinType LazyRP NewMonoid.
 
 (* -------------------------------------------------------------------- *)
 theory BitWord.
@@ -59,3 +59,13 @@ clone export BitWord as Block with
   rename
     [op] "zero" as "b0"
     [op] "uniform" as "bdistr".
+
+    print LazyRP.
+
+op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) Pervasive.distr.
+clone export LazyRP as Perm with
+  type D <- block * capacity,
+  op d <- bdistr * Capacity.cdistr
+rename
+  [module type] "RP" as "PRIMITIVE"
+  [module] "P" as "Perm".
