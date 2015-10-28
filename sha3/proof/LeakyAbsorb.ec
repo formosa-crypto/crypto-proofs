@@ -40,7 +40,7 @@ module type WeirdIRO_ = {
 
 op valid_query : block list -> int -> bool.
 op valid_queries : (block list) fset.
-axiom valid_queryP     : forall m n, valid_query m n => forall k, 0 <= k <= n => mem valid_queries (m ++ map (fun x => b0) (iota_ 0 k)).
+axiom valid_queryP     : forall m n, valid_query m n => forall k, 0 <= k <= n => mem valid_queries (m ++ mkseq (fun x => b0) k).
 axiom valid_query_take : forall m n, valid_query m n => forall i, 0 <= i <= size m => mem valid_queries (take i m).
 axiom valid_query_take1 : 
   forall m n, valid_query m n => forall i, 0 <= i <= size m => valid_query (take i m) 1.

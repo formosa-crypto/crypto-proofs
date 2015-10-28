@@ -235,20 +235,20 @@ section.
   *)
 
   lemma Intermediate &m:
-    `|Pr[Upper.RealIndif(Perm,Upper.BlockSponge,UpperDist).main() @ &m :res]
-      - Pr[Upper.IdealIndif(Upper.BIRO.IRO,Sim(LowerSim),UpperDist).main() @ &m: res]|
-    = `|Pr[Upper.RealIndif(Perm,UpperOfLowerBlockSponge,UpperDist).main() @ &m: res]
+    `|Pr[Upper.RealIndif(Upper.BlockSponge,Perm,UpperDist).main() @ &m :res]
+      - Pr[Upper.IdealIndif(Upper.BIRO.IRO',Sim(LowerSim),UpperDist).main() @ &m: res]|
+    = `|Pr[Upper.RealIndif(UpperOfLowerBlockSponge,Perm,UpperDist).main() @ &m: res]
         - Pr[Upper.IdealIndif(UpperFun(Lower.Ideal.RO),Sim(LowerSim),UpperDist).main() @ &m: res]|.
   proof.
-  have ->: Pr[Upper.RealIndif(Perm,UpperOfLowerBlockSponge,UpperDist).main() @ &m: res]
-           = Pr[Upper.RealIndif(Perm,Upper.BlockSponge,UpperDist).main() @ &m :res].
+  have ->: Pr[Upper.RealIndif(UpperOfLowerBlockSponge,Perm,UpperDist).main() @ &m: res]
+           = Pr[Upper.RealIndif(Upper.BlockSponge,Perm,UpperDist).main() @ &m :res].
     byequiv=> //=; proc.
     call (_:   ={m,mi}(Perm,Perm)
             /\ (forall x, mem (dom Perm.m){1} x)).
       by proc; if; auto; smt.
       by proc; if; auto; smt.
       (* BUG: arg should be handled much earlier and automatically *)
-      by conseq ModularUpper=> //= &1 &2; case (arg{1}); case (arg{2})=> //=.
+      by conseq ModularUpper_Real=> //= &1 &2; case (arg{1}); case (arg{2})=> //=.
     call (_:     true
              ==>    ={glob Perm}
                  /\ (forall x, mem (dom Perm.m){1} x)).
@@ -257,33 +257,33 @@ section.
     call (_: true ==> true)=> //.
       by proc; auto.
   have ->: Pr[Upper.IdealIndif(UpperFun(Lower.Ideal.RO),Sim(LowerSim),UpperDist).main() @ &m: res]
-           = Pr[Upper.IdealIndif(Upper.BIRO.IRO,Sim(LowerSim),UpperDist).main() @ &m: res].
+           = Pr[Upper.IdealIndif(Upper.BIRO.IRO',Sim(LowerSim),UpperDist).main() @ &m: res].
     byequiv=> //=; proc.
-    call (_: ={glob LowerSim} /\ relation Lower.Ideal.RO.m{1} Upper.BIRO.IRO.mp{2}).
-      proc (relation Lower.Ideal.RO.m{1} Upper.BIRO.IRO.mp{2})=> //=.
+    call (_: ={glob LowerSim} /\ lower Lower.Ideal.RO.m{1} Upper.BIRO.IRO'.mp{2}).
+      proc (lower Lower.Ideal.RO.m{1} Upper.BIRO.IRO'.mp{2})=> //=.
         by proc; sp; if=> //=; call ModularLower; auto.
-      proc (relation Lower.Ideal.RO.m{1} Upper.BIRO.IRO.mp{2})=> //=.
+      proc (lower Lower.Ideal.RO.m{1} Upper.BIRO.IRO'.mp{2})=> //=.
         by proc; sp; if=> //=; call ModularLower; auto.
       (* Re-Bug *)
       by conseq ModularLower=> &1 &2; case (arg{1}); case (arg{2}).
     inline *; wp; call (_: true)=> //=.
       by sim.
     auto; progress [-split]; split=> //=.
-    by split=> x y; rewrite map0P.
+    smt.
   done.
   qed.
 
   lemma Remainder &m:
-    `|Pr[Upper.RealIndif(Perm,UpperOfLowerBlockSponge,UpperDist).main() @ &m: res]
+    `|Pr[Upper.RealIndif(UpperOfLowerBlockSponge,Perm,UpperDist).main() @ &m: res]
       - Pr[Upper.IdealIndif(UpperFun(Lower.Ideal.RO),Sim(LowerSim),UpperDist).main() @ &m: res]|
-    = `|Pr[Lower.RealIndif(Perm,Lower.BlockSponge,Dist(UpperDist)).main() @ &m: res]
+    = `|Pr[Lower.RealIndif(Lower.BlockSponge,Perm,Dist(UpperDist)).main() @ &m: res]
         - Pr[Lower.IdealIndif(Lower.Ideal.RO,LowerSim,Dist(UpperDist)).main() @ &m: res]|.
   proof. admit. qed.
 
   lemma Conclusion &m:
-    `|Pr[Upper.RealIndif(Perm,Upper.BlockSponge,UpperDist).main() @ &m: res]
-      - Pr[Upper.IdealIndif(Upper.BIRO.IRO,Sim(LowerSim),UpperDist).main() @ &m: res]|
-    = `|Pr[Lower.RealIndif(Perm,Lower.BlockSponge,Dist(UpperDist)).main() @ &m: res]
+    `|Pr[Upper.RealIndif(Upper.BlockSponge,Perm,UpperDist).main() @ &m: res]
+      - Pr[Upper.IdealIndif(Upper.BIRO.IRO',Sim(LowerSim),UpperDist).main() @ &m: res]|
+    = `|Pr[Lower.RealIndif(Lower.BlockSponge,Perm,Dist(UpperDist)).main() @ &m: res]
       - Pr[Lower.IdealIndif(Lower.Ideal.RO,LowerSim,Dist(UpperDist)).main() @ &m: res]|.
   proof. by rewrite (Intermediate &m) (Remainder &m). qed.
 end section.

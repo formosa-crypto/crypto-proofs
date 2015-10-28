@@ -56,7 +56,7 @@ op eps : real.
 lemma top:
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
-      `|  Pr[Experiment(BlockSponge(Perm), Perm, D).main() @ &m : res]
-        - Pr[Experiment(IRO', S(IRO'), D).main() @ &m : res]|
+      `|  Pr[RealIndif(BlockSponge, Perm, D).main() @ &m : res]
+        - Pr[IdealIndif(IRO', S, D).main() @ &m : res]|
        < eps.
 proof. admit. qed.

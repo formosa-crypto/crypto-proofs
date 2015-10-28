@@ -54,7 +54,7 @@ module Indif (F : FUNCTIONALITY, P : PRIMITIVE, D : DISTINGUISHER) = {
   }
 }.
 
-module Real(P : PRIMITIVE, C : CONSTRUCTION) = Indif(C(P),P).
+module Real(C : CONSTRUCTION, P : PRIMITIVE) = Indif(C(P),P).
 module Ideal(F : FUNCTIONALITY, S : SIMULATOR) = Indif(F,S(F)).
 
 (* (C <: CONSTRUCTION) applied to (P <: PRIMITIVE) is indifferentiable
