@@ -1,5 +1,5 @@
 (** These should make it into the standard libs **)
-require import Pair NewList NewFSet NewFMap.
+require import Option Pair List FSet NewFMap.
 
 (* -------------------------------------------------------------------- *)
 (* In NewFSet *)

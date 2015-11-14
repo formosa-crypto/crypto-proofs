@@ -34,7 +34,7 @@ proof. by rewrite /strip; exact/(ge0_strip_aux 0 (rev bs)). qed.
 
 op valid_upper (bs : block list) =
   bs <> [] /\
-  forallb (fun n=> strip (extend bs n) = (bs,n)).
+  forall n, strip (extend bs n) = (bs,n).
 
 op valid_lower (bs : block list) =
   valid_upper (strip bs).`1.

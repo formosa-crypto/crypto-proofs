@@ -1,4 +1,4 @@
-require import Option Pair Int Real NewList NewFSet NewFMap.
+require import Option Pair Int Real List FSet NewFMap.
 require (*..*) AWord LazyRP IRO Indifferentiability Squeezeless.
 (* TODO: Clean up the Bitstring and Word theories
       -- Make use of those new versions. *)

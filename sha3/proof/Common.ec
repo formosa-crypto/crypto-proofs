@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Fun Pair Int Real List NewDistr.
-require (*--*) FinType LazyRP NewMonoid.
+require (*--*) FinType LazyRP Monoid.
 
 (* -------------------------------------------------------------------- *)
 theory BitWord.
@@ -9,7 +9,7 @@ type bword.
 op zero : bword.
 op (^)  : bword -> bword -> bword.
 
-clone include NewMonoid
+clone include Monoid
   with
     type t   <- bword,
       op idm <- zero,
