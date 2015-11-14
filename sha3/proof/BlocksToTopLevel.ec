@@ -4,7 +4,6 @@ require (*--*) Blocks TopLevel.
 
 (* -------------------------------------------------------------------- *)
 require import Common.
-print Common.
 
 op chunk: bool list -> bool list list.
 

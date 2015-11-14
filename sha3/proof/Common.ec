@@ -60,9 +60,8 @@ clone export BitWord as Block with
     [op] "zero" as "b0"
     [op] "uniform" as "bdistr".
 
-    print LazyRP.
-
 op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) Pervasive.distr.
+
 clone export LazyRP as Perm with
   type D <- block * capacity,
   op d <- bdistr * Capacity.cdistr
