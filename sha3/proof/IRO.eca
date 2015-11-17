@@ -25,7 +25,7 @@ module IRO : IRO = {
     var b, bs;
 
     bs <- [];
-    while (n > 0) {
+    while (0 < n) {
       b  <$ dto;
       bs <- rcons bs b;
       n  <- n - 1;
