@@ -22,7 +22,6 @@ clone include Indifferentiability.Core with
   rename
     [module] "Indif" as "Experiment"
     [module] "al"  as "alIndif".
-import Types.
 
 (* -------------------------------------------------------------------- *)
 (** Spurious uninitialized variable warning on p *)
@@ -44,6 +43,7 @@ module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
       while (i < n) {
         z       <- rcons z sa;
         (sa,sc) <@ P.f(sa,sc);
+        i       <- i + 1;
       }
     }
     return z;

@@ -23,14 +23,13 @@ clone include Indifferentiability.Core with
   rename
     [module] "Indif" as "Experiment"
     [module] "al"  as "alIndif".
-import Types.
 
 (* -------------------------------------------------------------------- *)
-(** Spurious uninitialized variable warning on p *)
+
 module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
   proc init = P.init
 
-  proc f(bp : bool list, n : int): bool list = {
+  proc f(bp : bool list, n : int) : bool list = {
     var z       <- [];
     var (sa,sc) <- (b0, Capacity.c0);
     var i       <- 0;
@@ -45,6 +44,7 @@ module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
     while (i < (n + r - 1) /% r) {
       z       <- z ++ (Block.w2bits sa);
       (sa,sc) <@ P.f(sa,sc);
+      i       <- i + 1;
     }
 
     return take n z;

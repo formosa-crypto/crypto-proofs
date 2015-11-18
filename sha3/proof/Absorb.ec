@@ -25,7 +25,6 @@ clone include Indifferentiability.Core with
   rename
     [module] "Indif" as "Experiment"
     [module] "al"  as "alIndif".
-import Types.
 
 (* -------------------------------------------------------------------- *)
 module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {
