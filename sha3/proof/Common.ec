@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-require import Fun Pair Int Real List NewDistr.
+require import Option Fun Pair Int Real List NewDistr.
 require (*--*) FinType LazyRP Monoid.
 
 (* -------------------------------------------------------------------- *)
@@ -68,3 +68,38 @@ clone export LazyRP as Perm with
 rename
   [module type] "RP" as "PRIMITIVE"
   [module] "P" as "Perm".
+
+(* ------------------------------ Padding ----------------------------- *)
+
+(* unpad_aux returns None if its argument xs doesn't end with true and
+   have at least one other occurrence of true; otherwise, it returns
+   Some of the result of removing the shortest suffix of xs containing
+   two occurrences of true *)
+op unpad_aux : bool list -> bool list option =
+  fun xs =>
+    let ys = rev xs in
+    if !(head false ys)
+    then None
+    else let zs = behead ys in
+         let i = find ((=) true) zs in
+         if i = size zs
+         then None
+         else Some(rev(drop (i + 1) zs)).
+
+op unpad : block list -> bool list option =
+  fun xs =>
+    if xs = []
+    then None
+    else let bs = w2bits(last b0 xs) in
+         let ys = take (size xs - 1) xs in
+         let ocs = unpad_aux bs in
+         if ocs = None
+         then if bs = nseq (r - 1) false ++ [true] && ys <> []
+              then let ds = w2bits(last b0 ys) in
+                   let ws = take (size ys - 1) ys in
+                   if !(last false ds)
+                   then None
+                   else Some(flatten(map w2bits ws) ++
+                             take (size ds - 1) ds)
+              else None
+         else Some(flatten(map w2bits ys) ++ oget ocs).

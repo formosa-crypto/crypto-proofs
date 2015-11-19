@@ -6,7 +6,9 @@ require (*--*) Common IRO LazyRP Indifferentiability.
 require import Common.
 
 (* -------------------------------------------------------------------- *)
-op valid: block list -> bool.
+
+op valid : block list -> bool =
+  fun xs => unpad xs <> None.
 
 clone import IRO as BIRO with
   type from  <- block list,
@@ -24,11 +26,10 @@ clone include Indifferentiability.Core with
     [module] "al"  as "alIndif".
 
 (* -------------------------------------------------------------------- *)
-(** Spurious uninitialized variable warning on p *)
 module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
   proc init = P.init
 
-  proc f(p : block list, n : int): block list = {
+  proc f(p : block list, n : int) : block list = {
     var z       <- [];
     var (sa,sc) <- (b0, Capacity.c0);
     var i       <- 0;
