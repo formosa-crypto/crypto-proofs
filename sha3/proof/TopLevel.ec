@@ -6,9 +6,6 @@ require (*--*) IRO LazyRP Indifferentiability.
 require import Common.
 
 (* -------------------------------------------------------------------- *)
-op pad : bool list -> block list.
-
-(* -------------------------------------------------------------------- *)
 clone import IRO as BIRO with
   type from <- bool list,
   type to <- bool,

@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-require import Option Fun Pair Int Real List NewDistr.
+require import Option Fun Pair Int IntExtra Real List NewDistr.
 require (*--*) FinType LazyRP Monoid.
 
 (* -------------------------------------------------------------------- *)
@@ -69,7 +69,34 @@ rename
   [module type] "RP" as "PRIMITIVE"
   [module] "P" as "Perm".
 
-(* ------------------------------ Padding ----------------------------- *)
+(* ------------------------- Padding/Unpadding ------------------------ *)
+
+(* if size cs < r, then size (chunk_aux (xs, cs) b).`2 < r *)
+op chunk_aux : block list * bool list -> bool -> block list * bool list =
+  fun p b =>
+    let (xs, cs) = p in
+    let ds = rcons cs b in
+    if size ds = r
+    then (rcons xs (bits2w ds), [])
+    else (xs, ds).
+
+(* size (chunk bs).`2 < r *)
+op chunk : bool list -> block list * bool list =
+  fun bs => foldl chunk_aux ([], []) bs.
+
+op pad : bool list -> block list =
+  fun bs =>
+  let (xs, cs) = chunk bs in
+  let siz_cs = size cs in (* siz_cs < r *)
+  if 2 <= r - siz_cs
+  then rcons xs
+             (bits2w(cs ++
+                     [true] ++
+                     nseq (r - siz_cs - 2) false ++
+                     [true]))
+  else (* r - siz_cs = 1 *)
+       xs ++ [bits2w(rcons cs true)] ++
+       [bits2w(rcons (nseq (r - 1) false) true)].
 
 (* unpad_aux returns None if its argument xs doesn't end with true and
    have at least one other occurrence of true; otherwise, it returns
@@ -103,3 +130,57 @@ op unpad : block list -> bool list option =
                              take (size ds - 1) ds)
               else None
          else Some(flatten(map w2bits ys) ++ oget ocs).
+
+lemma pad_unpad : pcancel pad unpad.
+proof.
+rewrite /pcancel.
+admit.
+qed.
+
+lemma unpad_pad : ocancel unpad pad.
+proof.
+rewrite /ocancel.
+admit.
+qed.
+
+(* ------------------------ Extending/Stripping ----------------------- *)
+
+(* extend xs n returns None if xs doesn't unpad successfully;
+   otherwise, it returns the result of adding n copies of b0 to the
+   end of xs (n < 0 is treated as n = 0) *)
+op extend : block list -> int -> block list option =
+  fun xs n =>
+  if unpad xs = None
+  then None
+  else Some(xs ++ nseq n b0).
+
+op extend_uncur : block list * int -> block list option =
+  fun (p : block list * int) => extend p.`1 p.`2.
+
+(* strip returns None if removing the longest suffix of b0's from its
+   argument yields a block list that cannot be unpadded; otherwise, it
+   removes the longest suffix of b0's from its argument and returns
+   the pair of the resulting block list with the number of b0's
+   removed *)
+op strip : block list -> (block list * int)option =
+  fun xs =>
+    let ys = rev xs in
+    let i = find (fun x => x <> b0) ys in
+    if i = size xs
+    then None
+    else let zs = rev(drop i ys) in
+         if unpad zs = None
+         then None
+         else Some(zs, i).
+
+lemma extend_strip (xs : block list, n : int) :
+  oapp strip (Some(xs, max n 0)) (extend xs n) = Some(xs, max n 0).
+proof.
+admit.
+qed.
+
+lemma strip_extend (xs : block list) :
+  oapp extend_uncur (Some xs) (strip xs) = Some xs.
+proof.
+admit.
+qed.

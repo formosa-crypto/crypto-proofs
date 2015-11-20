@@ -9,24 +9,8 @@ require import Common.
 
 (* -------------------------------------------------------------------- *)
 
-(* valid_strip returns None if removing the longest suffix of b0's
-   from its argument yields a block list that cannot be unpadded;
-   otherwise, it removes the longest suffix of b0's from its argument
-   and returns the pair of the resulting block list with the number of
-   b0's removed *)
-op valid_strip : block list -> (block list * int)option =
-  fun xs =>
-    let ys = rev xs in
-    let i = find (fun x => x <> b0) ys in
-    if i = size xs
-    then None
-    else let zs = rev(drop i ys) in
-         if unpad zs = None
-         then None
-         else Some(zs, i).
-    
 op valid : block list -> bool =
-  fun xs => valid_strip xs <> None.
+  fun xs => strip xs <> None.
 
 clone import RndOrcl as RO with
   type from                          <- block list,
