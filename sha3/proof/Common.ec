@@ -131,6 +131,17 @@ op unpad : block list -> bool list option =
               else None
          else Some(flatten(map w2bits ys) ++ oget ocs).
 
+pred valid_block (xs : block list) =
+  exists (ys : bool list, n : int),
+  0 <= n < r /\
+  flatten(map w2bits xs) = ys ++ [true] ++ nseq n false ++ [true].
+
+lemma valid_block (xs : block list) :
+  unpad xs <> None <=> valid_block xs.
+proof.
+admit.
+qed.
+
 lemma pad_unpad : pcancel pad unpad.
 proof.
 rewrite /pcancel.
@@ -172,6 +183,16 @@ op strip : block list -> (block list * int)option =
          if unpad zs = None
          then None
          else Some(zs, i).
+
+pred valid_absorb (xs : block list) =
+  exists (ys : block list, n : int),
+  0 <= n /\ valid_block ys /\ xs = ys ++ nseq n b0.
+
+lemma valid_absorb (xs : block list) :
+  strip xs <> None <=> valid_absorb xs.
+proof.
+admit.
+qed.
 
 lemma extend_strip (xs : block list, n : int) :
   oapp strip (Some(xs, max n 0)) (extend xs n) = Some(xs, max n 0).
