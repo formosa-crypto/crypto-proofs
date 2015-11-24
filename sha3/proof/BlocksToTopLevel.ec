@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-require import Fun Pred Option Pair Int Real List FSet NewFMap.
+require import Fun Pred Option Pair Int IntDiv Real List FSet NewFMap.
 require (*--*) Blocks TopLevel.
 
 (* -------------------------------------------------------------------- *)
@@ -12,7 +12,7 @@ module UpperFun (F : Blocks.FUNCTIONALITY) = {
   proc f(p : bool list, n : int) = {
     var xs;
 
-    xs <@ F.f(pad p, (n + r - 1) /% r);
+    xs <@ F.f(pad p, (n + r - 1) %/ r);
     return take n (flatten(map w2bits xs));
   }
 }.

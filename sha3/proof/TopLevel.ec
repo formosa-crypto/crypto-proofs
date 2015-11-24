@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-require import Pair Int Real List.
+require import Pair Int IntDiv Real List.
 require (*--*) IRO LazyRP Indifferentiability.
 
 (* -------------------------------------------------------------------- *)
@@ -38,7 +38,7 @@ module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
       p       <- behead p;
     }
     (* Squeezing *)
-    while (i < (n + r - 1) /% r) {
+    while (i < (n + r - 1) %/ r) {
       z       <- z ++ (Block.w2bits sa);
       (sa,sc) <@ P.f(sa,sc);
       i       <- i + 1;
