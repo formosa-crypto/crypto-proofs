@@ -1,6 +1,8 @@
 (* -------------------------------------------------------------------- *)
-require import Option Fun Pair Int IntExtra Real List NewDistr.
+require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
+require import Ring StdRing StdOrder StdBigop ListExtra.
 require (*--*) FinType LazyRP Monoid.
+(*---*) import IntID IntOrder Bigint Bigint.BIA.
 
 (* -------------------------------------------------------------------- *)
 theory BitWord.
@@ -38,11 +40,18 @@ op uniform : bword distr =
 end BitWord.
 
 (* -------------------------------------------------------------------- *)
-op r : { int | 0 < r } as gt0_r.
-op c : { int | 0 < c } as gt0_c.
+op r : { int | 2 <= r } as ge2_r.
+op c : { int | 0 <  c } as gt0_c.
 
 type block.    (* ~ bitstrings of size r *)
 type capacity. (* ~ bitstrings of size c *)
+
+(* -------------------------------------------------------------------- *)
+lemma gt0_r: 0 < r.
+proof. by apply/(ltr_le_trans 2)/ge2_r. qed.
+
+lemma ge0_r: 0 <= r.
+proof. by apply/ltrW/gt0_r. qed.
 
 (* -------------------------------------------------------------------- *)
 clone BitWord as Capacity with
@@ -74,6 +83,136 @@ rename
 
 (* ------------------------- Padding/Unpadding ------------------------ *)
 
+(* What about this (and the comment applies to other functions): *)
+
+theory Alternative.
+op chunk (bs : bool list) =
+  mkseq (fun i => take r (drop (r * i) bs)) (size bs %/ r).
+
+op mkpad (n : int) =
+  true :: rcons (nseq ((-(n+2)) %% r) false) true.
+
+op pad (s : bool list) =
+  s ++ mkpad (size s).
+
+op unpad (s : bool list) =
+  if !last false s then None else
+  let i = index true (behead (rev s)) in
+  if i+1 = size s then None else Some (take (size s - (i+2)) s).
+
+lemma rev_mkpad n : rev (mkpad n) = mkpad n.
+proof. by rewrite /mkpad rev_cons rev_rcons rev_nseq. qed.
+
+lemma last_mkpad b n : last b (mkpad n) = true.
+proof. by rewrite !(lastcons, lastrcons). qed.
+
+lemma head_mkpad b n : head b (mkpad n) = true.
+proof. by []. qed.
+
+lemma last_pad b s : last b (pad s) = true.
+proof. by rewrite lastcat last_mkpad. qed.
+
+lemma size_mkpad n : size (mkpad n) = (-(n+2)) %% r + 2.
+proof.
+rewrite /mkpad /= size_rcons size_nseq max_ler.
+by rewrite modz_ge0 gtr_eqF ?gt0_r. by ring.
+qed.
+
+lemma size_pad s: size (pad s) = (size s + 1) %/ r * r + r.
+proof.
+rewrite /pad /mkpad size_cat /= size_rcons size_nseq.
+rewrite max_ler 1:modz_ge0 1:gtr_eqF ?gt0_r // (addrCA 1).
+rewrite modNz ?gt0_r ?ltr_spaddr ?size_ge0 //.
+by rewrite (@subrE (size s + 2)) -(addrA _ 2) /= modzE; ring.
+qed.
+
+lemma size_pad_dvd_r s: r %| size (pad s).
+proof. by rewrite size_pad dvdzD 1:dvdz_mull dvdzz. qed.
+
+lemma index_true_behead_mkpad n :
+  index true (behead (mkpad n)) = (-(n + 2)) %% r.
+proof.
+rewrite /mkpad -cats1 index_cat mem_nseq size_nseq.
+by rewrite max_ler // modz_ge0 gtr_eqF ?gt0_r.
+qed.
+
+lemma size_chunk bs : size (chunk bs) = size bs %/ r.
+proof. by rewrite size_mkseq max_ler // divz_ge0 ?gt0_r ?size_ge0. qed.
+
+lemma in_chunk_size bs b: mem (chunk bs) b => size b = r.
+proof.
+move/mapP=> [i] [] /mem_iota /= [ge0_i ^lt_is +] ->.
+rewrite ltzE -(@ler_pmul2r r) 1:gt0_r divzE mulrDl mul1r.
+rewrite -ler_subr_addr 2!subrE addrAC -2!subrE.
+move/ler_trans/(_ (size bs - r) _); 1: rewrite subrE.
+  by rewrite ler_naddr // oppr_le0 modz_ge0 gtr_eqF ?gt0_r.
+rewrite (mulrC i) ler_subr_addl -ler_subr_addr => ler.
+rewrite size_take ?ge0_r size_drop // 1:mulr_ge0 ?ge0_r //.
+rewrite max_ler 1:subr_ge0 1:-subr_ge0 1:(ler_trans r) ?ge0_r //.
+by move/ler_eqVlt: ler=> [<-|->].
+qed.
+
+lemma size_flatten_chunk bs :
+  size (flatten (chunk bs)) = (size bs) %/ r * r.
+proof.
+rewrite size_flatten sumzE big_map predT_comp /(\o) /= big_seq.
+rewrite (@eq_bigr _ _ (fun x => r)) /=; 1: exact/in_chunk_size.
+by rewrite -big_seq big_constz count_predT size_chunk mulrC.
+qed.
+
+lemma chunkK bs : r %| size bs => flatten (chunk bs) = bs.
+proof.
+move=> dvd_d_bs; apply/(eq_from_nth false)=> [|i].
+  by rewrite size_flatten_chunk divzK.
+rewrite size_flatten_chunk divzK // => [ge0_i lt_ibs].
+rewrite (@nth_flatten false r); 1: by apply/allP=> s /in_chunk_size.
+rewrite nth_mkseq /= 1:divz_ge0 ?ge0_i ?ltz_divRL ?gt0_r //.
+  by apply/(@ler_lt_trans i)=> //; rewrite lez_floor gtr_eqF ?gt0_r.
+rewrite nth_take ?ltz_pmod 1:ltrW ?gt0_r nth_drop; last 2 first.
+  by rewrite modz_ge0 ?gtr_eqF ?gt0_r. by rewrite (@mulrC r) -divz_eq.
+by rewrite mulr_ge0 ?ge0_r divz_ge0 // gt0_r.
+qed.
+
+lemma padK : pcancel pad unpad.
+proof.
+move=> s @/unpad; rewrite last_pad /= rev_cat rev_mkpad.
+pose i := index _ _; have ^iE {1}->: i = (-(size s + 2)) %% r.
+  rewrite /i behead_cat //= index_cat {1}/mkpad /= mem_rcons /=.
+  by rewrite index_true_behead_mkpad.
+pose b := _ = size _; case: b => @/b - {b}.
+  rewrite modNz ?gt0_r ?ltr_spaddr ?size_ge0 //.
+  rewrite (subrE (size s + 2)) -(addrA _ 2) size_pad.
+  rewrite (addrC _ r) 2!subrE -!addrA => /addrI; rewrite addrCA /=.
+  rewrite -subr_eq0 -opprB subrE opprK -divz_eq oppr_eq0.
+  by rewrite addz_neq0 ?size_ge0.
+move=> _ /=; rewrite iE -size_mkpad /pad size_cat addrK_sub.
+by rewrite take_cat /= take0 cats0.
+qed.
+
+lemma unpadK : ocancel unpad pad.
+proof.
+move=> s @/unpad; case: (last false s) => //=.
+elim/last_ind: s=> //= s b ih {ih}; rewrite lastrcons => hb.
+rewrite rev_rcons /= size_rcons -(inj_eq _ (addIr (-1))) /= ?addrK.
+pose i := index _ _; case: (i = size s) => //=.
+move=> ne_is @/pad; pose j := _ - (i+2); apply/eq_sym.
+rewrite -{1}(cat_take_drop j (rcons s b)) eqseq_cat //=.
+rewrite size_take; first rewrite /j subr_ge0.
+  (have ->: 2=1+1 by done); rewrite addrA -ltzE ltr_add2r.
+  by rewrite ltr_neqAle ne_is /= /i -size_rev index_size.
+rewrite {2}/j size_rcons ltr_subl_addr ?ltr_spaddr //=.
+  by rewrite /i index_ge0.
+rewrite -cats1 drop_cat {1}/j ltr_subl_addr ler_lt_add //=.
+  by rewrite ltzE /= ler_addr // /i index_ge0.
+rewrite /mkpad -cats1 -cat_cons hb; congr.
+admit.                          (* missing results on drop/take *)
+qed.
+
+lemma chunk_padK : pcancel (chunk \o pad) (unpad \o flatten).
+proof. by move=> s @/(\o); rewrite chunkK 1:size_pad_dvd_r padK. qed.
+end Alternative.
+
+(* -------------------------------------------------------------------- *)
 (* if size cs < r, then size (chunk_aux (xs, cs) b).`2 < r *)
 op chunk_aux : block list * bool list -> bool -> block list * bool list =
   fun p b =>
@@ -229,6 +368,8 @@ pred valid_block (xs : block list) =
   exists (ys : bool list, n : int),
   0 <= n < r /\
   flatten(map w2bits xs) = ys ++ [true] ++ nseq n false ++ [true].
+
+
 
 op pad : bool list -> block list =
   fun bs =>
