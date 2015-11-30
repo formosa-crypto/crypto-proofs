@@ -1,19 +1,21 @@
-require import Option NewFSet NewFMap.
-require (*..*) RO.
+require import Option FSet NewFMap.
+require (*..*) NewROM.
 
 type from, to.
 op d: to distr.
 
-clone include RO with
-  type from <- from,
-  type to   <- to.
+clone include NewROM with
+  type from  <- from,
+  type to    <- to,
+  op dsample <- fun (x:from) => d.
 
-module H : RO, RO_ = {
+
+module H = {
   var m : (from, to) fmap
 
   proc init() = { m = map0; }
 
-  proc oracle(x) = {
+  proc f(x) = {
     if (!mem (dom m) x) m.[x] = $d;
     return oget m.[x];
   }

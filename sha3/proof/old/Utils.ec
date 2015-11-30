@@ -2,19 +2,6 @@
 require import Option Pair List FSet NewFMap.
 
 (* -------------------------------------------------------------------- *)
-(* In NewFSet *)
-op image (f : 'a -> 'b) (X : 'a fset) = oflist (map f (elems X))
-  axiomatized by imageE.
-
-lemma imageP (f : 'a -> 'b) (X : 'a fset) (b : 'b):
-  mem (image f X) b <=> exists a, mem X a /\ f a = b.
-proof.
-  rewrite imageE mem_oflist mapP.
-  (* FIXME *)
-  by split=> [[a] [a_in_X b_def]| [a] [a_in_X b_def]];
-    [rewrite -memE in a_in_X | rewrite memE in a_in_X];
-    exists a; rewrite b_def.
-qed.
 
 lemma rem_id (x : 'a) (m : ('a,'b) fmap):
   !mem (dom m) x => rem x m = m.
@@ -34,11 +21,14 @@ proof. by rewrite rng_rm in_rng=> [x0] [_ h]; exists x0. qed.
 
 
 (* -------------------------------------------------------------------- *)
-(* In NewFMap *)
+  (* In NewFMap *)
+
 op reindex (f : 'a -> 'c) (m : ('a, 'b) fmap) =
   NewFMap.oflist (map (fun (x : 'a * 'b) => (f x.`1,x.`2)) (elems m))
   axiomatized by reindexE.
 
+
+  
 lemma dom_reindex (f : 'a -> 'c) (m : ('a, 'b) fmap) x:
   mem (dom (reindex f m)) x <=> mem (image f (dom m)) x.
 proof.

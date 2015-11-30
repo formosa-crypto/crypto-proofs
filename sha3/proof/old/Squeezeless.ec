@@ -2,7 +2,7 @@
     functionality is a fixed-output-length random oracle whose output
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
-require import Fun Option Pair Int Real NewList NewFSet NewFMap Utils.
+require import Fun Option Pair Int Real List FSet NewFMap Utils.
 require (*..*) AWord LazyRP LazyRO Indifferentiability.
 (* TODO: Clean up the Bitstring and Word theories
       -- Make use of those new versions. *)
@@ -36,31 +36,14 @@ proof leq0_length by smt.
 type state  = block  *  capacity.
 op   dstate = dblock * dcapacity.
 
-(** The following is just lining up type definitions and defines the
-    Indifferentiability experiment. Importantly, it defines neither
-    ideal primitive nor ideal functionality: only their type. **)
-type p_query = [
-  | F  of state
-  | Fi of state
-].
-
-op is_F (q : p_query) =
-  with q = F  s => true
-  with q = Fi s => false.
-
-op is_Fi (q : p_query) =
-  with q = F  s => false
-  with q = Fi s => true.
-
-op get_query (q : p_query) =
-  with q = F  s => s
-  with q = Fi s => s.
+print Indifferentiability.
 
 clone include Indifferentiability with
-  type p_in  <- p_query,
-  type p_out <- state,
+  type p     <- state, 
   type f_in  <- block list,
-  type f_out <- block.
+  type f_out <- block
+  rename [module] "GReal" as "RealIndif"
+         [module] "GIdeal"  as "IdealIndif".
 
 (** Ideal Functionality **)
 clone import LazyRO as Functionality with
@@ -73,37 +56,16 @@ clone import LazyRP as Primitive with
   type D <- state,
   op   d <- dstate.
 
-(*** TODO: deal with these.
-       - lining up names and types should be easier than it is... ***)
-module RP_to_P (O : RP) = {
-  proc init = O.init
-  proc oracle(q : p_query) = {
-    var r;
-
-    if (is_F q) {
-      r <@ O.f(get_query q);
-    } else {
-      r <@ O.fi(get_query q);
-    }
-    return r;
-  }
-}.
-
-module RO_to_F (O : RO): Functionality = {
-  proc init   = O.init
-  proc oracle = O.f
-}.
-
 (** We can now define the squeezeless sponge construction **)
-module SqueezelessSponge (P : Primitive): Construction(P), Functionality = {
-  proc init = P.init
+module SqueezelessSponge (P:PRIMITIVE): CONSTRUCTION(P), FUNCTIONALITY = {
+  proc init () = {} 
 
-  proc oracle(p : block list): block = {
+  proc f(p : block list): block = {
     var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
-    if (size p >= 1 /\ p <> [Block.zeros]) {
+    if (1 <= size p /\ p <> [Block.zeros]) {
       while (p <> []) { (* Absorption *)
-        (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
+        (sa,sc) <@ P.f((sa ^ head witness p,sc));
         p <- behead p;
       }
     }
@@ -114,11 +76,10 @@ module SqueezelessSponge (P : Primitive): Construction(P), Functionality = {
 (** And the corresponding simulator **)
 op find_chain: (state,state) fmap -> state -> (block list * block) option.
 
-module PreSimulator (F : Functionality) = {
+module S (F : FUNCTIONALITY) = {
   var m, mi: (state,state) fmap
 
   proc init() = {
-    F.init();
     m  <- map0;
     mi <- map0;
   }
@@ -130,7 +91,7 @@ module PreSimulator (F : Functionality) = {
       pvo <- find_chain m x;
       if (pvo <> None) {
         (p,v) <- oget pvo;
-        h <@ F.oracle(rcons p v);
+        h <@ F.f(rcons p v);
         y <$ dcapacity;
       } else {
         (h,y) <$ dstate;
@@ -153,12 +114,8 @@ module PreSimulator (F : Functionality) = {
   }
 }.
 
-module P = RP_to_P(Primitive.P).
-module F = RO_to_F(H).
-module S(F : Functionality) = RP_to_P(PreSimulator(F)).
-
 section.
-  declare module D : Self.Distinguisher {P, F, S}.
+  declare module D : Self.DISTINGUISHER {P, H, S}.
 
   (** Inlining oracles into the experiment for clarity **)
   (* TODO: Drop init from the Distinguisher parameters' signatures *)
@@ -169,7 +126,7 @@ section.
     module F = {
       proc init(): unit = { }
 
-      proc oracle(x : block list): block = {
+      proc f(x : block list): block = {
         if (!mem (dom ro) x) {
           ro.[x] <$ dblock;
         }
@@ -187,7 +144,7 @@ section.
           pvo <- find_chain m x;
           if (pvo <> None) {
             (p,v) <- oget pvo;
-            h <@ F.oracle(rcons p v);
+            h <@ F.f(rcons p v);
             y <$ dcapacity;
           } else {
             (h,y) <$ dstate;
@@ -209,16 +166,6 @@ section.
         return oget mi.[x];
       }
 
-      proc oracle(q : p_query): state = {
-        var r;
-
-        if (is_F q) {
-          r <@ f(get_query q);
-        } else {
-          r <@ fi(get_query q);
-        }
-        return r;
-      }
     }
 
     proc main(): bool = {
@@ -260,28 +207,17 @@ section.
         return oget mi.[x];
       }
 
-      proc oracle(q : p_query): state = {
-        var r;
-
-        if (is_F q) {
-          r <@ f(get_query q);
-        } else {
-          r <@ fi(get_query q);
-        }
-        return r;
-      }
-
     }
 
     module C = {
       proc init(): unit = { }
 
-      proc oracle(p : block list): block = {
+      proc f(p : block list): block = {
         var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
-        if (size p >= 1 /\ p <> [Block.zeros]) {
+        if (1 <= size p /\ p <> [Block.zeros]) {
           while (p <> []) { (* Absorption *)
-            (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
+            (sa,sc) <@ P.f((sa ^ head witness p,sc));
             p <- behead p;
           }
         }
@@ -302,8 +238,8 @@ section.
   (** Result: The adversary's advantage in distinguishing the modular
       defs is equal to that of distinguishing these **)
   local lemma Inlined_pr &m:
-    `|Pr[Indif(SqueezelessSponge(P),P,D).main() @ &m: res]
-      - Pr[Indif(F,S(F),D).main() @ &m: res]|
+    `|Pr[RealIndif(SqueezelessSponge,P,D).main() @ &m: res]
+      - Pr[IdealIndif(H,S,D).main() @ &m: res]|
     = `|Pr[Concrete.main() @ &m: res]
         - Pr[Ideal.main() @ &m: res]|.
   proof. by do !congr; expect 2 (byequiv=> //=; proc; inline *; sim; auto). qed.
@@ -338,28 +274,17 @@ section.
         return oget mi.[x];
       }
 
-      proc oracle(q : p_query): state = {
-        var r;
-
-        if (is_F q) {
-          r <@ f(get_query q);
-        } else {
-          r <@ fi(get_query q);
-        }
-        return r;
-      }
-
     }
 
     module C = {
       proc init(): unit = { }
 
-      proc oracle(p : block list): block = {
+      proc f(p : block list): block = {
         var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
-        if (size p >= 1 /\ p <> [Block.zeros]) {
+        if (1 <= size p /\ p <> [Block.zeros]) {
           while (p <> []) { (* Absorption *)
-            (sa,sc) <@ P.oracle(F (sa ^ head witness p,sc));
+            (sa,sc) <@ P.f((sa ^ head witness p,sc));
             p <- behead p;
           }
         }
@@ -437,6 +362,7 @@ section.
     by split; apply/half_permutation_set.
   qed.    
 
+print FUNCTIONALITY.
   local module Game0 = {
     var m, mi               : (state,state) fmap
     var mcol, micol         : (state,caller) fmap (* colouring maps for m, mi *)
@@ -447,7 +373,7 @@ section.
 
     module S = {
       (** Inner interface **)
-      proc f(o : caller, x : state): state = {
+      proc fg(o : caller, x : state): state = {
         var o', y, pv, p, v;
 
         o' <- odflt D pathscol.[x.`2];
@@ -478,6 +404,12 @@ section.
         return oget m.[x];
       }
 
+      proc f(x:state):state = {
+        var r; 
+        r <@ fg(D,x);
+        return r;
+      }
+
       proc fi(x : state): state = {
         var o', y;
 
@@ -501,28 +433,17 @@ section.
       (** Distinguisher interface **)
       proc init() = { }
 
-      proc oracle(q : p_query): state = {
-        var r;
-
-        if (is_F q) {
-          r <@ f(D,get_query q);
-        } else {
-          r <@ fi(get_query q);
-        }
-        return r;
-      }
-
     }
 
     module C = {
       proc init(): unit = { }
 
-      proc oracle(p : block list): block = {
+      proc f(p : block list): block = {
         var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
-        if (size p >= 1 /\ p <> [Block.zeros]) {
+        if (1 <= size p /\ p <> [Block.zeros]) {
           while (p <> []) {
-            (sa,sc) <@ S.f(I,(sa ^ head witness p,sc));
+            (sa,sc) <@ S.fg(I,(sa ^ head witness p,sc));
             p <- behead p;
           }
         }
@@ -553,7 +474,7 @@ section.
   (** Result: the instrumented system and the concrete system are
       perfectly equivalent **)
   local equiv Game0_P_S_eq:
-    Concrete_F.P.f ~ Game0.S.f:
+    Concrete_F.P.f ~ Game0.S.fg:
          arg{1} = arg{2}.`2
       /\ ={m,mi}(Concrete_F,Game0)
       /\ is_pre_permutation (Concrete_F.m){1} (Concrete_F.mi){1}
@@ -593,14 +514,12 @@ section.
     proc.
     call (_:    ={m,mi}(Concrete_F,Game0)
              /\ is_pre_permutation Concrete_F.m{1} Concrete_F.mi{1}).
-      proc; if=> //=.
-      + by call Game0_P_S_eq.
-      + by call Game0_Pi_Si_eq.
+      + by proc *;inline Game0.S.f;wp;call Game0_P_S_eq;auto.
+      + by proc *;call Game0_Pi_Si_eq.
       + proc. sp; if=> //=.
         while (   ={sa,sc,p}
                /\ ={m,mi}(Concrete_F,Game0)
                /\ is_pre_permutation Concrete_F.m{1} Concrete_F.mi{1}).
-          inline Concrete_F.P.oracle. rcondt{1} 2; 1:by auto.
           wp; call Game0_P_S_eq.
           by auto.
         by auto.
@@ -629,7 +548,7 @@ section.
 
     module S = {
       (** Inner interface **)
-      proc f(o : caller, x : state): state = {
+      proc fg(o : caller, x : state): state = {
         var o', ya, yc, pv, p, v;
 
         o' <- odflt D pathscol.[x.`2];
@@ -663,6 +582,12 @@ section.
         return (oget rate.[x],oget cap.[x]);
       }
 
+      proc f(x:state):state = {
+        var r; 
+        r <@ fg(D,x);
+        return r;
+      }
+
       proc fi(x : state): state = {
         var ya, yc;
 
@@ -688,28 +613,17 @@ section.
       (** Distinguisher interface **)
       proc init() = { }
 
-      proc oracle(q : p_query): state = {
-        var r;
-
-        if (is_F q) {
-          r <@ f(D,get_query q);
-        } else {
-          r <@ fi(get_query q);
-        }
-        return r;
-      }
-
     }
 
     module C = {
       proc init(): unit = { }
 
-      proc oracle(p : block list): block = {
+      proc f(p : block list): block = {
         var (sa,sc) <- (Block.zeros,Capacity.zeros);
 
-        if (size p >= 1 /\ p <> [Block.zeros]) {
+        if (1<= size p /\ p <> [Block.zeros]) {
           while (p <> []) {
-            (sa,sc) <@ S.f(I,(sa ^ head witness p,sc));
+            (sa,sc) <@ S.fg(I,(sa ^ head witness p,sc));
             p <- behead p;
           }
         }
@@ -740,7 +654,7 @@ section.
   }.
 
   local equiv Game1_S_S_eq:
-    Game0.S.f ~ Game1.S.f:
+    Game0.S.fg ~ Game1.S.fg:
          ={arg}
       /\ ={pathscol,paths}(Game0,Game1)
       /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
@@ -751,15 +665,15 @@ section.
           /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
           /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
           /\ is_pre_permutation (Game0.m){1} (Game0.mi){1}.
-  proof.
+  proof. 
     proc. inline *.
     sp; if; 1:by progress [-split]; move: H=> [->].
-      + auto; progress [-split].
-        move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
-        by rewrite !getP_eq !map_split_set ?pre_permutation_set.
-      + auto; progress [-split].
-        rewrite H H0 H1 /=.
-        by move: H=> [_ [_ ->]].
+    + auto; progress [-split].
+      move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
+      by rewrite !getP_eq !map_split_set ?pre_permutation_set.
+    + auto; progress [-split].
+      rewrite H H0 H1 /=.
+      by move: H=> [_ [_ ->]].
   qed.
 
   local equiv Game1_Si_Si_eq:
@@ -777,12 +691,12 @@ section.
   proof.
     proc. inline *.
     sp; if; 1:by progress [-split]; move: H0=> [->].
-      + auto; progress [-split].
-        move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
-        by rewrite !getP_eq !map_split_set ?pre_permutation_set.
-      + auto; progress [-split].
-        rewrite H H0 H1 /=.
-        by move: H0=> [_ [_ ->]].
+    + auto; progress [-split].
+      move: H3; case yL=> ya yc H3; case (x{2})=> xa xc.
+      by rewrite !getP_eq !map_split_set ?pre_permutation_set.
+    + auto; progress [-split].
+      rewrite H H0 H1 /=.
+      by move: H0=> [_ [_ ->]].
   qed.
 
   local lemma Game1_pr &m:
@@ -796,17 +710,15 @@ section.
              /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
              /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
              /\ is_pre_permutation Game0.m{1} Game0.mi{1}).
-      proc; if=> //=.
-      + by call Game1_S_S_eq.
-      + by call Game1_Si_Si_eq.
-      + proc; sp; if=> //=.
-        while (   ={sa,sc,p}
-               /\ ={pathscol,paths}(Game0,Game1)
-               /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
-               /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
-               /\ is_pre_permutation Game0.m{1} Game0.mi{1}).
-          by wp; call Game1_S_S_eq.
-        done.
+    + by proc;call Game1_S_S_eq.
+    + by apply Game1_Si_Si_eq.
+    + proc; sp; if=> //=.
+      while (   ={sa,sc,p}
+             /\ ={pathscol,paths}(Game0,Game1)
+             /\ map_split Game0.m{1}  Game1.rate{2}  Game1.cap{2}
+             /\ map_split Game0.mi{1} Game1.ratei{2} Game1.capi{2}
+             /\ is_pre_permutation Game0.m{1} Game0.mi{1})=> //.
+      by wp; call Game1_S_S_eq.
     by auto; smt.
   qed.
 end section.
@@ -814,8 +726,8 @@ end section.
 (* That Self is unfortunate *)
 lemma PermutationLemma:
   exists epsilon,
-    forall (D <: Self.Distinguisher) &m,
-    `|Pr[Indif(SqueezelessSponge(P),P,D).main() @ &m: res]
-      - Pr[Indif(F,S(F),D).main() @ &m: res]|
+    forall (D <: Self.DISTINGUISHER) &m,
+    `|Pr[RealIndif(SqueezelessSponge,P,D).main() @ &m: res]
+      - Pr[IdealIndif(H,S,D).main() @ &m: res]|
   < epsilon.
 proof. admit. qed.

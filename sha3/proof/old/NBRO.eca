@@ -1,8 +1,7 @@
-require import Int Real NewList NewFMap.
+require import Option Int Real List FSet NewFMap.
 require RndOrcl Indifferentiability. 
 
-type p_in.
-type p_out.
+type p.
 
 type from.
 
@@ -30,63 +29,62 @@ axiom test_neg (x:from) (n:int): n < 0 => !test (x,n).
 axiom test_le (x:from) (n p:int) : 0 <= p <= n => test (x,n) => test (x,p).
 
 clone import Indifferentiability as IndB with 
-  type p_in <- p_in,
-  type p_out <- p_out,
+  type p <- p,
   type f_in  <- from * int,
   type f_out <- block.
 
 clone import Indifferentiability as IndNB with 
-  type p_in <- p_in,
-  type p_out <- p_out,
+  type p <- p,
   type f_in  <- from * int,
   type f_out <- block list.
 
-module RONB (Ob:IndB.Functionality) = {
+module RONB (Ob:IndB.FUNCTIONALITY) = {
   proc init = Ob.init
 
-  proc oracle(x:from, n:int) : block list = {
+  proc f(x:from, n:int) : block list = {
     var b, bs;
     bs <- [];
     while (size bs < n) {
-      b  <@ Ob.oracle(x,size bs);
+      b  <@ Ob.f(x,size bs);
       bs <- rcons bs b;
     }
     return bs;
   }
 }.
 
-module DNB(D:IndNB.Distinguisher, F:IndB.Functionality, P:IndB.Primitive) = {
+module DNB(D:IndNB.DISTINGUISHER, F:IndB.FUNCTIONALITY, P:IndB.PRIMITIVE) = {
   proc distinguish = D(RONB(F), P).distinguish
 }.
 
-module CNB (C: IndB.Construction, P:IndB.Primitive) = RONB(C(P)).
+module CNB (C: IndB.CONSTRUCTION, P:IndB.PRIMITIVE) = RONB(C(P)).
 
-module FNB_B(F:IndNB.Functionality) = {
+module FNB_B(F:IndNB.FUNCTIONALITY) = {
   proc init () = {}
 
-  proc oracle(x:from,n:int) : block = {
+  proc f(x:from,n:int) : block = {
     var bs;
-    bs <@ F.oracle(x,n+1);
+    bs <@ F.f(x,n+1);
     return nth dfl bs n;
   }
 }.
 
-module SNB(S:IndB.Simulator, F:IndNB.Functionality) = {
+module SNB(S:IndB.SIMULATOR, F:IndNB.FUNCTIONALITY) = {
 
   proc init = S(FNB_B(F)).init
 
-  proc oracle = S(FNB_B(F)).oracle
+  proc f = S(FNB_B(F)).f
+  proc fi = S(FNB_B(F)).fi
 }.
 
 section PROOF.
 
-  declare module P:IndB.Primitive.
-  declare module C:IndB.Construction {P}.
-  declare module S:IndB.Simulator {RO}.
+  declare module P:IndB.PRIMITIVE.
+  declare module C:IndB.CONSTRUCTION {P}.
+  declare module S:IndB.SIMULATOR {RO}.
 
-  declare module D: IndNB.Distinguisher {P, RO, S, C}.
+  declare module D: IndNB.DISTINGUISHER {P, RO, S, C}.
 
-  local equiv equivReal: IndNB.Real(P, CNB(C), D).main ~ IndB.Real(P, C, DNB(D)).main:
+  local equiv equivReal: IndNB.GReal(CNB(C), P, D).main ~ IndB.GReal(C, P, DNB(D)).main:
          ={glob P, glob C, glob D} ==>
          ={glob P, glob C, glob D,res}.
   proof. proc;inline *; sim. qed.
@@ -100,52 +98,56 @@ section PROOF.
     }
   }.
 
-  local module DNB'(O:ROB.RO) = {
+  local module DNB'(O:ROB.RO) : ROB.Distinguisher(O)= {
     proc distinguish () : bool = {
       var b;
-      S(O).init();
+      S(O).init(); 
       b <@ DNB(D, O, S(O)).distinguish();
       return b;
     }
   }.
 
+  local equiv feq : 
+    FNB_B(RONB(ERO)).f ~ ERO.f : (x, n){1} = x{2} /\ ={RO.m} ==> ={res, RO.m}. 
+  proof.
+    proc;inline *;wp.
+    while{1} ((0 <= n0 => size bs0 <= n0){1} /\ forall i, 0 <= i < size bs0{1} => 
+                        nth dfl bs0{1} i = 
+                          if test (x0{1},i) 
+                          then oget RO.m{1}.[(x0{1},i)] 
+                          else dfl) ((n0 - size bs0){1}).
+    + move=> &m2 z;auto;progress [-split].
+      rewrite size_rcons;split;2:smt ml=0;split;1:smt ml=0.
+      move=> i [Hi0 Hi1];rewrite nth_rcons.
+      case (i < size bs0{hr})=> Hi';first by apply H0.
+      by cut -> : i = size bs0{hr} by smt ml=0.
+    auto;progress;1,2: smt ml=0.
+    case (n{1} < 0)=> Hn. 
+    + by rewrite nth_neg // test_neg. 
+    apply H1=> {H1} //;smt ml=0.
+  qed.
+
   lemma conclusion &m: 
-     `|Pr[IndNB.Real(P, CNB(C), D).main()@ &m:res] - Pr[IndNB.Ideal(RONB(Restr(RO)), SNB(S), D).main()@ &m:res] | = 
-     `|Pr[IndB.Real(P, C, DNB(D)).main()@ &m:res] - Pr[IndB.Ideal(Restr(RO),S,DNB(D)).main()@ &m:res] |.
+     `|Pr[IndNB.GReal(CNB(C), P, D).main()@ &m:res] - Pr[IndNB.GIdeal(RONB(Restr(RO)), SNB(S), D).main()@ &m:res] | = 
+     `|Pr[IndB.GReal(C, P, DNB(D)).main()@ &m:res] - Pr[IndB.GIdeal(Restr(RO),S,DNB(D)).main()@ &m:res] |.
   proof. 
-    cut -> : Pr[IndNB.Real(P, CNB(C), D).main()@ &m:res] = Pr[IndB.Real(P, C, DNB(D)).main()@ &m:res].
+    cut -> : Pr[IndNB.GReal(CNB(C), P, D).main()@ &m:res] = Pr[IndB.GReal(C, P, DNB(D)).main()@ &m:res].
     + byequiv equivReal=> //.    
-    cut -> : Pr[Ideal(RONB(Restr(RO)), SNB(S), D).main() @ &m : res] = 
+    cut -> : Pr[GIdeal(RONB(Restr(RO)), SNB(S), D).main() @ &m : res] = 
              Pr[ROB.IND(Restr(RO), DRO).main() @ &m : res].
-    + byequiv=> //; proc;inline *;swap{1} 1 1;sim.
+    + by byequiv=> //; proc;inline *;swap{1} 1 1;sim.
     cut -> :  Pr[ROB.IND(Restr(RO), DRO).main() @ &m : res] = 
               Pr[ROB.IND(ERO,DRO).main () @ &m : res].
-    + byequiv (Eager DRO)=> //.
+    + by byequiv (Eager DRO)=> //.
     do 2! congr.
-    cut -> : Pr[IndB.Ideal(Restr(RO), S, DNB(D)).main() @ &m : res] = 
+    cut -> : Pr[IndB.GIdeal(Restr(RO), S, DNB(D)).main() @ &m : res] = 
              Pr[ROB.IND(Restr(RO), DNB').main() @ &m : res].
-    + byequiv=> //; proc;inline *;swap{1} 1 1;sim. 
+    + by byequiv=> //; proc;inline *;swap{1} 1 1;sim. 
     cut -> : Pr[ROB.IND(Restr(RO), DNB').main() @ &m : res] = 
              Pr[ROB.IND(ERO, DNB').main() @ &m : res].
-    + byequiv (Eager DNB')=> //.
+    + by byequiv (Eager DNB')=> //.
     byequiv=> //;proc;inline DRO(ERO).distinguish DNB'(ERO).distinguish;wp.
-    call (_: ={RO.m, glob S}).
-    + proc (={RO.m}) => //.
-      proc;inline *;wp.
-      while{1} ((0 <= n0 => size bs0 <= n0){1} /\ forall i, 0 <= i < size bs0{1} => 
-                          nth dfl bs0{1} i = 
-                            if test (x0{1},i) 
-                            then oget RO.m{1}.[(x0{1},i)] 
-                            else dfl) ((n0 - size bs0){1}).
-      + move=> &m2 z;auto;progress [-split].
-        rewrite size_rcons;split;2:smt ml=0;split;1:smt ml=0.
-        move=> i [Hi0 Hi1];rewrite nth_rcons.
-        case (i < size bs0{hr})=> Hi';first by apply H0.
-        by cut -> : i = size bs0{hr} by smt ml=0.
-      auto;progress;1,2: smt ml=0.
-      case (n{1} < 0)=> Hn. 
-      + by rewrite nth_neg // test_neg. 
-      apply H1=> {H1} //;smt ml=0.     
+    call (_: ={RO.m, glob S});1,2:by proc (={RO.m}) => //;apply feq.
     + sim.
     by conseq (_: _ ==> ={glob S, glob D, RO.m})=> //;sim.
   qed.

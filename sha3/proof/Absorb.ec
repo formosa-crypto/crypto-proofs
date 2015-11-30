@@ -19,14 +19,16 @@ clone import RndOrcl as RO with
 clone import Ideal. (* ?? Nested abstract theories... we don't like them *)
   
 (* -------------------------------------------------------------------- *)
-clone include Indifferentiability.Core with
-  type Types.p     <- block * capacity,
-  type Types.f_in  <- block list,
-  type Types.f_out <- block
+clone include Indifferentiability with
+  type p     <- block * capacity,
+  type f_in  <- block list,
+  type f_out <- block
 
   rename
     [module] "Indif" as "Experiment"
-    [module] "al"  as "alIndif".
+    [module] "GReal"  as "RealIndif"
+    [module] "GIdeal"  as "IdealIndif".
+ 
 
 (* -------------------------------------------------------------------- *)
 module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {

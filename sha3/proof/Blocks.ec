@@ -16,14 +16,15 @@ clone import IRO as BIRO with
     op valid <- valid.
   
 (* -------------------------------------------------------------------- *)
-clone include Indifferentiability.Core with
-  type Types.p     <- block * capacity,
-  type Types.f_in  <- block list * int,
-  type Types.f_out <- block list
+clone include Indifferentiability with
+  type p     <- block * capacity,
+  type f_in  <- block list * int,
+  type f_out <- block list
 
   rename
     [module] "Indif" as "Experiment"
-    [module] "al"  as "alIndif".
+    [module] "GReal"  as "RealIndif"
+    [module] "GIdeal"  as "IdealIndif".
 
 (* -------------------------------------------------------------------- *)
 module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {

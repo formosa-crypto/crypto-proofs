@@ -232,8 +232,7 @@ section.
         by proc; sp; if=> //=; call ModularAbsorb; auto.
       (* Re-Bug *)
       by conseq ModularAbsorb=> &1 &2; case (arg{1}); case (arg{2}).
-    inline *; wp; call (_: true)=> //=.
-      by sim.
+    inline *; wp;call (_: true)=> //=.
     auto; progress [-split]; split=> //=.
     smt.
   done.

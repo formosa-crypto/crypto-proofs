@@ -12,14 +12,15 @@ clone import IRO as BIRO with
   op valid (x : bool list) <- true.
   
 (* -------------------------------------------------------------------- *)
-clone include Indifferentiability.Core with
-  type Types.p     <- block * capacity,
-  type Types.f_in  <- bool list * int,
-  type Types.f_out <- bool list
+clone include Indifferentiability with
+  type p     <- block * capacity,
+  type f_in  <- bool list * int,
+  type f_out <- bool list
 
   rename
     [module] "Indif" as "Experiment"
-    [module] "al"  as "alIndif".
+    [module] "GReal"  as "RealIndif"
+    [module] "GIdeal"  as "IdealIndif".
 
 (* -------------------------------------------------------------------- *)
 

@@ -1,15 +1,8 @@
-(* -------------------------------------------------------------------- *)
-abstract theory Types.
 (** A primitive: the building block we assume ideal **)
 type p.
 
 (** A functionality: the target construction **)
 type f_in, f_out.
-end Types.
-
-(* -------------------------------------------------------------------- *)
-abstract theory Core.
-clone import Types.
 
 module type PRIMITIVE = {
   proc init(): unit
@@ -34,7 +27,7 @@ module type CONSTRUCTION (P : PRIMITIVE) = {
 }.
 
 module type SIMULATOR (F : FUNCTIONALITY) = {
-  proc init() : unit { F.init }
+  proc init() : unit { (* F.init *) }
   proc f(x : p) : p { F.f }
   proc fi(x : p) : p { F.f }
 }.
@@ -54,8 +47,9 @@ module Indif (F : FUNCTIONALITY, P : PRIMITIVE, D : DISTINGUISHER) = {
   }
 }.
 
-module Real(C : CONSTRUCTION, P : PRIMITIVE) = Indif(C(P),P).
-module Ideal(F : FUNCTIONALITY, S : SIMULATOR) = Indif(F,S(F)).
+(* Using the name Real can be a bad idea, since it can clash with the theory Real *)
+module GReal(C : CONSTRUCTION, P : PRIMITIVE) = Indif(C(P),P).
+module GIdeal(F : FUNCTIONALITY, S : SIMULATOR) = Indif(F,S(F)).
 
 (* (C <: CONSTRUCTION) applied to (P <: PRIMITIVE) is indifferentiable
    from (F <: FUNCTIONALITY) if there exists (S <: SIMULATOR) such
@@ -63,4 +57,3 @@ module Ideal(F : FUNCTIONALITY, S : SIMULATOR) = Indif(F,S(F)).
       | Pr[Real(P,C,D): res] - Pr[Ideal(F,S,D): res] | is small.
    We avoid the existential by providing a concrete construction for S
    and the `small` by providing a concrete bound. *)
-end Core.

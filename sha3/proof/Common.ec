@@ -338,6 +338,8 @@ op unpad : block list -> bool list option =
 
 lemma pad_valid (bs : bool list) : valid_block(pad bs).
 proof.
+admit.
+qed.
 
 lemma valid_block (xs : block list) :
   unpad xs <> None <=> valid_block xs.
