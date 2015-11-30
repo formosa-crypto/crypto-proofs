@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
-require import Ring StdRing StdOrder StdBigop ListExtra.
+require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType LazyRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA.
 
@@ -86,8 +86,7 @@ rename
 (* What about this (and the comment applies to other functions): *)
 
 theory Alternative.
-op chunk (bs : bool list) =
-  mkseq (fun i => take r (drop (r * i) bs)) (size bs %/ r).
+op chunk (bs : bool list) = BitChunking.chunk r bs.
 
 op mkpad (n : int) =
   true :: rcons (nseq ((-(n+2)) %% r) false) true.
@@ -137,41 +136,13 @@ by rewrite max_ler // modz_ge0 gtr_eqF ?gt0_r.
 qed.
 
 lemma size_chunk bs : size (chunk bs) = size bs %/ r.
-proof. by rewrite size_mkseq max_ler // divz_ge0 ?gt0_r ?size_ge0. qed.
+proof. by apply/BitChunking.size_chunk/gt0_r. qed.
 
 lemma in_chunk_size bs b: mem (chunk bs) b => size b = r.
-proof.
-move/mapP=> [i] [] /mem_iota /= [ge0_i ^lt_is +] ->.
-rewrite ltzE -(@ler_pmul2r r) 1:gt0_r divzE mulrDl mul1r.
-rewrite -ler_subr_addr 2!subrE addrAC -2!subrE.
-move/ler_trans/(_ (size bs - r) _); 1: rewrite subrE.
-  by rewrite ler_naddr // oppr_le0 modz_ge0 gtr_eqF ?gt0_r.
-rewrite (mulrC i) ler_subr_addl -ler_subr_addr => ler.
-rewrite size_take ?ge0_r size_drop // 1:mulr_ge0 ?ge0_r //.
-rewrite max_ler 1:subr_ge0 1:-subr_ge0 1:(ler_trans r) ?ge0_r //.
-by move/ler_eqVlt: ler=> [<-|->].
-qed.
-
-lemma size_flatten_chunk bs :
-  size (flatten (chunk bs)) = (size bs) %/ r * r.
-proof.
-rewrite size_flatten sumzE big_map predT_comp /(\o) /= big_seq.
-rewrite (@eq_bigr _ _ (fun x => r)) /=; 1: exact/in_chunk_size.
-by rewrite -big_seq big_constz count_predT size_chunk mulrC.
-qed.
+proof. by apply/BitChunking.in_chunk_size/gt0_r. qed.
 
 lemma chunkK bs : r %| size bs => flatten (chunk bs) = bs.
-proof.
-move=> dvd_d_bs; apply/(eq_from_nth false)=> [|i].
-  by rewrite size_flatten_chunk divzK.
-rewrite size_flatten_chunk divzK // => [ge0_i lt_ibs].
-rewrite (@nth_flatten false r); 1: by apply/allP=> s /in_chunk_size.
-rewrite nth_mkseq /= 1:divz_ge0 ?ge0_i ?ltz_divRL ?gt0_r //.
-  by apply/(@ler_lt_trans i)=> //; rewrite lez_floor gtr_eqF ?gt0_r.
-rewrite nth_take ?ltz_pmod 1:ltrW ?gt0_r nth_drop; last 2 first.
-  by rewrite modz_ge0 ?gtr_eqF ?gt0_r. by rewrite (@mulrC r) -divz_eq.
-by rewrite mulr_ge0 ?ge0_r divz_ge0 // gt0_r.
-qed.
+proof. by apply/BitChunking.chunkK/gt0_r. qed.
 
 lemma padK : pcancel pad unpad.
 proof.
