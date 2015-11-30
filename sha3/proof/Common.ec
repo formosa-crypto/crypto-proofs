@@ -1,43 +1,8 @@
 (* -------------------------------------------------------------------- *)
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
-require (*--*) FinType LazyRP Monoid.
+require (*--*) FinType BitWord LazyRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA.
-
-(* -------------------------------------------------------------------- *)
-theory BitWord.
-type bword.
-
-op zero : bword.
-op (^)  : bword -> bword -> bword.
-
-clone include Monoid
-  with
-    type t   <- bword,
-      op idm <- zero,
-      op (+) <- (^)
-  proof Axioms.* by admit.
-
-clone FinType with type t <- bword
-  proof * by admit.
-
-op w2bits : bword -> bool list.
-op bits2w : bool list -> bword.
-op size   : { int | 0 < size } as gt0_size.
-
-lemma w2bitsK : cancel w2bits bits2w.
-proof. admit. qed.
-
-lemma bits2wK (s : bool list) :
-  size s = size => w2bits (bits2w s) = s.
-proof. admit. qed.
-
-lemma w2bits_size (x : bword) : size(w2bits x) = size.
-proof. admit. qed.
-
-op uniform : bword distr =
-  MUniform.duniform FinType.enum.
-end BitWord.
 
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
@@ -55,28 +20,25 @@ proof. by apply/ltrW/gt0_r. qed.
 
 (* -------------------------------------------------------------------- *)
 clone BitWord as Capacity with
-  type bword <- capacity,
-    op size  <- c
-  proof * by apply/gt0_c
+  type word <- capacity,
+    op n    <- c
+  proof gt0_n by apply/gt0_c
 
-  rename
-    [op] "zero" as "c0"
-    [op] "uniform" as "cdistr".
+  rename "dword" as "cdistr".
 
 clone export BitWord as Block with
-  type bword <- block,
-    op size  <- r
-  proof * by apply/gt0_r
+  type word <- block,
+    op n    <- r
+  proof gt0_n by apply/gt0_r
 
-  rename
-    [op] "zero" as "b0"
-    [op] "uniform" as "bdistr".
+  rename "dword" as "bdistr".
 
-op ( * ): 'a NewDistr.distr -> 'b NewDistr.distr -> ('a * 'b) Pervasive.distr.
+(* -------------------------------------------------------------------- *)
+op ( * ): 'a distr -> 'b distr -> ('a * 'b) distr.
 
 clone export LazyRP as Perm with
   type D <- block * capacity,
-  op d <- bdistr * Capacity.cdistr
+  op   d <- bdistr * Capacity.cdistr
 rename
   [module type] "RP" as "PRIMITIVE"
   [module] "P" as "Perm".
