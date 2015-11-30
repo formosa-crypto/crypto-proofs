@@ -40,7 +40,7 @@ module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {
     if (valid p) {
       (* Absorption *)
       while (p <> []) {
-        (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+        (sa,sc) <@ P.f(sa +^ head b0 p, sc);
         p       <- behead p;
       }
     }

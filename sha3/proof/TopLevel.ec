@@ -31,11 +31,11 @@ module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
     var z       <- [];
     var (sa,sc) <- (b0, Capacity.c0);
     var i       <- 0;
-    var p       <- pad bp;
+    var p       <- map bits2w (chunk (pad bp));
 
     (* Absorption *)
     while (p <> []) {
-      (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+      (sa,sc) <@ P.f(sa +^ head b0 p, sc);
       p       <- behead p;
     }
     (* Squeezing *)

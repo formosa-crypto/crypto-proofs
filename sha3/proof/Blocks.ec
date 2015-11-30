@@ -7,13 +7,10 @@ require import Common.
 
 (* -------------------------------------------------------------------- *)
 
-op valid : block list -> bool =
-  fun xs => unpad xs <> None.
-
 clone import IRO as BIRO with
   type from  <- block list,
   type to    <- block,
-    op valid <- valid.
+    op valid <- valid_block.
   
 (* -------------------------------------------------------------------- *)
 clone include Indifferentiability with
@@ -35,10 +32,10 @@ module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
     var (sa,sc) <- (b0, Capacity.c0);
     var i       <- 0;
 
-    if (valid p) {
+    if (valid_block p) {
       (* Absorption *)
       while (p <> []) {
-        (sa,sc) <@ P.f(sa ^ head b0 p, sc);
+        (sa,sc) <@ P.f(sa +^ head b0 p, sc);
         p       <- behead p;
       }
       (* Squeezing *)

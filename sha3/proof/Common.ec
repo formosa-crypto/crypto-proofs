@@ -2,7 +2,7 @@
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType BitWord LazyRP Monoid.
-(*---*) import IntID IntOrder Bigint Bigint.BIA.
+(*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
 
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
@@ -24,14 +24,16 @@ clone BitWord as Capacity with
     op n    <- c
   proof gt0_n by apply/gt0_c
 
-  rename "dword" as "cdistr".
+  rename "dword" as "cdistr"
+         "zerow" as "c0".
 
 clone export BitWord as Block with
   type word <- block,
     op n    <- r
   proof gt0_n by apply/gt0_r
 
-  rename "dword" as "bdistr".
+  rename "dword" as "bdistr"
+         "zerow" as "b0".
 
 (* -------------------------------------------------------------------- *)
 op ( * ): 'a distr -> 'b distr -> ('a * 'b) distr.
@@ -47,7 +49,6 @@ rename
 
 (* What about this (and the comment applies to other functions): *)
 
-theory Alternative.
 op chunk (bs : bool list) = BitChunking.chunk r bs.
 
 op mkpad (n : int) =
@@ -143,8 +144,41 @@ qed.
 
 lemma chunk_padK : pcancel (chunk \o pad) (unpad \o flatten).
 proof. by move=> s @/(\o); rewrite chunkK 1:size_pad_dvd_r padK. qed.
-end Alternative.
 
+
+lemma mkseq_add (f:int -> 'a) (n m:int): 
+   0 <= n => 0 <= m =>
+   mkseq f (n+m) = mkseq f n ++ mkseq (fun i => f (n+i)) m.
+admit.
+qed.
+
+
+lemma flattenK bs : (forall b, mem bs b => size b = r) => chunk (flatten bs) = bs.
+proof.
+  elim:bs=> [_|x xs Hrec Hs]. by rewrite flatten_nil /chunk /= div0z mkseq0.
+  rewrite flatten_cons /chunk size_cat Hs 1://.
+  cut /= -> :=(divzMDl 1 (size (flatten xs)) r);1:by apply /gtr_eqF/gt0_r.
+  rewrite mkseq_add // 1:divz_ge0 1:gt0_r 1:size_ge0 (mkseqS _ 0) 1:// mkseq0 /=.
+  rewrite drop0 take_cat Hs //= take0 cats0 /= -{3}Hrec;1:by move=> b Hb;apply Hs;right.
+  apply eq_in_mkseq => /= i Hi; rewrite IntID.mulrDr /= drop_cat (Hs x) //=.
+  cut ->/=:!(r + r * i < r);smt ml=0 w=gt0_r.
+qed.
+
+op blocks2bits (xs:block list) : bool list = 
+  flatten (map w2bits xs).
+
+op bits2blocks (xs:bool list) : block list =
+  map bits2w (chunk xs).
+
+lemma block2bitsK : cancel blocks2bits bits2blocks.
+proof.
+  move=> xs;rewrite /blocks2bits /bits2blocks flattenK.
+  + by move=> b /mapP [x [_ ->]];rewrite /w2bits -Array.sizeE size_word.
+  rewrite -map_comp -{2}(map_id xs) /(\o) /=;apply eq_map=> @/idfun x /=;apply oflistK.
+qed.
+
+
+(*
 (* -------------------------------------------------------------------- *)
 (* if size cs < r, then size (chunk_aux (xs, cs) b).`2 < r *)
 op chunk_aux : block list * bool list -> bool -> block list * bool list =
@@ -275,10 +309,10 @@ smt.
 smt.
 (* inductive step *)
 move=> x xs IH cs ys siz_cs_lt_r.
-have -> : flatten(x :: xs, cs) = w2bits x ++ flatten (xs, cs) by smt.
+have -> : flatten(x :: xs, cs) = w2bits x ++ flatten (xs, cs) by (* smt *) admit.
 rewrite foldl_cat.
 rewrite foldl_chunk_aux_new_block.
-smt.
+smt ml=0.
 smt.
 have -> : bits2w([] ++ w2bits x) = x by smt.
 rewrite (IH cs (rcons ys x)).
@@ -358,36 +392,37 @@ proof.
 rewrite /ocancel.
 admit.
 qed.
-
+*)
 (* ------------------------ Extending/Stripping ----------------------- *)
 
+
+op valid_block (xs : block list) =
+  unpad (flatten (map w2bits xs)) <> None.
 (* extend xs n returns None if xs doesn't unpad successfully;
    otherwise, it returns the result of adding n copies of b0 to the
    end of xs (n < 0 is treated as n = 0) *)
-op extend : block list -> int -> block list option =
-  fun xs n =>
-  if unpad xs = None
-  then None
+
+op extend (xs:block list) (n:int): block list option =
+  if unpad (flatten (map w2bits xs)) = None then None
   else Some(xs ++ nseq n b0).
 
-op extend_uncur : block list * int -> block list option =
-  fun (p : block list * int) => extend p.`1 p.`2.
+op extend_uncur (p:block list * int): block list option =
+  extend p.`1 p.`2.
 
-(* strip returns None if removing the longest suffix of b0's from its
+(* strip returns None if removing the longest suffix of zerow's from its
    argument yields a block list that cannot be unpadded; otherwise, it
-   removes the longest suffix of b0's from its argument and returns
-   the pair of the resulting block list with the number of b0's
+   removes the longest suffix of zerow's from its argument and returns
+   the pair of the resulting block list with the number of zerow's
    removed *)
-op strip : block list -> (block list * int)option =
-  fun xs =>
+op strip (xs:block list): (block list * int)option =
     let ys = rev xs in
     let i = find (fun x => x <> b0) ys in
-    if i = size xs
-    then None
-    else let zs = rev(drop i ys) in
-         if unpad zs = None
-         then None
-         else Some(zs, i).
+    if i = size xs then None
+    else 
+      let zs = rev(drop i ys) in
+      if valid_block zs then Some(zs, i) 
+      else None.
+
 
 pred valid_absorb (xs : block list) =
   exists (ys : block list, n : int),

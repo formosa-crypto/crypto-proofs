@@ -35,7 +35,7 @@ module UpperFun (F : Absorb.FUNCTIONALITY) = {
     var ys <- [];
     var i <- 0;
 
-    if (unpad xs <> None) {
+    if (valid_block xs) {
       while (i < n) {
         y <@ F.f(oget(extend xs i));
         ys <- rcons ys y;
@@ -70,7 +70,7 @@ section.
 
   pred lower (ro : (block list,block) fmap) (iro : (block list * int,block) fmap) =
     Blocks.BIRO.prefix_closed iro /\
-    forall x n, unpad x <> None => iro.[(x,n)] = ro.[oget(extend x n)].
+    forall x n, valid_block x => iro.[(x,n)] = ro.[oget(extend x n)].
 
   local equiv ModularAbsorb:
     UpperFun(Absorb.Ideal.RO).f ~ Blocks.BIRO.IRO'.f:
@@ -87,7 +87,7 @@ section.
   pred upper (ro : (block list,block) fmap) (iro : (block list * int,block) fmap) =
     (forall x y, strip x <> None => ro.[x] = Some y => iro.[oget(strip x)] = Some y)
     /\ (forall x n y,
-          unpad x <> None =>
+          valid_block x =>
           iro.[(x,n)] = Some y =>
           exists n',
                n <= n'

@@ -12,8 +12,8 @@ module UpperFun (F : Blocks.FUNCTIONALITY) = {
   proc f(p : bool list, n : int) = {
     var xs;
 
-    xs <@ F.f(pad p, (n + r - 1) %/ r);
-    return take n (flatten(map w2bits xs));
+    xs <@ F.f(bits2blocks (pad p), (n + r - 1) %/ r);
+    return take n (blocks2bits xs);
   }
 }.
 
@@ -25,10 +25,10 @@ module LowerFun (F : TopLevel.FUNCTIONALITY) = {
     var obs : bool list option;
     var ys : block list <- [];
 
-    obs <- unpad xs;
+    obs <- unpad (blocks2bits xs);
     if (obs <> None) {
       cs <@ F.f(oget obs, n * r); (* size cs = n * r *)
-      ys <- (chunk cs).`1;
+      ys <- bits2blocks cs;
     }
     return ys;
   }
