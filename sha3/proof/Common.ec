@@ -145,24 +145,9 @@ qed.
 lemma chunk_padK : pcancel (chunk \o pad) (unpad \o flatten).
 proof. by move=> s @/(\o); rewrite chunkK 1:size_pad_dvd_r padK. qed.
 
-
-lemma mkseq_add (f:int -> 'a) (n m:int): 
-   0 <= n => 0 <= m =>
-   mkseq f (n+m) = mkseq f n ++ mkseq (fun i => f (n+i)) m.
-admit.
-qed.
-
-
-lemma flattenK bs : (forall b, mem bs b => size b = r) => chunk (flatten bs) = bs.
-proof.
-  elim:bs=> [_|x xs Hrec Hs]. by rewrite flatten_nil /chunk /= div0z mkseq0.
-  rewrite flatten_cons /chunk size_cat Hs 1://.
-  cut /= -> :=(divzMDl 1 (size (flatten xs)) r);1:by apply /gtr_eqF/gt0_r.
-  rewrite mkseq_add // 1:divz_ge0 1:gt0_r 1:size_ge0 (mkseqS _ 0) 1:// mkseq0 /=.
-  rewrite drop0 take_cat Hs //= take0 cats0 /= -{3}Hrec;1:by move=> b Hb;apply Hs;right.
-  apply eq_in_mkseq => /= i Hi; rewrite IntID.mulrDr /= drop_cat (Hs x) //=.
-  cut ->/=:!(r + r * i < r);smt ml=0 w=gt0_r.
-qed.
+lemma flattenK bs :
+  (forall b, mem bs b => size b = r) => chunk (flatten bs) = bs.
+proof. by apply/BitChunking.flattenK/gt0_r. qed.
 
 op blocks2bits (xs:block list) : bool list = 
   flatten (map w2bits xs).
@@ -176,7 +161,6 @@ proof.
   + by move=> b /mapP [x [_ ->]];rewrite /w2bits -Array.sizeE size_word.
   rewrite -map_comp -{2}(map_id xs) /(\o) /=;apply eq_map=> @/idfun x /=;apply oflistK.
 qed.
-
 
 (*
 (* -------------------------------------------------------------------- *)
