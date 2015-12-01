@@ -8,9 +8,9 @@ require import Common.
 (* -------------------------------------------------------------------- *)
 
 clone import IRO as BIRO with
-  type from  <- block list,
-  type to    <- block,
-    op valid <- valid_block.
+  type from <- block list,
+  type to   <- block,
+  op valid  <- valid_block.
   
 (* -------------------------------------------------------------------- *)
 clone include Indifferentiability with

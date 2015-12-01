@@ -12,16 +12,13 @@ module LowerFun(F : Blocks.FUNCTIONALITY) : Absorb.FUNCTIONALITY = {
   proc init = F.init
 
   proc f(xs : block list) : block = {
-    var o : (block list * int)option;
-    var ys <- [];
-    var n;
+    var (ys, n) <- strip xs;
+    var zs <- [];
 
-    o <- strip xs;
-    if (o <> None) {
-      (ys, n) <- oget o;
-      ys <@ F.f(ys, n + 1);
+    if (valid_block ys) {
+      zs <@ F.f(ys, n + 1);
     }
-    return last b0 ys;
+    return last b0 zs;
   }
 }.
 
@@ -37,7 +34,7 @@ module UpperFun (F : Absorb.FUNCTIONALITY) = {
 
     if (valid_block xs) {
       while (i < n) {
-        y <@ F.f(oget(extend xs i));
+        y <@ F.f(extend xs i);
         ys <- rcons ys y;
         i <- i + 1;
       }
@@ -70,7 +67,7 @@ section.
 
   pred lower (ro : (block list,block) fmap) (iro : (block list * int,block) fmap) =
     Blocks.BIRO.prefix_closed iro /\
-    forall x n, valid_block x => iro.[(x,n)] = ro.[oget(extend x n)].
+    forall x n, valid_block x => iro.[(x,n)] = ro.[extend x n].
 
   local equiv ModularAbsorb:
     UpperFun(Absorb.Ideal.RO).f ~ Blocks.BIRO.IRO'.f:
@@ -85,23 +82,22 @@ section.
   qed.
 
   pred upper (ro : (block list,block) fmap) (iro : (block list * int,block) fmap) =
-    (forall x y, strip x <> None => ro.[x] = Some y => iro.[oget(strip x)] = Some y)
+    (forall x y, valid_absorb x => ro.[x] = y => iro.[strip x] = y)
     /\ (forall x n y,
           valid_block x =>
           iro.[(x,n)] = Some y =>
           exists n',
                n <= n'
-            /\ mem (dom ro) (oget(extend x n'))).
+            /\ mem (dom ro) (extend x n')).
 
   module LowIRO' : Absorb.FUNCTIONALITY = {
     proc init = Blocks.BIRO.IRO'.init
-    proc f(x : block list) = {
+    proc f(xs : block list) = {
       var b <- b0;
-      var o : (block list * int)option;
+      var (ys, n) = strip xs;
 
-      o <- strip x;
-      if (o <> None) {
-        b <@ Blocks.BIRO.IRO'.f_lazy(oget o);
+      if (valid_block ys) {
+        b <@ Blocks.BIRO.IRO'.f_lazy(ys, n);
       }
 
       return b;
@@ -227,9 +223,11 @@ section.
     byequiv=> //=; proc.
     call (_: ={glob AbsorbSim} /\ lower Absorb.Ideal.RO.m{1} Blocks.BIRO.IRO'.mp{2}).
       proc (lower Absorb.Ideal.RO.m{1} Blocks.BIRO.IRO'.mp{2})=> //=.
-        by proc; sp; if=> //=; call ModularAbsorb; auto.
+        proc; sp; if=> //=. smt.
+        call ModularAbsorb; auto; smt.
       proc (lower Absorb.Ideal.RO.m{1} Blocks.BIRO.IRO'.mp{2})=> //=.
-        by proc; sp; if=> //=; call ModularAbsorb; auto.
+        proc; sp; if=> //=. smt.
+        call ModularAbsorb; auto; smt.
       (* Re-Bug *)
       by conseq ModularAbsorb=> &1 &2; case (arg{1}); case (arg{2}).
     inline *; wp;call (_: true)=> //=.

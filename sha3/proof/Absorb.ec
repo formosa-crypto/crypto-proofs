@@ -9,9 +9,6 @@ require import Common.
 
 (* -------------------------------------------------------------------- *)
 
-op valid : block list -> bool =
-  fun xs => strip xs <> None.
-
 clone import RndOrcl as RO with
   type from                          <- block list,
   type to                            <- block,
@@ -37,7 +34,7 @@ module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {
   proc f(p : block list): block = {
     var (sa,sc) <- (b0, Capacity.c0);
 
-    if (valid p) {
+    if (valid_absorb p) {
       (* Absorption *)
       while (p <> []) {
         (sa,sc) <@ P.f(sa +^ head b0 p, sc);

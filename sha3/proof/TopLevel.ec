@@ -8,8 +8,8 @@ require import Common.
 (* -------------------------------------------------------------------- *)
 clone import IRO as BIRO with
   type from <- bool list,
-  type to <- bool,
-  op valid (x : bool list) <- true.
+  type to   <- bool,
+  op valid  <- valid_toplevel.
   
 (* -------------------------------------------------------------------- *)
 clone include Indifferentiability with
