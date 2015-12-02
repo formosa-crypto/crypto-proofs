@@ -158,8 +158,9 @@ op bits2blocks (xs:bool list) : block list =
 lemma blocks2bitsK : cancel blocks2bits bits2blocks.
 proof.
   move=> xs;rewrite /blocks2bits /bits2blocks flattenK.
-  + by move=> b /mapP [x [_ ->]];rewrite /w2bits -Array.sizeE size_word.
-  rewrite -map_comp -{2}(map_id xs) /(\o) /=;apply eq_map=> @/idfun x /=;apply oflistK.
+  + by move=> b /mapP [x [_ ->]];rewrite size_tolist.
+  rewrite -map_comp -{2}(map_id xs) /(\o) /=;apply eq_map=> @/idfun x /=;
+  apply oflistK.
 qed.
 
 lemma bits2blocksK (bs : bool list) :
@@ -194,7 +195,8 @@ proof.
 move=> xs; rewrite /pad2blocks /unpad_blocks /(\o).
 pose bs := blocks2bits xs.
 case (unpad bs = None) => [-> // | unpad_bs_neq_None].
-cut unpad_bs : unpad bs = Some(oget(unpad bs)) by rewrite /#.
+cut unpad_bs : unpad bs = Some(oget(unpad bs))
+  by move: unpad_bs_neq_None; case (unpad bs)=> //.
 rewrite unpad_bs /=.
 cut -> : pad(oget(unpad bs)) = bs by rewrite - {2} (unpadK bs) unpad_bs //.
 rewrite /bs blocks2bitsK //.
@@ -233,4 +235,4 @@ op valid_block (xs : block list) = unpad_blocks xs <> None.
 
 (* in Absorb *)
 op valid_absorb (xs : block list) =
-  let (ys, n) = strip xs in valid_block ys.
+  let (ys, _) = strip xs in valid_block ys.
