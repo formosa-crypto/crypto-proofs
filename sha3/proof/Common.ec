@@ -3,6 +3,7 @@ require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType BitWord LazyRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
+require import Auxiliary.
 
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
@@ -168,7 +169,7 @@ lemma bits2blocksK (bs : bool list) :
 proof.
 move=> siz_bs_div_r.
 rewrite /blocks2bits /bits2blocks -map_comp.
-cut map_tolistK :
+have map_tolistK :
   forall (xss : bool list list),
   (forall (xs : bool list), mem xss xs => size xs = r) =>
   map (w2bits \o bits2w) xss = xss.
@@ -195,10 +196,10 @@ proof.
 move=> xs; rewrite /pad2blocks /unpad_blocks /(\o).
 pose bs := blocks2bits xs.
 case (unpad bs = None) => [-> // | unpad_bs_neq_None].
-cut unpad_bs : unpad bs = Some(oget(unpad bs))
+have unpad_bs : unpad bs = Some(oget(unpad bs))
   by move: unpad_bs_neq_None; case (unpad bs)=> //.
 rewrite unpad_bs /=.
-cut -> : pad(oget(unpad bs)) = bs by rewrite - {2} (unpadK bs) unpad_bs //.
+have -> : pad(oget(unpad bs)) = bs by rewrite - {2} (unpadK bs) unpad_bs //.
 rewrite /bs blocks2bitsK //.
 qed.
 
@@ -212,17 +213,62 @@ op strip (xs : block list) =
   (take (size xs - i) xs, i).
 
 lemma extendK (xs : block list) (n : int) :
-  last b0 xs <> b0 => 0 <= n =>
-  strip(extend xs n) = (xs, n).
+  last b0 xs <> b0 => 0 <= n => strip(extend xs n) = (xs, n).
 proof.
-admit. (* proof in progress *)
+move=> xs_ends_not_b0 ge0_n.
+rewrite /strip /extend /= rev_cat rev_nseq size_cat size_nseq max_ler //
+        subzE - addzA.
+have head_rev_xs_neq_b0 : head b0 (rev xs) <> b0 by rewrite - last_rev revK //.
+have -> : rev xs = head b0 (rev xs) :: behead (rev xs)
+  by rewrite head_behead //; exact (head_nonnil b0 (rev xs)).
+pose p := fun (x : block) => x <> b0.
+have has_p_full : has p (nseq n b0 ++ head b0 (rev xs) :: behead (rev xs))
+  by apply has_cat; right; simplify; left.
+have not_has_p_nseq : ! has p (nseq n b0) by rewrite has_nseq.
+have -> : find p (nseq n b0 ++ head b0 (rev xs) :: behead (rev xs)) = n.
+  rewrite find_cat not_has_p_nseq /= size_nseq max_ler //.
+  have -> // : p (head b0 (rev xs)) by trivial.
+by rewrite (addzC n) addNz /= take_size_cat.
 qed.
 
 lemma stripK (xs : block list) :
   let (ys, n) = strip xs in
   extend ys n = xs.
 proof.
-admit. (* proof in progress *)
+rewrite /strip /extend /=.
+pose p := fun x => x <> b0.
+pose i := find p (rev xs).
+have [i_low i_upp] : 0 <= i <= size xs
+  by split; [apply find_ge0 | move=> _; rewrite - size_rev find_size].
+have i_upp' : 0 <= size xs - i by rewrite subz_ge0 //.
+have {3} <- :
+  take (size xs - i) xs ++ drop (size xs - i) xs = xs by apply cat_take_drop.
+have siz_drop : size(drop (size xs - i) xs) = i.
+  rewrite size_drop 1 : i_upp'.
+  have -> : size xs - (size xs - i) = i by algebra.
+  apply max_ler; first apply i_low.
+have drop_eq_b0 :
+  forall (j : int),
+  0 <= j < i => nth b0 (drop (size xs - i) xs) j = b0.
+    move=> j [j_low j_upp].
+    have [i_min_j_min_1_low i_min_j_min_1_upp] : 0 <= i - j - 1 < i.
+      split => [|_].
+      rewrite - subz_gt0 - lez_add1r in j_upp; rewrite subz_ge0 //.
+      rewrite - subz_gt0.
+      have -> : i - (i - j - 1) = j + 1 by algebra.
+      by rewrite - lez_add1r addzC addzA lez_add2r.
+    rewrite nth_drop //.
+    have -> : size xs - i + j = size xs - ((i - j - 1) + 1) by algebra.
+    rewrite - (nth_rev b0 (i - j - 1) xs).
+    split=> [//| _]; exact (ltlez i).
+    have -> :
+      (nth b0 (rev xs) (i - j - 1) = b0) = !p(nth b0 (rev xs) (i - j - 1))
+      by trivial.
+    exact before_find.
+have <- // : drop (size xs - i) xs = nseq i b0.
+  apply (eq_from_nth b0)=> [| j rng_j].
+  rewrite siz_drop size_nseq max_ler //.
+  rewrite siz_drop in rng_j; rewrite nth_nseq //; exact drop_eq_b0.
 qed.
 
 (*------------------------------ Validity ----------------------------- *)
