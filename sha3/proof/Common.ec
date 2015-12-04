@@ -3,7 +3,6 @@ require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType BitWord LazyRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
-require import Auxiliary.
 
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
@@ -67,13 +66,13 @@ lemma rev_mkpad n : rev (mkpad n) = mkpad n.
 proof. by rewrite /mkpad rev_cons rev_rcons rev_nseq. qed.
 
 lemma last_mkpad b n : last b (mkpad n) = true.
-proof. by rewrite !(lastcons, lastrcons). qed.
+proof. by rewrite !(last_cons, last_rcons). qed.
 
 lemma head_mkpad b n : head b (mkpad n) = true.
 proof. by []. qed.
 
 lemma last_pad b s : last b (pad s) = true.
-proof. by rewrite lastcat last_mkpad. qed.
+proof. by rewrite last_cat last_mkpad. qed.
 
 lemma size_mkpad n : size (mkpad n) = (-(n+2)) %% r + 2.
 proof.
@@ -127,7 +126,7 @@ qed.
 lemma unpadK : ocancel unpad pad.
 proof.
 move=> s @/unpad; case: (last false s) => //=.
-elim/last_ind: s=> //= s b ih {ih}; rewrite lastrcons => hb.
+elim/last_ind: s=> //= s b ih {ih}; rewrite last_rcons => hb.
 rewrite rev_rcons /= size_rcons -(inj_eq _ (addIr (-1))) /= ?addrK.
 pose i := index _ _; case: (i = size s) => //=.
 move=> ne_is @/pad; pose j := _ - (i+2); apply/eq_sym.
@@ -219,8 +218,8 @@ move=> xs_ends_not_b0 ge0_n.
 rewrite /strip /extend /= rev_cat rev_nseq size_cat size_nseq max_ler //
         subzE - addzA.
 have head_rev_xs_neq_b0 : head b0 (rev xs) <> b0 by rewrite - last_rev revK //.
-have -> : rev xs = head b0 (rev xs) :: behead (rev xs)
-  by rewrite head_behead //; exact (head_nonnil b0 (rev xs)).
+have -> : rev xs = head b0 (rev xs) :: behead (rev xs).
+  by rewrite head_behead //; case: (rev xs) head_rev_xs_neq_b0.
 pose p := fun (x : block) => x <> b0.
 have has_p_full : has p (nseq n b0 ++ head b0 (rev xs) :: behead (rev xs))
   by apply has_cat; right; simplify; left.
@@ -260,7 +259,7 @@ have drop_eq_b0 :
     rewrite nth_drop //.
     have -> : size xs - i + j = size xs - ((i - j - 1) + 1) by algebra.
     rewrite - (nth_rev b0 (i - j - 1) xs).
-    split=> [//| _]; exact (ltlez i).
+    split=> [//| _]; exact/(ltr_le_trans i).
     have -> :
       (nth b0 (rev xs) (i - j - 1) = b0) = !p(nth b0 (rev xs) (i - j - 1))
       by trivial.
