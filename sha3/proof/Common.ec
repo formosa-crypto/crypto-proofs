@@ -203,7 +203,6 @@ rewrite /bs blocks2bitsK //.
 qed.
 
 (* ------------------------ Extending/Stripping ----------------------- *)
-
 op extend (xs : block list) (n : int) =
   xs ++ nseq n b0.
 
@@ -231,43 +230,23 @@ by rewrite (addzC n) addNz /= take_size_cat.
 qed.
 
 lemma stripK (xs : block list) :
-  let (ys, n) = strip xs in
-  extend ys n = xs.
+  extend (strip xs).`1 (strip xs).`2 = xs.
 proof.
-rewrite /strip /extend /=.
-pose p := fun x => x <> b0.
-pose i := find p (rev xs).
-have [i_low i_upp] : 0 <= i <= size xs
-  by split; [apply find_ge0 | move=> _; rewrite - size_rev find_size].
-have i_upp' : 0 <= size xs - i by rewrite subz_ge0 //.
-have {3} <- :
-  take (size xs - i) xs ++ drop (size xs - i) xs = xs by apply cat_take_drop.
-have siz_drop : size(drop (size xs - i) xs) = i.
-  rewrite size_drop 1 : i_upp'.
-  have -> : size xs - (size xs - i) = i by algebra.
-  apply max_ler; first apply i_low.
-have drop_eq_b0 :
-  forall (j : int),
-  0 <= j < i => nth b0 (drop (size xs - i) xs) j = b0.
-    move=> j [j_low j_upp].
-    have [i_min_j_min_1_low i_min_j_min_1_upp] : 0 <= i - j - 1 < i.
-      split => [|_].
-      rewrite - subz_gt0 - lez_add1r in j_upp; rewrite subz_ge0 //.
-      rewrite - subz_gt0.
-      have -> : i - (i - j - 1) = j + 1 by algebra.
-      by rewrite - lez_add1r addzC addzA lez_add2r.
-    rewrite nth_drop //.
-    have -> : size xs - i + j = size xs - ((i - j - 1) + 1) by algebra.
-    rewrite - (nth_rev b0 (i - j - 1) xs).
-    split=> [//| _]; exact/(ltr_le_trans i).
-    have -> :
-      (nth b0 (rev xs) (i - j - 1) = b0) = !p(nth b0 (rev xs) (i - j - 1))
-      by trivial.
-    exact before_find.
-have <- // : drop (size xs - i) xs = nseq i b0.
-  apply (eq_from_nth b0)=> [| j rng_j].
-  rewrite siz_drop size_nseq max_ler //.
-  rewrite siz_drop in rng_j; rewrite nth_nseq //; exact drop_eq_b0.
+rewrite /extend /strip eq_sym /=; pose i := find _ _.
+rewrite -{1}(cat_take_drop (size xs - i) xs); congr.
+have [ge0_i le_ixs]: 0 <= i <= size xs.
+  by rewrite find_ge0 -size_rev find_size.
+have sz_drop: size (drop (size xs - i) xs) = i.
+  rewrite size_drop ?subr_ge0 // 2!subrE opprD opprK.
+  by rewrite addrA addrN /= max_ler.
+apply/(eq_from_nth b0) => [|j]; rewrite ?size_nseq ?max_ler //.
+rewrite sz_drop=> -[ge0_j lt_ji]; rewrite nth_nseq //.
+rewrite nth_drop ?subr_ge0 // -{1}revK nth_rev ?size_rev.
+  rewrite addr_ge0 ?subr_ge0 //= -ltr_subr_addr 2!subrE.
+  by rewrite ltr_add2l ltr_opp2.
+have @/predC1 /= ->// := (before_find b0 (predC1 b0)).
+pose s := (_ - _)%Int; rewrite -/i (_ : s = i - (j+1)) /s 1:#ring.
+by rewrite subr_ge0 -ltzE lt_ji /= subrE ltr_snaddr // oppr_lt0 ltzS.
 qed.
 
 (*------------------------------ Validity ----------------------------- *)
