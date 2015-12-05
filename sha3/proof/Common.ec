@@ -2,7 +2,7 @@
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType BitWord LazyRP Monoid.
-(*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
+(*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv Dprod.
 
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
@@ -36,7 +36,6 @@ clone export BitWord as Block with
          "zerow" as "b0".
 
 (* -------------------------------------------------------------------- *)
-op ( * ): 'a distr -> 'b distr -> ('a * 'b) distr.
 
 clone export LazyRP as Perm with
   type D <- block * capacity,
