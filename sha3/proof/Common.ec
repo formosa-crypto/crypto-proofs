@@ -46,8 +46,6 @@ rename
 
 (* ------------------------- Padding/Unpadding ------------------------ *)
 
-(* What about this (and the comment applies to other functions): *)
-
 op chunk (bs : bool list) = BitChunking.chunk r bs.
 
 op mkpad (n : int) =
@@ -59,7 +57,9 @@ op pad (s : bool list) =
 op unpad (s : bool list) =
   if !last false s then None else
   let i = index true (behead (rev s)) in
-  if i+1 = size s then None else Some (take (size s - (i+2)) s).
+  if i + 1 = size s then None
+  else let n = size s - (i + 2) in
+       if i = (-(n+2)) %% r then Some (take n s) else None.
 
 lemma rev_mkpad n : rev (mkpad n) = mkpad n.
 proof. by rewrite /mkpad rev_cons rev_rcons rev_nseq. qed.
@@ -109,20 +109,29 @@ proof. by apply/BitChunking.chunkK/gt0_r. qed.
 lemma padK : pcancel pad unpad.
 proof.
 move=> s @/unpad; rewrite last_pad /= rev_cat rev_mkpad.
-pose i := index _ _; have ^iE {1}->: i = (-(size s + 2)) %% r.
+pose i := index _ _.
+have ^iE {1 2}->: i = (-(size s + 2)) %% r.
   rewrite /i behead_cat //= index_cat {1}/mkpad /= mem_rcons /=.
   by rewrite index_true_behead_mkpad.
-pose b := _ = size _; case: b => @/b - {b}.
+pose b := _ = size _; case b => @/b - {b}.
   rewrite modNz ?gt0_r ?ltr_spaddr ?size_ge0 //.
   rewrite -(addrA _ 2) size_pad (addrC _ r) -!addrA => /addrI.
   rewrite addrCA /= -subr_eq0 -opprD oppr_eq0 addrC -divz_eq.
   by rewrite addz_neq0 ?size_ge0.
-move=> _ /=; rewrite iE -size_mkpad /pad size_cat addrK.
+move=> x {x}.
+cut -> : size (pad s) - (i + 2) + 2 = size (pad s) - i by algebra.
+pose b := _ = _ %% r; case b=> @/b - {b}; last first.
+have -> // : size s + 2 = size (pad s) - i
+  by rewrite /pad size_cat size_mkpad iE #ring.
+move=> x {x} /=; rewrite iE -size_mkpad /pad size_cat addrK.
 by rewrite take_cat /= take0 cats0.
 qed.
 
 lemma unpadK : ocancel unpad pad.
 proof.
+(*
+proof in progress -- Alley to fill in shortly
+
 move=> s @/unpad; case: (last false s) => //=.
 elim/last_ind: s=> //= s b ih {ih}; rewrite last_rcons => hb.
 rewrite rev_rcons /= size_rcons -(inj_eq _ (addIr (-1))) /= ?addrK.
@@ -138,6 +147,8 @@ rewrite -cats1 drop_cat {1}/j ltr_subl_addr ler_lt_add //=.
   by rewrite ltzE /= ler_addr // /i index_ge0.
 rewrite /mkpad -cats1 -cat_cons hb; congr.
 admit.                          (* missing results on drop/take *)
+*)
+admit.
 qed.
 
 lemma chunk_padK : pcancel (chunk \o pad) (unpad \o flatten).
