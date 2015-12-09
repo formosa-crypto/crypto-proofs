@@ -271,6 +271,20 @@ require import Ring.
     by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq. 
   qed.
 
+  lemma huniq_hinvD (handles:handles) c: 
+    huniq handles => mem (rng handles) (c,D) => handles.[oget (hinvD handles c)] = Some(c,D).
+  proof.
+    move=> Huniq;rewrite in_rng=> [h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
+    by move=>_/(_ h);rewrite H.
+  qed.
+
+  lemma huniq_hinvD_h h (handles:handles) c: 
+    huniq handles => handles.[h] = Some (c,D) => hinvD handles c = Some h.
+  proof.
+    move=> Huniq;case: (hinvD _ _) (hinvDP handles c)=>/= [H|h'];1: by apply H. 
+    by rewrite oget_some=> /Huniq H/H. 
+  qed.
+
   local module G2 = {
     var m, mi               : smap
     var mh, mhi             : hsmap
@@ -414,13 +428,14 @@ require import Ring.
     }    
   }.
 
-  op build_hpath (mh:hsmap) (bs:block list) = 
-    let step = fun (sah:hstate option ) (b:block) => 
+  op step_hpath (mh:hsmap) (sah:hstate option) (b:block) = 
       if sah = None then None 
       else 
         let sah = oget sah in 
-        mh.[(sah.`1 +^ b, sah.`2)] in
-    foldl step (Some (b0,0)) bs.
+        mh.[(sah.`1 +^ b, sah.`2)].
+ 
+  op build_hpath (mh:hsmap) (bs:block list) = 
+     foldl (step_hpath mh) (Some (b0,0)) bs.
 
   op eqm_handles (handles:handles) (m:smap) (mh:hsmap) =
     (forall bc bc', m.[bc] = Some bc' => 
@@ -459,10 +474,13 @@ require import Ring.
   op incl (m m':('a,'b)fmap) = 
     forall x,  m .[x] <> None => m'.[x] = m.[x].
 
-  op INV_CF_G2 (handles:handles) (m1 mi1 m2 mi2:smap) (mh2 mhi2:hsmap) (ro:(block list, block) fmap) paths =
+  op handle_spec handles chandle = 
+    huniq handles /\ handles.[0] = Some (c0,D) /\ forall h, mem (dom handles) h => h < chandle.
+
+  op INV_CF_G2 (handles:handles) chandle (m1 mi1 m2 mi2:smap) (mh2 mhi2:hsmap) (ro:(block list, block) fmap) paths =
      (eqm_handles handles m1 mh2 /\ eqm_handles handles mi1 mhi2) /\ 
      (incl m2 m1 /\ incl mi2 mi1) /\ 
-     (mh_spec handles m2 mh2 ro /\ paths_spec handles mh2 paths /\ huniq handles).
+     (mh_spec handles m2 mh2 ro /\ paths_spec handles mh2 paths /\ handle_spec handles chandle).
 
   lemma eqm_dom_mh_m handles m mh hx2 f (x:state): 
     eqm_handles handles m mh =>
@@ -484,10 +502,76 @@ require import Ring.
     op d1   <- bdistr,
     op d2   <- cdistr.
 
+  lemma eqm_up_handles handles chandle m mh x2 : 
+     handle_spec handles chandle =>
+     eqm_handles handles m mh => 
+     eqm_handles handles.[chandle <- (x2, D)] m mh.
+  proof.
+    move=> []Hu[Hh0 Hlt][]H1 H2;split=>[bc bc'/H1 [h h' f f'][]Hh[]Hh' Hmh| bh bh'/H2 [c c' f f'][]Hh []Hh' Hm]. 
+    + exists h,h',f,f';rewrite !getP Hmh/=-Hh-Hh'(_:h<>chandle)2:(_:h'<>chandle) //. 
+      + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
+      by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
+    + exists c,c',f,f';rewrite !getP Hm/=-Hh-Hh'(_:bh.`2<>chandle)2:(_:bh'.`2<>chandle) //. 
+      + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
+      by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
+  qed.
+
+  lemma build_hpathP mh p v h: 
+    build_hpath mh p = Some (v, h) =>
+    (p = [] /\ v=b0 /\ h=0) \/ 
+    exists p' b v' h',  
+      p = rcons p' b /\ build_hpath mh p' = Some(v',h') /\ mh.[(v'+^b, h')] = Some(v,h).
+  proof.
+    elim/last_ind:p=>@/build_hpath //= p' b _. 
+    rewrite -cats1 foldl_cat /= => H;right;exists p',b. 
+    move:H;rewrite {1}/step_hpath;case (foldl _ _ _)=> //= -[v' h'].
+    by rewrite oget_some /==>Heq; exists v',h';rewrite -cats1.
+  qed.
+
+  lemma chandle_ge0 handles chandle : handle_spec handles chandle => 0 < chandle.
+  proof. by move=>[]_[]Heq Hlt;apply Hlt;rewrite in_dom Heq. qed.
+
+  lemma chandle_0 handles chandle : handle_spec handles chandle => 0 <> chandle.
+  proof.  move=> Hh;apply /IntOrder.ltr_eqF/(chandle_ge0 _ _ Hh). qed.
+
+  (* TODO make sub lemmas for this proof *)
+  lemma INV_CF_G2_up_handle  handles chandle m1 mi1 m2 mi2 mh mhi ro paths x2:
+     INV_CF_G2 handles chandle m1 mi1 m2 mi2 mh mhi ro paths =>
+     (forall f, ! mem (rng handles) (x2, f)) => 
+     INV_CF_G2 handles.[chandle <- (x2, D)](chandle+1) m1 mi1 m2 mi2 mh mhi ro paths.
+  proof.
+    move=>[][]Heqm Heqmi[]Hincl[]Hmh[]Hp Hh Hx2;split.
+    + by split;apply eqm_up_handles.
+    split=>//;split;[|split].
+    + move:Hmh Hh=>[H1 ?][_[]_ Hlt];split=>// bh bh' /H1 [c f c' f'][]Hh[]Hh' Hif.
+      exists c,f,c',f';rewrite Hif-Hh-Hh'!getP(_:bh.`2<>chandle)2:(_:bh'.`2<>chandle) //. 
+      + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
+      by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
+    + move=> c p v;rewrite Hp;apply NewLogic.exists_iff=> h/=;split=> -[^Hbu->] /=;
+      rewrite getP.
+      + move:Hh=>[]_[]_/(_ h)Hlt Hh;rewrite (_:h<>chandle)//.
+        by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
+      rewrite (_:h<>chandle)//.
+      cut [[]_[]_->|[p' b v' h'[]_[]_ Hh']]:= build_hpathP _ _ _ _ Hbu.
+      + by rewrite (chandle_0 _ _ Hh).
+      move:Hh=>[]_[]_/(_ h)Hlt;apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom. 
+      by cut [/(_ _ _ Hh')[????][]_[]->]:= Hmh.
+    cut []Hu[]Hh0 Hlt:= Hh;split;[ | split].
+    + move=> h1 h2 [c1 f1] [c2 f2];rewrite !getP.
+      case (h1=chandle)=>[->/=[]->> ->|_]; (case (h2=chandle)=>[->//=|_]).
+      + by move=>Heq ->>;move:(Hx2 f2);rewrite in_rng NewLogic.negb_exists=>/=/(_ h2);
+         rewrite Heq. 
+      + by move=>Heq[]->> <<- ->>;move:(Hx2 f1);rewrite in_rng NewLogic.negb_exists=>/=/(_ h1);
+        rewrite Heq. 
+      by apply Hu.
+    + by rewrite getP (chandle_0 _ _ Hh).
+    move=>h;rewrite dom_set !inE /#. 
+  qed.
+
   local equiv CF_G2 : CF.main ~ G2.main : ={glob D} ==> !(G2.bcol \/ G2.bext){2} => ={res}.
   proof.
     proc.
-    call (_:(G2.bcol \/ G2.bext), INV_CF_G2 G2.handles{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).   
+    call (_:(G2.bcol \/ G2.bext), INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).   
     (* lossless D *)
     + apply D_ll.
     (** proofs for G2.S.f *)
@@ -500,7 +584,7 @@ require import Ring.
         exists* RO.m{2}, G2.paths{2};elim*=>ro0 paths0.
         seq 1 2 : (!G2.bcol{2} /\ (G2.bext = mem (rng G2.handles) (x.`2, I)){2} /\
                    ={x,y} /\
-                   INV_CF_G2 G2.handles{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} ro0 paths0 /\
+                   INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} ro0 paths0 /\
                   ! mem (dom CF.m{1}) x{1} /\
                   (if mem (dom paths0) x.`2 then 
                      let (p,v) = oget paths0.[x.`2] in
@@ -515,18 +599,78 @@ require import Ring.
                             else RO.m{2} = ro0 /\ G2.paths{2} = paths0);1:smt ml=0.
           if{2};2:by auto=>/#.
           inline{2} RO.f;rcondt{2} 4.
-          + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
+           + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
             rewrite in_dom;case:(G2.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
             rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => [][]<- <- /=.
             rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
             by rewrite Hh=>[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
           swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
-          + progress [-split]. rewrite getP_eq oget_some H2/=.
-            by move:H2;rewrite in_dom;case:(G2.paths{2}.[x{2}.`2]).
+          + progress [-split];rewrite getP_eq oget_some H2/=.
+            by move:H2;rewrite in_dom;case:(G2.paths{2}.[_]).
           transitivity{1} {y <- S.sample();} (true ==> ={y}) (true==>y{1}=(rd,y2){2})=>//;1:by inline*;auto.
           transitivity{2} {(rd,y2) <- S.sample2();} (true==>y{1}=(rd,y2){2}) (true==> ={rd,y2})=>//;2:by inline*;auto.
           by call sample_sample2;auto=> /=?[??]->.
+        case (mem (rng G2.handles{2}) (x{2}.`2, I)).
+        + conseq (_:true);[by move=> ??[][]_[]->_->|auto].
+        conseq (_: !G2.bcol{2} => 
+               oget CF.m{1}.[x{1}] = y{2} /\ 
+               INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).
+        + by move=> ??[][]_[]->[][]-> _ _ ->. 
+        seq 0 2: ((!G2.bcol{2} /\ ={x, y} /\
+                  INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2}
+                     G2.mh{2} G2.mhi{2} ro0 paths0 /\
+                  ! mem (dom CF.m{1}) x{1} /\
+                  if mem (dom paths0) x{2}.`2 then
+                    let (p0, v0) = oget paths0.[x{2}.`2] in
+                    RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
+                    G2.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
+                  else RO.m{2} = ro0 /\ G2.paths{2} = paths0) /\
+                 !mem (rng G2.handles{2}) (x{2}.`2, I) /\
+                 (G2.handles.[hx2]=Some(x.`2,D)){2}).
+        + auto=> &ml&mr[][]->[]_[][]-> ->[]Hinv []-> -> ^Hrng-> /=.   
+          case (mem (rng G2.handles{mr}) (x{mr}.`2, Top.D))=> Hmem /=.
+          + by split=>//;apply /huniq_hinvD=>//;move:Hinv;rewrite /INV_CF_G2/handle_spec.
+          rewrite -anda_and;split=> [ | {Hinv}Hinv].
+          + by apply INV_CF_G2_up_handle=>//[[]]. 
+          rewrite rng_set (huniq_hinvD_h G2.chandle{mr}) ?getP//. 
+          + by move:Hinv;rewrite /INV_CF_G2/handle_spec.
+          by rewrite oget_some /=!inE/=;move:Hrng;apply NewLogic.contraLR=>/=;apply rng_rem_le.
+        rcondf{2} 1.
+        + move=> &ml;skip=> &mr[][]_[][]-> _ []Hinv[]Hndom _[]_ Hh;rewrite -not_def in_dom=>[].
+          move:Hinv=>[][][]_ /(_ (x{mr}.`1, hx2{mr}));case (G2.mh{mr}.[_])=>// bh' /(_ bh') [c c' f f'] /=. 
+          by rewrite Hh/= =>[][]<- _ []_ H;case: (x{mr}) H Hndom => [x1 x2];rewrite in_dom=>->.
+        auto.
+(* Stopped here *)
+        admit.
 
+        
+/=.
+case (
+         
+
+
+ _.
+          rewrite in_dom;case (paths0.[x{mr}.`2])=> //= [[p v]].
+          rewrite oget_some /=.
+          case 
+ 
+search rng rem.
+           
+          rewrite getP. 
+search hinvD.
+          move=>
+
+
+
+          search hinvD.
+search hinv.
+
+    G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}
+        seq 
+          wp=> //.
+progress [-split]. by move:H4;rewrite H3.
+ progress.
+        seq   
 print Sample2.
           appl
           + inline*;auto.
