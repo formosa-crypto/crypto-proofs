@@ -118,37 +118,80 @@ pose b := _ = size _; case b => @/b - {b}.
   rewrite -(addrA _ 2) size_pad (addrC _ r) -!addrA => /addrI.
   rewrite addrCA /= -subr_eq0 -opprD oppr_eq0 addrC -divz_eq.
   by rewrite addz_neq0 ?size_ge0.
-move=> x {x}.
-cut -> : size (pad s) - (i + 2) + 2 = size (pad s) - i by algebra.
+move=> sz {sz}.
+have -> : size (pad s) - (i + 2) + 2 = size (pad s) - i by ring.
 pose b := _ = _ %% r; case b=> @/b - {b}; last first.
 have -> // : size s + 2 = size (pad s) - i
   by rewrite /pad size_cat size_mkpad iE #ring.
-move=> x {x} /=; rewrite iE -size_mkpad /pad size_cat addrK.
+move=> sz {sz} /=; rewrite iE -size_mkpad /pad size_cat addrK.
 by rewrite take_cat /= take0 cats0.
 qed.
 
 lemma unpadK : ocancel unpad pad.
 proof.
-(*
-proof in progress -- Alley to fill in shortly
-
-move=> s @/unpad; case: (last false s) => //=.
+move=> s @/unpad; case: (last false s)=> //=.
 elim/last_ind: s=> //= s b ih {ih}; rewrite last_rcons => hb.
 rewrite rev_rcons /= size_rcons -(inj_eq _ (addIr (-1))) /= ?addrK.
-pose i := index _ _; case: (i = size s) => //=.
-move=> ne_is @/pad; pose j := _ - (i+2); apply/eq_sym.
+pose i := index _ _; case: (i = size s)=> // ne_is @/pad.
+have [ge0_i lt_siz_s_i] : 0 <= i < size s.
+  have le_siz_s_i : i <= size s by rewrite /i - size_rev index_size.
+  split=> [| _]; [rewrite index_ge0 | rewrite ltr_neqAle //].
+have -> : size s + 1 - (i + 2) + 2 = size s - i + 1 by ring.
+have -> : size s + 1 - (i + 2) = size s - i - 1 by ring.
+case: (i = (-(size s - i + 1)) %% r) => [iE | //].
+pose j := size s - i - 1; apply/eq_sym.
 rewrite -{1}(cat_take_drop j (rcons s b)) eqseq_cat //=.
 rewrite size_take; first rewrite /j subr_ge0.
-  (have ->: 2=1+1 by done); rewrite addrA -ltzE ltr_add2r.
-  by rewrite ltr_neqAle ne_is /= /i -size_rev index_size.
+  rewrite - (ler_add2r i) - addrA addNr /= lez_add1r //.
 rewrite {2}/j size_rcons ltr_subl_addr ?ltr_spaddr //=.
-  by rewrite /i index_ge0.
+  rewrite ler_add2l - ler_oppl (ler_trans 0) // lerN10.
 rewrite -cats1 drop_cat {1}/j ltr_subl_addr ler_lt_add //=.
-  by rewrite ltzE /= ler_addr // /i index_ge0.
+  rewrite ltr_oppl (ltr_le_trans 0) 1:ltrN10 //.
 rewrite /mkpad -cats1 -cat_cons hb; congr.
-admit.                          (* missing results on drop/take *)
-*)
-admit.
+have [ge0_j le_siz_j] : 0 <= j < size s.
+  rewrite /j; split=> [| _].
+  rewrite - (ler_add2r 1) /= - addrA addNr /= - (ler_add2r i)
+          - addrA addNr /= lez_add1r //.
+  rewrite - addrA - opprD - (ltr_add2r (i + 1)) - addrA addrN /=
+          ltz_addl (ler_lt_trans i) // ltz_addl ltr01.
+rewrite (drop_nth false) //.
+have -> : nth false s j = true
+  by rewrite /j - addrA - opprD - nth_rev // nth_index //
+             - index_mem size_rev //.
+congr.
+have size_drop : size (drop (j + 1) s) = (-(j + 2)) %% r.
+  rewrite size_drop; 1:rewrite (ler_trans j) //ler_addl ler01.
+  rewrite max_ler /j.
+  have -> // : size s - (size s - i - 1 + 1) = i by ring.
+  have -> : size s - (size s - i - 1 + 1) = i by ring.
+  have -> : -(size s - i - 1 + 2) = -(size s - i + 1).
+  ring. rewrite - iE //.
+apply (eq_from_nth false).
+rewrite size_drop size_nseq.
+rewrite max_ler // 1:modz_ge0 gtr_eqF ?gt0_r //.
+move=> k [ge0k lt_size_drop_k]; rewrite size_drop in lt_size_drop_k.
+rewrite nth_nseq; first split=> // _; rewrite - size_drop //.
+rewrite nth_drop // 1:(ler_trans j) // 1:lez_addl 1:ler01.
+rewrite /j.
+have -> : size s - i - 1 + 1 + k = size s - ((i - k - 1) + 1) by ring.
+have i_min_k_min1_rng {size_drop} : 0 <= i - k - 1 < i.
+  rewrite iE; pose sz := (-(size s - i + 1)) %% r.
+  split=> [| _].
+  rewrite - (ler_add2r (k + 1)) /=.
+  have -> @/sz : sz - k - 1 + (k + 1) = sz by ring.
+  have -> : -(size s - i + 1) = -(size s - i - 1 + 2) by ring.
+  rewrite - /j addrC lez_add1r //.
+  rewrite -(ltr_add2r (k + 1)).
+  have -> : sz - k - 1 + (k + 1) = sz by algebra.
+  rewrite  ltr_addl ltzS //.
+rewrite - nth_rev //.
+  split=> [| _ //].
+  elim i_min_k_min1_rng=> //.
+  rewrite (ltr_trans i) //; elim i_min_k_min1_rng=> //.
+have -> :
+  (nth false (rev s) (i - k - 1) = false) =
+  (nth false (rev s) (i - k - 1) <> true) by smt ml=0.
+rewrite (before_index false) //.
 qed.
 
 lemma chunk_padK : pcancel (chunk \o pad) (unpad \o flatten).
