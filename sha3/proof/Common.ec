@@ -84,7 +84,7 @@ proof.
 rewrite /pad /mkpad size_cat /= size_rcons size_nseq.
 rewrite max_ler 1:modz_ge0 1:gtr_eqF ?gt0_r // (addrCA 1).
 rewrite modNz ?gt0_r ?ltr_spaddr ?size_ge0 //.
-by rewrite (@subrE (size s + 2)) -(addrA _ 2) /= modzE; ring.
+by rewrite -(addrA _ 2) /= modzE; ring.
 qed.
 
 lemma size_pad_dvd_r s: r %| size (pad s).
@@ -114,11 +114,10 @@ pose i := index _ _; have ^iE {1}->: i = (-(size s + 2)) %% r.
   by rewrite index_true_behead_mkpad.
 pose b := _ = size _; case: b => @/b - {b}.
   rewrite modNz ?gt0_r ?ltr_spaddr ?size_ge0 //.
-  rewrite (subrE (size s + 2)) -(addrA _ 2) size_pad.
-  rewrite (addrC _ r) 2!subrE -!addrA => /addrI; rewrite addrCA /=.
-  rewrite -subr_eq0 -opprB subrE opprK -divz_eq oppr_eq0.
+  rewrite -(addrA _ 2) size_pad (addrC _ r) -!addrA => /addrI.
+  rewrite addrCA /= -subr_eq0 -opprD oppr_eq0 addrC -divz_eq.
   by rewrite addz_neq0 ?size_ge0.
-move=> _ /=; rewrite iE -size_mkpad /pad size_cat addrK_sub.
+move=> _ /=; rewrite iE -size_mkpad /pad size_cat addrK.
 by rewrite take_cat /= take0 cats0.
 qed.
 
@@ -212,9 +211,8 @@ op strip (xs : block list) =
 lemma extendK (xs : block list) (n : int) :
   last b0 xs <> b0 => 0 <= n => strip(extend xs n) = (xs, n).
 proof.
-move=> xs_ends_not_b0 ge0_n.
-rewrite /strip /extend /= rev_cat rev_nseq size_cat size_nseq max_ler //
-        subzE - addzA.
+move=> xs_ends_not_b0 ge0_n; rewrite /strip /extend /=.
+rewrite rev_cat rev_nseq size_cat size_nseq max_ler // -addzA.
 have head_rev_xs_neq_b0 : head b0 (rev xs) <> b0 by rewrite - last_rev revK //.
 have -> : rev xs = head b0 (rev xs) :: behead (rev xs).
   by rewrite head_behead //; case: (rev xs) head_rev_xs_neq_b0.
@@ -236,16 +234,16 @@ rewrite -{1}(cat_take_drop (size xs - i) xs); congr.
 have [ge0_i le_ixs]: 0 <= i <= size xs.
   by rewrite find_ge0 -size_rev find_size.
 have sz_drop: size (drop (size xs - i) xs) = i.
-  rewrite size_drop ?subr_ge0 // 2!subrE opprD opprK.
-  by rewrite addrA addrN /= max_ler.
+  rewrite size_drop ?subr_ge0 // opprD opprK.
+  by rewrite addrA /= max_ler.
 apply/(eq_from_nth b0) => [|j]; rewrite ?size_nseq ?max_ler //.
 rewrite sz_drop=> -[ge0_j lt_ji]; rewrite nth_nseq //.
 rewrite nth_drop ?subr_ge0 // -{1}revK nth_rev ?size_rev.
-  rewrite addr_ge0 ?subr_ge0 //= -ltr_subr_addr 2!subrE.
+  rewrite addr_ge0 ?subr_ge0 //= -ltr_subr_addr.
   by rewrite ltr_add2l ltr_opp2.
 have @/predC1 /= ->// := (before_find b0 (predC1 b0)).
 pose s := (_ - _)%Int; rewrite -/i (_ : s = i - (j+1)) /s 1:#ring.
-by rewrite subr_ge0 -ltzE lt_ji /= subrE ltr_snaddr // oppr_lt0 ltzS.
+by rewrite subr_ge0 -ltzE lt_ji /= ltr_snaddr // oppr_lt0 ltzS.
 qed.
 
 (*------------------------------ Validity ----------------------------- *)
