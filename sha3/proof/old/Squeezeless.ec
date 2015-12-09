@@ -82,7 +82,7 @@ section.
 
   (** An intermediate game where we don't care about the permutation
       being a bijection anymore... **)
-  local module Concrete_F = {
+  local module CF = {
     var m, mi: (state,state) fmap
 
     module P = {
@@ -140,9 +140,9 @@ section.
   
   op bound_concrete : real.
 
-  local lemma Concrete_Concrete_F &m: 
+  local lemma Concrete_CF &m: 
     Pr[Concrete.main() @ &m: res] <=
-    Pr[Concrete_F.main() @ &m: res] + bound_concrete.
+    Pr[CF.main() @ &m: res] + bound_concrete.
   admitted.
 
   (** Result (expected): The distance between Concrete and Concrete_F
@@ -211,16 +211,70 @@ section.
  
   type ccapacity = capacity * caller.
 
-  op hinv (handles:(handle,ccapacity) fmap) (c:capacity) = 
+  type smap    = (state , state    ) fmap.
+  type hsmap   = (hstate, hstate   ) fmap.
+  type handles = (handle, ccapacity) fmap.
+
+lemma get_oget (m:('a,'b)fmap) (x:'a) : mem (dom m) x => m.[x] = Some (oget m.[x]).
+proof. by rewrite in_dom;case (m.[x]). qed.
+
+lemma find_set (m:('a,'b) fmap) y x (p:'a -> 'b -> bool):
+  (forall x, mem (dom m) x => !p x (oget m.[x])) =>
+  find p m.[x <- y] = if p x y then Some x else None.
+proof.
+  cut [[a []->[]] | []-> Hp Hnp]:= findP p (m.[x<-y]);1: rewrite getP dom_set !inE /#. 
+  by case (p x y)=> //; cut := Hp x;rewrite getP dom_set !inE /= oget_some.
+qed.
+
+require import StdOrder.
+require import Ring.
+
+  (* Operators and properties of handles *)
+  op hinv (handles:handles) (c:capacity) = 
      find (fun _ => pred1 c \o fst) handles.
 
-  op hinvD (handles:(handle,ccapacity) fmap) (c:capacity) = 
+  op hinvD (handles:handles) (c:capacity) = 
      find (fun _ => pred1 (c,D)) handles.
 
+  op huniq (handles:handles) = 
+    forall h1 h2 cf1 cf2, 
+       handles.[h1] = Some cf1 => 
+       handles.[h2] = Some cf2 => 
+       cf1.`1 = cf2.`1 => h1 = h2.
+ 
+  lemma hinvP handles c:
+    if hinv handles c = None then forall h f, handles.[h] <> Some(c,f)
+    else exists f, handles.[oget (hinv handles c)] = Some(c,f).
+  proof.
+    cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
+      findP (fun (_ : handle) => pred1 c \o fst) handles.
+    + by exists (oget handles.[h]).`2;rewrite oget_some get_oget;2:case (oget handles.[h]).
+    by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq.
+  qed.
+
+  lemma huniq_hinv (handles:handles) (h:handle): 
+    huniq handles => mem (dom handles) h => hinv handles (oget handles.[h]).`1 = Some h.
+  proof.
+    move=> Huniq;pose c := (oget handles.[h]).`1.
+    cut:=Huniq h;cut:=hinvP handles c.
+    case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')];1:by rewrite in_dom /#.
+    by move=> [f ->] /(_ (oget handles.[h]) (c,f)) H1 H2;rewrite H1 // get_oget.
+  qed.
+
+  lemma hinvDP handles c:
+    if hinvD handles c = None then forall h, handles.[h] <> Some(c,D)
+    else handles.[oget (hinvD handles c)] = Some(c,D).
+  proof.
+    cut @/pred1/=[[h []->[]Hmem ]|[]->H h ]/= := 
+      findP (fun (_ : handle) => pred1 (c,D)) handles.
+    + by rewrite oget_some get_oget.
+    by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq. 
+  qed.
+
   local module G2 = {
-    var m, mi               : (state , state ) fmap
-    var mh, mhi             : (hstate, hstate) fmap
-    var handles             : (handle, ccapacity) fmap
+    var m, mi               : smap
+    var mh, mhi             : hsmap
+    var handles             : handles
     var chandle             : int
     var paths               : (capacity, block list * block) fmap
     var bext, bcol          : bool
@@ -230,26 +284,25 @@ section.
       proc init(): unit = { }
 
       proc f(p : block list): block = {
+        var sa, sa', sc;
         var h, i <- 0; 
-        var (sa,sc) <- (b0,c0);
-        var sa';
-
+        sa <- b0;
         if (1 <= size p /\ p <> [b0]) {
-          while (i < size p - 1 /\ mem (dom m) (sa +^ nth witness p i, sc)) {
-            (sa, sc) <- oget m.[(sa +^ nth witness p i, sc)];
-            (sa', h) <- oget mh.[(sa +^ nth witness p i, h)];
+          while (i < size p ) {
+            if (mem (dom mh) (sa +^ nth witness p i, h)) {
+              (sa, h) <- oget mh.[(sa +^ nth witness p i, h)];
+            } else {
+              sc                  <$ cdistr;
+              bcol                <- bcol \/ hinv handles sc <> None;
+              sa'                 <- RO.f(take (i+1) p);
+              sa                  <- sa +^ nth witness p i;
+              mh.[(sa,h)]         <- (sa', chandle);
+              mhi.[(sa',chandle)] <- (sa, h);
+              (sa,h)              <- (sa',chandle);
+              handles.[chandle]   <- (sc,I);
+              chandle             <- chandle + 1;
+            }
             i        <- i + 1;
-          }
-          while (i < size p) {
-            sc                  <$ cdistr;
-            bcol                <- bcol \/ hinv handles sc <> None;
-            sa'                 <- RO.f(take i p);
-            mh.[(sa,h)]         <- (sa', chandle);
-            mhi.[(sa',chandle)] <- (sa,h);
-            (sa,h)              <- (sa',chandle);
-            handles.[chandle]   <- (sc,I);
-            chandle             <- chandle + 1;
-            i                   <- i + 1;
           }
           sa <- RO.f(p);
         }
@@ -344,8 +397,6 @@ section.
 
     }
 
-  
-
     proc main(): bool = {
       var b;
 
@@ -363,6 +414,277 @@ section.
     }    
   }.
 
+  op build_hpath (mh:hsmap) (bs:block list) = 
+    let step = fun (sah:hstate option ) (b:block) => 
+      if sah = None then None 
+      else 
+        let sah = oget sah in 
+        mh.[(sah.`1 +^ b, sah.`2)] in
+    foldl step (Some (b0,0)) bs.
+
+  op eqm_handles (handles:handles) (m:smap) (mh:hsmap) =
+    (forall bc bc', m.[bc] = Some bc' => 
+       exists h h' f f', 
+         handles.[h ]    = Some(bc .`2,f ) /\ 
+         handles.[h']    = Some(bc'.`2,f') /\
+         mh.[(bc.`1, h)] = Some (bc'.`1,h')) /\
+    (forall bh bh', mh.[bh] = Some bh' =>
+       exists c c' f f', 
+         handles.[bh .`2] = Some(c ,f) /\ 
+         handles.[bh'.`2] = Some(c',f') /\
+         m.[(bh.`1, c)]   = Some (bh'.`1,c')).
+
+  op mh_spec (handles:handles) (m2:smap) (mh:hsmap) (ro:(block list, block)fmap) = 
+    (forall bh bh', mh.[bh] = Some bh' =>
+      exists c f c' f', 
+        handles.[bh .`2]=Some(c,f) /\
+        handles.[bh'.`2]=Some(c',f') /\
+        if f' = D then m2.[(bh.`1,c)] = Some(bh'.`1,c') /\ f = D
+        else 
+          exists p v b, 
+            ro.[rcons p b] = Some bh'.`1 /\
+            build_hpath mh p = Some(v,bh.`2) /\
+            bh.`1 = v +^ b) /\
+    (forall p b, mem (dom ro) (rcons p b) <=>
+       exists v h h', 
+         build_hpath mh p = Some (v,h) /\
+         mh.[(v +^ b,h)] = Some (oget ro.[rcons p b], h')).
+
+  op paths_spec (handles:handles) (mh:hsmap) (paths:(capacity,block list * block)fmap) = 
+    forall c p v, paths.[c] = Some(p,v) <=> 
+      exists h, 
+        build_hpath mh p = Some(v,h) /\ 
+        handles.[h] = Some(c,D).
+
+  op incl (m m':('a,'b)fmap) = 
+    forall x,  m .[x] <> None => m'.[x] = m.[x].
+
+  op INV_CF_G2 (handles:handles) (m1 mi1 m2 mi2:smap) (mh2 mhi2:hsmap) (ro:(block list, block) fmap) paths =
+     (eqm_handles handles m1 mh2 /\ eqm_handles handles mi1 mhi2) /\ 
+     (incl m2 m1 /\ incl mi2 mi1) /\ 
+     (mh_spec handles m2 mh2 ro /\ paths_spec handles mh2 paths /\ huniq handles).
+
+  lemma eqm_dom_mh_m handles m mh hx2 f (x:state): 
+    eqm_handles handles m mh =>
+    handles.[hx2] = Some (x.`2, f) =>
+    mem (dom mh) (x.`1, hx2) => mem (dom m) x.
+  proof.
+    move=>[]H1 H2 Hhx2;rewrite !in_dom.
+    case: (mh.[_]) (H2 (x.`1,hx2))=> //= bh' /(_ bh') [c c' f1 f1'].
+    by rewrite Hhx2=> /=[][]<<- _;case:(x)=> ??[]_->.
+  qed.
+
+  axiom D_ll (F <: FUNCTIONALITY{D}) (P <: PRIMITIVE{D}):
+    islossless P.f => islossless P.fi => islossless F.f => 
+    islossless D(F, P).distinguish.
+
+  clone import Pair.Dprod.Sample as Sample2 with 
+    type t1 <- block,
+    type t2 <- capacity,
+    op d1   <- bdistr,
+    op d2   <- cdistr.
+
+  local equiv CF_G2 : CF.main ~ G2.main : ={glob D} ==> !(G2.bcol \/ G2.bext){2} => ={res}.
+  proof.
+    proc.
+    call (_:(G2.bcol \/ G2.bext), INV_CF_G2 G2.handles{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).   
+    (* lossless D *)
+    + apply D_ll.
+    (** proofs for G2.S.f *)
+    (* equiv CF.P.f G2.S.f *)
+    + proc;if{1}=>/=.
+      (* x is not in m{1} so forall h, (x.1,h) is not in mh{2} *)
+      + rcondt{2} 1.
+        + move=> &hr;skip=> &hr'[][]_[]<-[]_[][]Hincl Hincli _. 
+          rewrite !in_dom/==>H; by case:(G2.m{hr'}.[x{hr}]) (Hincl x{hr})=> //=;rewrite H.
+        exists* RO.m{2}, G2.paths{2};elim*=>ro0 paths0.
+        seq 1 2 : (!G2.bcol{2} /\ (G2.bext = mem (rng G2.handles) (x.`2, I)){2} /\
+                   ={x,y} /\
+                   INV_CF_G2 G2.handles{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} ro0 paths0 /\
+                  ! mem (dom CF.m{1}) x{1} /\
+                  (if mem (dom paths0) x.`2 then 
+                     let (p,v) = oget paths0.[x.`2] in
+                     RO.m{2}  = ro0.[rcons p (v+^x.`1) <- y.`1] /\ 
+                     G2.paths = paths0.[y.`2 <- (rcons p (v +^ x.`1), y.`1)]
+                   else RO.m = ro0 /\ G2.paths = paths0){2}).
+        + wp 1 1;conseq (_: ={y} /\
+                            if mem (dom paths0) x{2}.`2 then
+                              let (p0, v0) = oget paths0.[x{2}.`2] in
+                              RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
+                              G2.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
+                            else RO.m{2} = ro0 /\ G2.paths{2} = paths0);1:smt ml=0.
+          if{2};2:by auto=>/#.
+          inline{2} RO.f;rcondt{2} 4.
+          + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
+            rewrite in_dom;case:(G2.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
+            rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => [][]<- <- /=.
+            rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
+            by rewrite Hh=>[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
+          swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
+          + progress [-split]. rewrite getP_eq oget_some H2/=.
+            by move:H2;rewrite in_dom;case:(G2.paths{2}.[x{2}.`2]).
+          transitivity{1} {y <- S.sample();} (true ==> ={y}) (true==>y{1}=(rd,y2){2})=>//;1:by inline*;auto.
+          transitivity{2} {(rd,y2) <- S.sample2();} (true==>y{1}=(rd,y2){2}) (true==> ={rd,y2})=>//;2:by inline*;auto.
+          by call sample_sample2;auto=> /=?[??]->.
+
+print Sample2.
+          appl
+          + inline*;auto.
+
+
+
+search Pair.Dprod.( * ).
+print Pair.
+
+search mem dom None.
+print in_dom.
+ search "_.[_]"  "_.[_<-_]" .
+
+            move: Heqm=> [].
+search (+^).
+
+ Hp b _;rewrite -not_def.
+            move=> /Hro. 
+            
+[][][]_[]->Hinv Hmx Hp b _.
+              cut [H1 H2] : path_RO G2.mh{mr} RO.m{mr}. admit.
+              rewrite -not_def in_dom=>/H2[h1 h2][]Hh1 Hh2. cut:= H1 _ _ _ _ Hh1 Hh2.
+              case ((oget G2.paths{mr}.[x{mr}.`2]).`1 = [])=> /=.
+              + admit.
+            admit. (* should be more or less ok *)
+          by auto=> &ml&mr;rewrite NewLogic.negb_or=> [][][][]-> ->;progress.
+        case (mem (rng G2.handles{2}) (x{2}.`2, I)).
+        + conseq (_:_ ==> true);[by move=> &ml&mr[][]_[]->_-> | auto].
+        seq 0 2: ((!G2.bcol{2} /\
+                   G2.bext{2} = mem (rng G2.handles{2}) (x{2}.`2, I) /\
+                   ={x, y} /\
+                   INV_CF_G2 G2.handles{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2}
+                   G2.mhi{2} RO.m{2} /\
+                   !mem (dom CF.m{1}) x{1}) /\
+                   !mem (rng G2.handles{2}) (x{2}.`2, I) /\
+                   (G2.handles.[hx2] = Some (x.`2,D)){2}).
+        + admit. (* should be ok *)
+        rcondf{2} 1.
+        + move=> &ml;skip=> &mr[][]_[]_[][->_][]Hinv Hdom[]_ Hx2.
+          rewrite NewLogic.negb_and;left;move:Hdom;apply NewLogic.contraLR=> /=.
+          admit. (* foo *)  
+        admit. (* should be ok *) *)
+      if{2}=> /=.
+      + admit. (* can be hard *)
+      auto=> &ml&mr[][][]->[]-> ^Hinv->/=.
+      admit.
+
+
+search dom hinv.
+ = hinv G2.handles x.`2){2}).
+=>//.
+          
+;progress;smt ml=0.
+        seq 0 1 : 
+        case ((mem (rng G2.handles) (x.`2, I)){2}).
+        +         
+      
+                  !mem (dom m) x   =>
+                  !mem (dom mh) x.1 (hinv x.2) 
+
+hinv x.2 = 
+        
+        rcondf{2} 5.
+        + move=> &ml;wp 2;conseq (_:_==>true)=> //= &mr.
+          rewrite in_rng.
+search rng.
+= to_hstate.[x]
+
+
+
+print incl.
+
+[]+[]_[]+ _. 
+         
+<-.
+;1:(move=> &hr;skip).
+         
+ |].
+
+admit.
+    (* lossless CF.P.f *)
+    + admit.
+    (* lossless and do not reset bad G2.S.f *)
+    + admit.
+    (** proofs for G2.S.fi *)
+    (* equiv CF.P.fi G2.S.fi *)
+    + admit.
+    (* lossless CF.P.fi *)
+    + admit.
+    (* lossless and do not reset bad G2.S.fi *)
+    + admit.
+    (** proofs for G2.C.f *)
+    (* equiv CF.C.f G2.C.f *)
+    + admit.
+    (* lossless CF.C.f *)
+    + admit.
+    (* lossless and do not reset bad G2.C.f *)
+    + admit.
+    (* Init ok *)
+    + admit.
+  qed.
+     
+    
+
+ma equiv_
+Concrete_F
+
+
+
+
+               
+       mh.[RO. 
+
+
+ (p,v) <- oget paths.[x.`2]; 
+            y1    <- RO.f (rcons p (v +^ x.`1));
+            y2    <$ cdistr;
+            y     <- (y1, y2);
+            paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
+
+
+
+inv : 
+  (forall (x:state), m.[x]{1} <> None    => m.[x]{1} = mh.[x.`1, oget (hinv handles{2} x.`2)])
+  (forall (xh:hstate), m.[xh]{2} <> None => mh.[xh]{2} = mh.[x.`1, (oget (handles.[xh.`2])).`1])
+
+  (si path alors mh= ...)
+  (si 
+
+
+
+
+op check_hpath (mh:(hstate, hstate) fmap) (handles:(handle, ccapacity) fmap) (xs:block list) (c:capacity) = 
+  obind (fun (sah:hstate) => if c = sah.`2 then Some sah.`1 else None)
+        (build_hpath mh xs).
+
+  if sah <> None then
+   
+  else None 
+
+hpath 
+  let step = fun (sah:hstate option ) (x:block) => 
+    if sah = None then None 
+    else 
+      let sah = oget sah in 
+       mh.[(sah.`1 +^ x, sah.`2)] in
+  foldl step (Some (b0,0)) xs.
+
+
+
+
+
+
+
+fun sah => mh.fun (sah:hstate) (cont=>
+             if mem
+
+
 op INV2 (m mi:(state , state ) fmap) (mh mhi:(hstate, hstate) fmap) (handles:(handle, ccapacity) fmap) chandle = 
   dom mh = rng mhi /\ dom mhi = rng mh /\ 
   (forall xh, mem (dom mh `|` rng mh) xh => mem (dom handles) xh.`2) /\ 
@@ -370,19 +692,6 @@ op INV2 (m mi:(state , state ) fmap) (mh mhi:(hstate, hstate) fmap) (handles:(ha
   (forall xh,  mem (dom mh) xh => mem (dom m) (xh.`1, (oget handles.[xh.`2]).`1) \/ (oget handles.[xh.`2]).`2 = I) /\
   (forall xh,  mem (dom mhi) xh => mem (dom mi) (xh.`1, (oget handles.[xh.`2]).`1) \/ (oget handles.[xh.`2]).`2 = I).
 
-lemma get_oget (m:('a,'b)fmap) (x:'a) : mem (dom m) x => m.[x] = Some (oget m.[x]).
-proof. by rewrite in_dom;case (m.[x]). qed.
-
-lemma find_set (m:('a,'b) fmap) y x (p:'a -> 'b -> bool):
-  (forall x, mem (dom m) x => !p x (oget m.[x])) =>
-  find p m.[x <- y] = if p x y then Some x else None.
-proof.
-  cut [[a []->[]] | []-> Hp Hnp]:= findP p (m.[x<-y]);1: rewrite getP dom_set !inE /#. 
-  by case (p x y)=> //; cut := Hp x;rewrite getP dom_set !inE /= oget_some.
-qed.
-
-require import StdOrder.
-require import Ring.
 
 lemma hinvD_rng x (handles:(handle, ccapacity) fmap):
    mem (rng handles) (x, D) =>
