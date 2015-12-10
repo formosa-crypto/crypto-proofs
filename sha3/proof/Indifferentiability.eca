@@ -10,8 +10,17 @@ module type PRIMITIVE = {
   proc fi(x : p): p
 }.
 
+module type DPRIMITIVE = {
+  proc f(x : p): p
+  proc fi(x : p): p
+}.
+
 module type FUNCTIONALITY = {
   proc init(): unit
+  proc f(x : f_in): f_out
+}.
+
+module type DFUNCTIONALITY = {
   proc f(x : f_in): f_out
 }.
 
@@ -32,8 +41,8 @@ module type SIMULATOR (F : FUNCTIONALITY) = {
   proc fi(x : p) : p { F.f }
 }.
 
-module type DISTINGUISHER (F : FUNCTIONALITY, P : PRIMITIVE) = {
-  proc distinguish(): bool { P.f P.fi F.f }
+module type DISTINGUISHER (F : DFUNCTIONALITY, P : DPRIMITIVE) = {
+  proc distinguish(): bool 
 }.
 
 module Indif (F : FUNCTIONALITY, P : PRIMITIVE, D : DISTINGUISHER) = {

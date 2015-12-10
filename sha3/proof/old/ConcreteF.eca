@@ -1,0 +1,77 @@
+require import Pred Fun Option Pair Int Real StdOrder Ring.
+require import List FSet NewFMap Utils Common SLCommon.
+(*...*) import Dprod Dexcepted Capacity IntOrder.
+
+module Concrete(D:DISTINGUISHER) = RealIndif(SqueezelessSponge,Perm,D).
+(** An intermediate game where we don't care about the permutation
+      being a bijection anymore... **)
+module CF(D:DISTINGUISHER) = {
+    var m, mi: (state,state) fmap
+
+    module P = {
+      proc init(): unit = { }
+
+      proc f(x : state): state = {
+        var y;
+
+        if (!mem (dom m) x) {
+          y <$ dstate;
+          m.[x]  <- y;
+          mi.[y] <- x;
+        }
+        return oget m.[x];
+      }
+
+      proc fi(x : state): state = {
+        var y;
+
+        if (!mem (dom mi) x) {
+          y <$ dstate;
+          mi.[x] <- y;
+          m.[y]  <- x;
+        }
+        return oget mi.[x];
+      }
+
+    }
+
+    module C = {
+      proc init(): unit = { }
+
+      proc f(p : block list): block = {
+        var (sa,sc) <- (b0,c0);
+
+        if (1 <= size p /\ p <> [b0]) {
+          while (p <> []) { (* Absorption *)
+            (sa,sc) <@ P.f((sa +^ head witness p,sc));
+            p <- behead p;
+          }
+        }
+        return sa;          (* Squeezing phase (non-iterated) *)
+      }
+    }
+
+    proc main(): bool = {
+      var b;
+
+      m  <- map0;
+      mi <- map0;
+      b  <@ D(C,P).distinguish();
+      return b;
+    }
+  }.
+
+section PROOF.
+
+  declare module D : DISTINGUISHER {Perm, RO, CF}.
+ 
+  op bound_concrete : real.
+
+  lemma Concrete_CF &m: 
+    Pr[Concrete(D).main() @ &m: res] <=
+    Pr[CF(D).main() @ &m: res] + bound_concrete.
+  admitted.
+
+end section PROOF.
+
+

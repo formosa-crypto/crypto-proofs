@@ -67,83 +67,91 @@ module SqueezelessSponge (P:PRIMITIVE): CONSTRUCTION(P), FUNCTIONALITY = {
   }
 }.
 
-section.
+module Count = { var c:int }.
 
-  declare module D : Self.DISTINGUISHER {Perm, RO}.
+module DCount (D:DISTINGUISHER, F:DFUNCTIONALITY, P:DPRIMITIVE) = {
 
-  local module Concrete = RealIndif(SqueezelessSponge,Perm,D).
-
-  (** Result: The adversary's advantage in distinguishing the modular
-      defs is equal to that of distinguishing these **)
-  local lemma Inlined_pr &m:
-     Pr[RealIndif(SqueezelessSponge,Perm,D).main() @ &m: res]
-    = Pr[Concrete.main() @ &m: res].
-  proof. trivial. qed.
-
-  (** An intermediate game where we don't care about the permutation
-      being a bijection anymore... **)
-  local module CF = {
-    var m, mi: (state,state) fmap
-
-    module P = {
-      proc init(): unit = { }
-
-      proc f(x : state): state = {
-        var y;
-
-        if (!mem (dom m) x) {
-          y <$ dstate;
-          m.[x]  <- y;
-          mi.[y] <- x;
-        }
-        return oget m.[x];
-      }
-
-      proc fi(x : state): state = {
-        var y;
-
-        if (!mem (dom mi) x) {
-          y <$ dstate;
-          mi.[x] <- y;
-          m.[y]  <- x;
-        }
-        return oget mi.[x];
-      }
-
-    }
-
-    module C = {
-      proc init(): unit = { }
-
-      proc f(p : block list): block = {
-        var (sa,sc) <- (b0,c0);
-
-        if (1 <= size p /\ p <> [b0]) {
-          while (p <> []) { (* Absorption *)
-            (sa,sc) <@ P.f((sa +^ head witness p,sc));
-            p <- behead p;
-          }
-        }
-        return sa;          (* Squeezing phase (non-iterated) *)
-      }
-    }
-
-    proc main(): bool = {
+  module Fc = { 
+    proc f (bs:block list) = {
       var b;
-
-      m  <- map0;
-      mi <- map0;
-      b  <@ D(C,P).distinguish();
+      Count.c <- Count.c + size bs;
+      b     <@ F.f(bs);
       return b;
     }
-  }.
-  
-  op bound_concrete : real.
+  }
 
-  local lemma Concrete_CF &m: 
-    Pr[Concrete.main() @ &m: res] <=
-    Pr[CF.main() @ &m: res] + bound_concrete.
-  admitted.
+  module Pc = {
+    proc f (x:state) = {
+      var y;
+      Count.c <- Count.c + 1;
+      y     <@ P.f(x);
+      return y;
+    }
+
+    proc fi(x:state) = {
+      var y;
+      Count.c <- Count.c + 1;
+      y     <@ P.fi(x);
+      return y;
+    } 
+  }
+
+  proc distinguish = D(Fc,Pc).distinguish
+
+}.
+
+module DRestr (D:DISTINGUISHER, F:DFUNCTIONALITY, P:DPRIMITIVE) = {
+  var count:int
+
+  module Fc = { 
+    proc f (bs:block list) = {
+      var b = b0;
+      if (Count.c + size bs <= max_size) {
+        Count.c <- Count.c + size bs;
+        b     <@ F.f(bs);
+      }
+      return b;
+    }
+  }
+
+  module Pc = {
+    proc f (x:state) = {
+      var y;
+      if (
+      count <- count + 1;
+      y     <@ P.f(x);
+      return y;
+    }
+
+    proc fi(x:state) = {
+      var y;
+      count <- count + 1;
+      y     <@ P.fi(x);
+      return y;
+    } 
+  }
+
+  proc distinguish = D(Fc,Pc).distinguish
+
+}.
+
+
+
+
+module type DPRIMITIVE = {
+  proc f(x : p): p
+  proc fi(x : p): p
+}.
+
+module type FUNCTIONALITY = {
+  proc init(): unit
+  proc f(x : f_in): f_out
+}.
+
+module type DFUNCTIONALITY = {
+  proc f(x : f_in): f_out
+}.
+
 
   (** Result (expected): The distance between Concrete and Concrete_F
       is bounded by N^2/|state|, where N is the total cost (in terms
@@ -226,7 +234,7 @@ proof.
   by case (p x y)=> //; cut := Hp x;rewrite getP dom_set !inE /= oget_some.
 qed.
 
-require import StdOrder.
+require import StdOrder IntOrder.
 require import Ring.
 
   (* Operators and properties of handles *)
@@ -285,416 +293,7 @@ require import Ring.
     by rewrite oget_some=> /Huniq H/H. 
   qed.
 
-  local module G2 = {
-    var m, mi               : smap
-    var mh, mhi             : hsmap
-    var handles             : handles
-    var chandle             : int
-    var paths               : (capacity, block list * block) fmap
-    var bext, bcol          : bool
-
-
-    module C = {
-      proc init(): unit = { }
-
-      proc f(p : block list): block = {
-        var sa, sa', sc;
-        var h, i <- 0; 
-        sa <- b0;
-        if (1 <= size p /\ p <> [b0]) {
-          while (i < size p ) {
-            if (mem (dom mh) (sa +^ nth witness p i, h)) {
-              (sa, h) <- oget mh.[(sa +^ nth witness p i, h)];
-            } else {
-              sc                  <$ cdistr;
-              bcol                <- bcol \/ hinv handles sc <> None;
-              sa'                 <- RO.f(take (i+1) p);
-              sa                  <- sa +^ nth witness p i;
-              mh.[(sa,h)]         <- (sa', chandle);
-              mhi.[(sa',chandle)] <- (sa, h);
-              (sa,h)              <- (sa',chandle);
-              handles.[chandle]   <- (sc,I);
-              chandle             <- chandle + 1;
-            }
-            i        <- i + 1;
-          }
-          sa <- RO.f(p);
-        }
-        return sa;
-      }
-    }
-
-    module S = {
-      (** Inner interface **)
-      proc f(x : state): state = {
-        var p, v, y, y1, y2, hy2, hx2;
-  
-        if (!mem (dom m) x) {
-          if (mem (dom paths) x.`2) {
-            (p,v) <- oget paths.[x.`2]; 
-            y1    <- RO.f (rcons p (v +^ x.`1));
-            y2    <$ cdistr;
-            y     <- (y1, y2);
-            paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
-          } else {
-            y <$ dstate;
-          }
-          bext <- bext \/ mem (rng handles) (x.`2, I);   
-            (*  exists x2 h, handles.[h] = Some (X2,I) *)
-          if (!(mem (rng handles) (x.`2, D))) {
-            handles.[chandle] <- (x.`2, D);
-            chandle <- chandle + 1;
-          }
-          hx2 <- oget (hinvD handles x.`2);
-          if (mem (dom mh) (x.`1, hx2) /\ (oget handles.[(oget mh.[(x.`1,hx2)]).`2]).`2 = I) {
-            hy2               <- (oget mh.[(x.`1, hx2)]).`2;
-            y                 <- (y.`1, (oget handles.[hy2]).`1);
-            handles.[hy2]     <- (y.`2, D);
-            (* bad               <- bad \/ mem X2 y.`2; *)
-            m.[x]             <- y;
-            mi.[y]            <- x;
-          } else {
-            bcol              <- bcol \/ hinv handles y.`2 <> None;          
-            hy2               <- chandle;
-            chandle           <- chandle + 1;
-            handles.[hy2]     <- (y.`2, D);
-            m.[x]             <- y;
-            mh.[(x.`1, hx2)]  <- (y.`1, hy2);
-            mi.[y]            <- x;
-            mhi.[(y.`1, hy2)] <- (x.`1, hx2);
-          }
-        } else {   
-          y <- oget m.[x];
-        }
-        return y;
-      }
-
-      proc fi(x : state): state = {
-        var y, y1, hx2, hy2;
-
-        if (!mem (dom mi) x) {
-          bext <- bext \/ mem (rng handles) (x.`2, I);   
-            (*  exists x2 h, handles.[h] = Some (X2,I) *)
-          if (!(mem (rng handles) (x.`2, D))) {
-            handles.[chandle] <- (x.`2, D);
-            chandle <- chandle + 1;
-          }
-          hx2 <- oget (hinvD handles x.`2);
-          y                 <$ dstate;
-          if (mem (dom mhi) (x.`1, hx2) /\ (oget handles.[(oget mh.[(x.`1,hx2)]).`2]).`2 = I) {
-            (y1,hy2)          <- oget mhi.[(x.`1, hx2)];
-            y                 <- (y.`1, (oget handles.[hy2]).`1);
-            handles.[hy2]     <- (y.`2, D);
-            (* bad               <- bad \/ mem X2 y.`2; *)
-            mi.[x]            <- y;
-            mhi.[(x.`1, hx2)] <- (y.`1, hy2);
-            m.[y]             <- x;
-            mh.[(y.`1, hy2)]  <- (x.`1, hx2);
-          } else {
-            bcol              <- bcol \/ hinv handles y.`2 <> None;          
-            hy2               <- chandle;
-            chandle           <- chandle + 1;
-            handles.[hy2]     <- (y.`2, D);
-            mi.[x]            <- y;
-            mhi.[(x.`1, hx2)] <- (y.`1, hy2);
-            m.[y]             <- x;
-            mh.[(y.`1, hy2)]  <- (x.`1, hx2);
-          }
-        } else {
-          y <- oget mi.[x];
-        }
-        return y;
-      }
-
-      (** Distinguisher interface **)
-      proc init() = { }
-
-    }
-
-    proc main(): bool = {
-      var b;
-
-      m        <- map0;
-      mi       <- map0;
-      bext     <- false;
-      bcol    <- false;
-
-      (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-      handles  <- map0.[0 <- (c0, D)];
-      paths    <- map0.[c0 <- ([<:block>],b0)];
-      chandle  <- 1;
-      b        <@ D(C,S).distinguish();
-      return b;
-    }    
-  }.
-
-  op step_hpath (mh:hsmap) (sah:hstate option) (b:block) = 
-      if sah = None then None 
-      else 
-        let sah = oget sah in 
-        mh.[(sah.`1 +^ b, sah.`2)].
  
-  op build_hpath (mh:hsmap) (bs:block list) = 
-     foldl (step_hpath mh) (Some (b0,0)) bs.
-
-  op eqm_handles (handles:handles) (m:smap) (mh:hsmap) =
-    (forall bc bc', m.[bc] = Some bc' => 
-       exists h h' f f', 
-         handles.[h ]    = Some(bc .`2,f ) /\ 
-         handles.[h']    = Some(bc'.`2,f') /\
-         mh.[(bc.`1, h)] = Some (bc'.`1,h')) /\
-    (forall bh bh', mh.[bh] = Some bh' =>
-       exists c c' f f', 
-         handles.[bh .`2] = Some(c ,f) /\ 
-         handles.[bh'.`2] = Some(c',f') /\
-         m.[(bh.`1, c)]   = Some (bh'.`1,c')).
-
-  op mh_spec (handles:handles) (m2:smap) (mh:hsmap) (ro:(block list, block)fmap) = 
-    (forall bh bh', mh.[bh] = Some bh' =>
-      exists c f c' f', 
-        handles.[bh .`2]=Some(c,f) /\
-        handles.[bh'.`2]=Some(c',f') /\
-        if f' = D then m2.[(bh.`1,c)] = Some(bh'.`1,c') /\ f = D
-        else 
-          exists p v b, 
-            ro.[rcons p b] = Some bh'.`1 /\
-            build_hpath mh p = Some(v,bh.`2) /\
-            bh.`1 = v +^ b) /\
-    (forall p b, mem (dom ro) (rcons p b) <=>
-       exists v h h', 
-         build_hpath mh p = Some (v,h) /\
-         mh.[(v +^ b,h)] = Some (oget ro.[rcons p b], h')).
-
-  op paths_spec (handles:handles) (mh:hsmap) (paths:(capacity,block list * block)fmap) = 
-    forall c p v, paths.[c] = Some(p,v) <=> 
-      exists h, 
-        build_hpath mh p = Some(v,h) /\ 
-        handles.[h] = Some(c,D).
-
-  op incl (m m':('a,'b)fmap) = 
-    forall x,  m .[x] <> None => m'.[x] = m.[x].
-
-  op handles_spec handles chandle = 
-    huniq handles /\ handles.[0] = Some (c0,D) /\ forall h, mem (dom handles) h => h < chandle.
-
-  op INV_CF_G2 (handles:handles) chandle (m1 mi1 m2 mi2:smap) (mh2 mhi2:hsmap) (ro:(block list, block) fmap) paths =
-     (eqm_handles handles m1 mh2 /\ eqm_handles handles mi1 mhi2) /\ 
-     (incl m2 m1 /\ incl mi2 mi1) /\ 
-     (mh_spec handles m2 mh2 ro /\ paths_spec handles mh2 paths /\ handles_spec handles chandle).
-
-  lemma eqm_dom_mh_m handles m mh hx2 f (x:state): 
-    eqm_handles handles m mh =>
-    handles.[hx2] = Some (x.`2, f) =>
-    mem (dom mh) (x.`1, hx2) => mem (dom m) x.
-  proof.
-    move=>[]H1 H2 Hhx2;rewrite !in_dom.
-    case: (mh.[_]) (H2 (x.`1,hx2))=> //= bh' /(_ bh') [c c' f1 f1'].
-    by rewrite Hhx2=> /=[][]<<- _;case:(x)=> ??[]_->.
-  qed.
-
-  axiom D_ll (F <: FUNCTIONALITY{D}) (P <: PRIMITIVE{D}):
-    islossless P.f => islossless P.fi => islossless F.f => 
-    islossless D(F, P).distinguish.
-
-  clone import Pair.Dprod.Sample as Sample2 with 
-    type t1 <- block,
-    type t2 <- capacity,
-    op d1   <- bdistr,
-    op d2   <- cdistr.
-
-  lemma build_hpathP mh p v h: 
-    build_hpath mh p = Some (v, h) =>
-    (p = [] /\ v=b0 /\ h=0) \/ 
-    exists p' b v' h',  
-      p = rcons p' b /\ build_hpath mh p' = Some(v',h') /\ mh.[(v'+^b, h')] = Some(v,h).
-  proof.
-    elim/last_ind:p=>@/build_hpath //= p' b _. 
-    rewrite -cats1 foldl_cat /= => H;right;exists p',b. 
-    move:H;rewrite {1}/step_hpath;case (foldl _ _ _)=> //= -[v' h'].
-    by rewrite oget_some /==>Heq; exists v',h';rewrite -cats1.
-  qed.
-
-  lemma chandle_ge0 handles chandle : handles_spec handles chandle => 0 < chandle.
-  proof. by move=>[]_[]Heq Hlt;apply Hlt;rewrite in_dom Heq. qed.
-
-  lemma chandle_0 handles chandle : handles_spec handles chandle => 0 <> chandle.
-  proof.  move=> Hh;apply /IntOrder.ltr_eqF/(chandle_ge0 _ _ Hh). qed.
-
-  lemma eqm_up_handles handles chandle m mh x2 : 
-     handles_spec handles chandle =>
-     eqm_handles handles m mh => 
-     eqm_handles handles.[chandle <- (x2, D)] m mh.
-  proof.
-    move=> []Hu[Hh0 Hlt][]H1 H2;split=>
-     [bc bc'/H1 [h h' f f'][]Hh[]Hh' Hmh| bh bh'/H2 [c c' f f'][]Hh []Hh' Hm]. 
-    + exists h,h',f,f';rewrite !getP Hmh/=-Hh-Hh'(_:h<>chandle)2:(_:h'<>chandle) //. 
-      + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
-      by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
-    exists c,c',f,f';rewrite !getP Hm/=-Hh-Hh'(_:bh.`2<>chandle)2:(_:bh'.`2<>chandle) //. 
-    + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
-    by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
-  qed.
-
-  lemma mh_up_handles handles chandle m2 mh ro cf: 
-     handles_spec handles chandle =>
-     mh_spec handles m2 mh ro =>
-     mh_spec handles.[chandle <- cf] m2 mh ro.
-  proof.
-    move=> Hh Hmh.
-    move:Hmh Hh=>[H1 ?][_[]_ Hlt];split=>// bh bh' /H1 [c f c' f'][]Hh[]Hh' Hif.
-    exists c,f,c',f';rewrite Hif-Hh-Hh'!getP(_:bh.`2<>chandle)2:(_:bh'.`2<>chandle) //. 
-    + by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
-    by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh'.
-  qed.
-
-  lemma paths_up_handles m2 ro handles mh paths cf chandle:
-    mh_spec handles m2 mh ro => 
-    handles_spec handles chandle =>
-    paths_spec handles mh paths =>
-    paths_spec handles.[chandle <- cf] mh paths.
-  proof.
-    move=> Hmh Hh Hp c p v;rewrite Hp;apply NewLogic.exists_iff=> h/=;split=> -[^Hbu->] /=;
-      rewrite getP.
-    + move:Hh=>[]_[]_/(_ h)Hlt Hh;rewrite (_:h<>chandle)//.
-      by apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom Hh.
-    rewrite (_:h<>chandle)//.
-    cut [[]_[]_->|[p' b v' h'[]_[]_ Hh']]:= build_hpathP _ _ _ _ Hbu.
-    + by rewrite (chandle_0 _ _ Hh).
-    move:Hh=>[]_[]_/(_ h)Hlt;apply /IntOrder.ltr_eqF/Hlt;rewrite in_dom. 
-    by cut [/(_ _ _ Hh')[????][]_[]->]:= Hmh.
-  qed.
-
-  lemma handles_up_handles handles chandle x2 f':
-    (forall (f : caller), ! mem (rng handles) (x2, f)) =>
-    handles_spec handles chandle =>
-    handles_spec handles.[chandle <- (x2, f')] (chandle + 1).
-  proof.
-    move=> Hx2^Hh[]Hu[]Hh0 Hlt;split;[ | split].
-    + move=> h1 h2 [c1 f1] [c2 f2];rewrite !getP.
-      case (h1=chandle)=>[->/=[]->> ->|_]; (case (h2=chandle)=>[->//=|_]).
-      + by move=>Heq ->>;move:(Hx2 f2);rewrite in_rng NewLogic.negb_exists=>/=/(_ h2);
-         rewrite Heq. 
-      + by move=>Heq[]->> <<- ->>;move:(Hx2 f1);rewrite in_rng NewLogic.negb_exists=>/=/(_ h1);
-        rewrite Heq. 
-      by apply Hu.
-    + by rewrite getP (chandle_0 _ _ Hh).
-    move=>h;rewrite dom_set !inE /#. 
-  qed.
-
-  lemma INV_CF_G2_up_handles handles chandle m1 mi1 m2 mi2 mh mhi ro paths x2:
-     INV_CF_G2 handles chandle m1 mi1 m2 mi2 mh mhi ro paths =>
-     (forall f, ! mem (rng handles) (x2, f)) => 
-     INV_CF_G2 handles.[chandle <- (x2, D)](chandle+1) m1 mi1 m2 mi2 mh mhi ro paths.
-  proof.
-    move=>[][]Heqm Heqmi[]Hincl[]Hmh[]Hp Hh Hx2;split.
-    + by split;apply eqm_up_handles.
-    split=>//;split;[|split].
-    + by apply mh_up_handles. 
-    + by apply (paths_up_handles m2 ro).
-    by apply handles_up_handles.
-  qed.
-
-  local equiv CF_G2 : CF.main ~ G2.main : ={glob D} ==> !(G2.bcol \/ G2.bext){2} => ={res}.
-  proof.
-    proc.
-    call (_:(G2.bcol \/ G2.bext), INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).   
-    (* lossless D *)
-    + apply D_ll.
-    (** proofs for G2.S.f *)
-    (* equiv CF.P.f G2.S.f *)
-    + proc;if{1}=>/=.
-      (* x is not in m{1} so forall h, (x.1,h) is not in mh{2} *)
-      + rcondt{2} 1.
-        + move=> &hr;skip=> &hr'[][]_[]<-[]_[][]Hincl Hincli _. 
-          rewrite !in_dom/==>H; by case:(G2.m{hr'}.[x{hr}]) (Hincl x{hr})=> //=;rewrite H.
-        exists* RO.m{2}, G2.paths{2};elim*=>ro0 paths0.
-        seq 1 2 : (!G2.bcol{2} /\ (G2.bext = mem (rng G2.handles) (x.`2, I)){2} /\
-                   ={x,y} /\
-                   INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} ro0 paths0 /\
-                  ! mem (dom CF.m{1}) x{1} /\
-                  (if mem (dom paths0) x.`2 then 
-                     let (p,v) = oget paths0.[x.`2] in
-                     RO.m{2}  = ro0.[rcons p (v+^x.`1) <- y.`1] /\ 
-                     G2.paths = paths0.[y.`2 <- (rcons p (v +^ x.`1), y.`1)]
-                   else RO.m = ro0 /\ G2.paths = paths0){2}).
-        + wp 1 1;conseq (_: ={y} /\
-                            if mem (dom paths0) x{2}.`2 then
-                              let (p0, v0) = oget paths0.[x{2}.`2] in
-                              RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
-                              G2.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
-                            else RO.m{2} = ro0 /\ G2.paths{2} = paths0);1:smt ml=0.
-          if{2};2:by auto=>/#.
-          inline{2} RO.f;rcondt{2} 4.
-           + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
-            rewrite in_dom;case:(G2.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
-            rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => [][]<- <- /=.
-            rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
-            by rewrite Hh=>[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
-          swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
-          + progress [-split];rewrite getP_eq oget_some H2/=.
-            by move:H2;rewrite in_dom;case:(G2.paths{2}.[_]).
-          transitivity{1} {y <- S.sample();} (true ==> ={y}) (true==>y{1}=(rd,y2){2})=>//;1:by inline*;auto.
-          transitivity{2} {(rd,y2) <- S.sample2();} (true==>y{1}=(rd,y2){2}) (true==> ={rd,y2})=>//;2:by inline*;auto.
-          by call sample_sample2;auto=> /=?[??]->.
-        case (mem (rng G2.handles{2}) (x{2}.`2, I)).
-        + conseq (_:true);[by move=> ??[][]_[]->_->|auto].
-        conseq (_: !G2.bcol{2} => 
-               oget CF.m{1}.[x{1}] = y{2} /\ 
-               INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2} G2.mh{2} G2.mhi{2} RO.m{2} G2.paths{2}).
-        + by move=> ??[][]_[]->[][]-> _ _ ->. 
-        seq 0 2: ((!G2.bcol{2} /\ ={x, y} /\
-                  INV_CF_G2 G2.handles{2} G2.chandle{2} CF.m{1} CF.mi{1} G2.m{2} G2.mi{2}
-                     G2.mh{2} G2.mhi{2} ro0 paths0 /\
-                  ! mem (dom CF.m{1}) x{1} /\
-                  if mem (dom paths0) x{2}.`2 then
-                    let (p0, v0) = oget paths0.[x{2}.`2] in
-                    RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
-                    G2.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
-                  else RO.m{2} = ro0 /\ G2.paths{2} = paths0) /\
-                 !mem (rng G2.handles{2}) (x{2}.`2, I) /\
-                 (G2.handles.[hx2]=Some(x.`2,D)){2}).
-        + auto=> &ml&mr[][]->[]_[][]-> ->[]Hinv []-> -> ^Hrng-> /=.   
-          case (mem (rng G2.handles{mr}) (x{mr}.`2, Top.D))=> Hmem /=.
-          + by split=>//;apply /huniq_hinvD=>//;move:Hinv;rewrite /INV_CF_G2/handles_spec.
-          rewrite -anda_and;split=> [ | {Hinv}Hinv].
-          + by apply INV_CF_G2_up_handles=>//[[]]. 
-          rewrite rng_set (huniq_hinvD_h G2.chandle{mr}) ?getP//. 
-          + by move:Hinv;rewrite /INV_CF_G2/handles_spec.
-          by rewrite oget_some /=!inE/=;move:Hrng;apply NewLogic.contraLR=>/=;apply rng_rem_le.
-        rcondf{2} 1.
-        + move=> &ml;skip=> &mr[][]_[][]-> _ []Hinv[]Hndom _[]_ Hh;rewrite -not_def in_dom=>[].
-          move:Hinv=>[][][]_ /(_ (x{mr}.`1, hx2{mr}));case (G2.mh{mr}.[_])=>// bh' /(_ bh') [c c' f f'] /=. 
-          by rewrite Hh/= =>[][]<- _ []_ H;case: (x{mr}) H Hndom => [x1 x2];rewrite in_dom=>->.
-        auto.
-(* Stopped here *)
-        admit.
-      admit.
-    (* lossless CF.P.f *)
-    + admit.
-    (* lossless and do not reset bad G2.S.f *)
-    + admit.
-    (** proofs for G2.S.fi *)
-    (* equiv CF.P.fi G2.S.fi *)
-    + admit.
-    (* lossless CF.P.fi *)
-    + admit.
-    (* lossless and do not reset bad G2.S.fi *)
-    + admit.
-    (** proofs for G2.C.f *)
-    (* equiv CF.C.f G2.C.f *)
-    + admit.
-    (* lossless CF.C.f *)
-    + admit.
-    (* lossless and do not reset bad G2.C.f *)
-    + admit.
-    (* Init ok *)
-    + admit.
-  qed.
-     
-    
-
-
-
 
 
 
