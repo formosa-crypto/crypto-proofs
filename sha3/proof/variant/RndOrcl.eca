@@ -124,7 +124,7 @@ abstract theory GenIdeal.
          (={x,work,RO.m} ==> ={x,RO.m})
          ((={x,work,RO.m} /\ mem work{1} x{1}) /\ ! mem (dom RO.m{2}) x{2} ==>
                ={x,RO.m} /\ (result = oget RO.m.[x]){2} /\ mem (dom RO.m{1}) x{1}) => //.
-      + by move=> &1 &2 H; exists RO.m{2}, x{2}, work{2}; generalize H.
+      + by move=> &1 &2 H; exists RO.m{2}, x{2}, work{2}; move: H.
       + transitivity{1} { while (work <> fset0) {
                             x0  <- pick work;
                             rd0 <$ sample x0;
@@ -134,7 +134,7 @@ abstract theory GenIdeal.
                           rd <$ sample x; }
             (={x,work,RO.m} ==> ={x,RO.m})
             (={x,work,RO.m} ==> ={x,RO.m})=> //.
-        + by move=> &1 &2 H; exists RO.m{2}, x{2}, work{2}; generalize H.
+        + by move=> &1 &2 H; exists RO.m{2}, x{2}, work{2}; move: H.
         + by sim; rnd{2}; sim : (={x,IND_Eager.H.m}); smt.
         symmetry; eager while (H: rd <$ sample x; ~ rd <$ sample x; : ={x} ==> ={rd})=> //; sim. 
         swap{2} 5 -4; swap [2..3] -1; case ((x = pick work){1}).
@@ -147,7 +147,7 @@ abstract theory GenIdeal.
                 else eq_except RO.m{1} RO.m{2} (fset1 x{1})).
         + auto;progress; 1..9,12:smt.
           + case ((pick work = x){2})=> pick_x; last smt.
-            subst x{2}; generalize H7 H1; rewrite -neqF /eq_except=> -> /= eq_exc.
+            subst x{2}; move: H7 H1; rewrite -neqF /eq_except=> -> /= eq_exc.
             by apply fmapP=> x0; case (pick work{2} = x0); smt.
         by auto; smt.
       by auto;progress [-split];rewrite H0 /= getP_eq;smt. 
