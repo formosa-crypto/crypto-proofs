@@ -145,7 +145,7 @@ section.
         + smt.
         + smt.
         + have [_] [_] /(_ x1 n0 _) //= := H0.
-          move: H5; rewrite domP in_fsetU in_fset1=> [//=|h].
+          move: H5; rewrite domP in_fsetU in_fset1=> -[//=|h].
           by have [->]:= H1 (x1,n0) _; first by rewrite h mem_pick // H2.
         + move: H5; rewrite domP in_fsetD in_fsetU !in_fset1.
           by case (x1 = pick work{hr})=> //= _ /H1 [->].

@@ -113,7 +113,7 @@ lemma half_permutation_set (m' mi' : ('a,'a) fmap) x' y':
   => (forall x, mem (rng m'.[x' <- y']) x => mem (dom mi'.[y' <- x']) x).
 proof.
   move=> h x0.
-  rewrite rng_set domP !in_fsetU in_fset1 => [/rng_rem_le in_rng|//=].
+  rewrite rng_set domP !in_fsetU in_fset1 => -[/rng_rem_le in_rng|//=].
   by rewrite h.
 qed.
 
@@ -171,7 +171,7 @@ qed.
 lemma huniq_hinvD (handles:handles) c: 
   huniq handles => mem (rng handles) (c,D) => handles.[oget (hinvD handles c)] = Some(c,D).
 proof.
-  move=> Huniq;rewrite in_rng=> [h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
+  move=> Huniq;rewrite in_rng=> -[h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
   by move=>_/(_ h);rewrite H.
 qed.
 

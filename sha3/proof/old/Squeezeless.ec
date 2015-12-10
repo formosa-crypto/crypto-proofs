@@ -201,7 +201,7 @@ module type DFUNCTIONALITY = {
     => (forall x, mem (rng m'.[x' <- y']) x => mem (dom mi'.[y' <- x']) x).
   proof.
     move=> h x0.
-    rewrite rng_set domP !in_fsetU in_fset1 => [/rng_rem_le in_rng|//=].
+    rewrite rng_set domP !in_fsetU in_fset1 => -[/rng_rem_le in_rng|//=].
     by rewrite h.
   qed.
 
@@ -282,7 +282,7 @@ require import Ring.
   lemma huniq_hinvD (handles:handles) c: 
     huniq handles => mem (rng handles) (c,D) => handles.[oget (hinvD handles c)] = Some(c,D).
   proof.
-    move=> Huniq;rewrite in_rng=> [h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
+    move=> Huniq;rewrite in_rng=> -[h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
     by move=>_/(_ h);rewrite H.
   qed.
 
@@ -352,14 +352,14 @@ lemma hinvD_rng x (handles:(handle, ccapacity) fmap):
 proof.
   cut[ [a []->[]] | []->/=Hp ]/=:= findP (fun _ z => z = (x, D)) handles.
   + by rewrite oget_some=> ? <- _;apply get_oget.
-  by rewrite in_rng=> [a Ha];cut := Hp a; rewrite in_dom Ha oget_some. 
+  by rewrite in_rng=> -[a Ha];cut := Hp a; rewrite in_dom Ha oget_some. 
 qed.
 
 (* TODO: change the name *)
 lemma map_perm (m mi: ('a, 'a) fmap) x y: !mem (dom mi) y => dom m = rng mi => dom m.[x<-y] = rng mi.[y<- x].
 proof.
   move=> Hdom Heq;rewrite fsetP=> w;rewrite dom_set in_rng !inE;split.
-  + rewrite Heq in_rng. case (w=x)=>[->|Hneq/=[a Ha]];1:by exists y;rewrite getP. 
+  + rewrite Heq in_rng. case (w=x)=> -[->|Hneq/=[a Ha]];1:by exists y;rewrite getP. 
     exists a;rewrite getP;case (a=y)=>[->>|//].
     by move:Hdom;rewrite in_dom Ha.
   rewrite Heq in_rng;by move=>[a];rewrite getP;case(a=y)=>[->>/# |_ <-];left;exists a.
@@ -387,13 +387,13 @@ proof.
       rewrite !(dom_set, rng_set, inE) /==>H1 [[H2|[_->]]|[/rng_rem_le H2|[_->]]]//;
       by rewrite H1 ?H2.
     + by move=> h;cut := Hhbound h;rewrite !dom_set !inE /= => H [[/H|]|->>]/#.
-    + move=>[x1 h];rewrite !getP !dom_set !inE /==>[|[]->> ->>];rewrite /chandles /=.
+    + move=>[x1 h];rewrite !getP !dom_set !inE /==> -[|[]->> ->>];rewrite /chandles /=.
       + move=>Hh. cut /Hhbound/=:= Hdomh (x1,h) _;1:by rewrite !inE Hh.
         move=> ^Hlt /IntOrder.gtr_eqF; rewrite eq_sym=>->.
         by cut ->/#: h <> G2.chandle{hr} + 1 by smt ml=0.
       cut ->/=: G2.chandle{hr} <> G2.chandle{hr} + 1 by smt ml=0.
       by rewrite oget_some /#. 
-     move=>[x1 h];rewrite !getP !dom_set !inE /==>[|[]->> ->>];rewrite /chandles /=.
+     move=>[x1 h];rewrite !getP !dom_set !inE /==> -[|[]->> ->>];rewrite /chandles /=.
      + move=>Hh; cut /Hhbound/=:= Hdomh (x1,h) _;1:by rewrite !inE -Hmhimh Hh.
        move=> ^Hlt /IntOrder.gtr_eqF; rewrite eq_sym=>->.
        by cut ->/#: h <> G2.chandle{hr} + 1 by smt ml=0.
@@ -406,17 +406,17 @@ proof.
        rewrite !inE -Hmhimh H.
   + apply map_perm=> //;rewrite -not_def=> H.
     by cut := Hmhor _ H;move: Hnmem;rewrite Hget oget_some /=;case (x{hr}).
-  + move=> [x1 h];rewrite !(dom_set,rng_set, inE) => [[H|[_ ->]]| [/rng_rem_le H|[_->]]]//=.
+  + move=> [x1 h];rewrite !(dom_set,rng_set, inE) => -[[H|[_ ->]]| [/rng_rem_le H|[_->]]]//=.
     + by left;apply (Hdomh (x1,h));rewrite inE H.
     + by left;rewrite in_dom Hget.
     by left;apply (Hdomh (x1,h));rewrite inE H.
-  + by move=>h;rewrite dom_set !inE=> [/Hhbound|->]/#. 
-  + move=> [x1 h];rewrite !(dom_set, getP, inE) /==>[H|[->> ->>]].
+  + by move=>h;rewrite dom_set !inE=> -[/Hhbound|->]/#. 
+  + move=> [x1 h];rewrite !(dom_set, getP, inE) /==> -[H|[->> ->>]].
     + by cut /IntOrder.ltr_eqF->/#:= Hhbound h _;1:by apply (Hdomh (x1,h));rewrite inE H.
     cut ->/=:oget (hinvD G2.handles{hr} x{hr}.`2) <> G2.chandle{hr}.
     + by cut /#:= Hhbound (oget (hinvD G2.handles{hr} x{hr}.`2)) _;1:by rewrite in_dom Hget.
     by rewrite Hget oget_some /=;right;case (x{hr}).
-  move=> [x1 h];rewrite !(dom_set, getP, inE) /==>[H|[->> ->> /=]].
+  move=> [x1 h];rewrite !(dom_set, getP, inE) /==> -[H|[->> ->> /=]].
   + by cut /IntOrder.ltr_eqF->/#:= Hhbound h _;1: apply (Hdomh (x1,h));rewrite inE -Hmhimh H.
   by rewrite oget_some /=;right;case y.
 qed.
@@ -443,12 +443,12 @@ proof.
       rewrite !(dom_set, rng_set, inE) /==>H1 [[H2|[_->]]|[/rng_rem_le H2|[_->]]]//;
       by rewrite H1 ?H2.
     + by move=> h;cut := Hhbound h;rewrite !dom_set !inE /= => H [[/H|]|->>]/#.
-    + move=>[x1 h];rewrite !getP !dom_set !inE /==>[|[]->> ->>];rewrite /chandles /=.
+    + move=>[x1 h];rewrite !getP !dom_set !inE /==> -[|[]->> ->>];rewrite /chandles /=.
       + move=>Hh; cut /Hhbound/=:= Hdomh (x1,h) _;1:by rewrite !inE -Hmhimh Hh.
         move=> ^Hlt /IntOrder.gtr_eqF; rewrite eq_sym=>->.
         by cut ->/#: h <> G2.chandle{hr} + 1 by smt ml=0.
       by rewrite oget_some /#.
-    move=>[x1 h];rewrite !getP !dom_set !inE /==>[|[]->> ->>];rewrite /chandles /=.
+    move=>[x1 h];rewrite !getP !dom_set !inE /==> -[|[]->> ->>];rewrite /chandles /=.
     + move=>Hh;cut /Hhbound/=:= Hdomh (x1,h) _;1:by rewrite !inE -Hmhimh Hh.
       move=> ^Hlt /IntOrder.gtr_eqF; rewrite eq_sym=>->.
       by cut ->/#: h <> G2.chandle{hr} + 1 by smt ml=0.
@@ -462,15 +462,15 @@ proof.
   + apply map_perm=> //;rewrite -not_def=> H.
     by cut /#:= Hhbound G2.chandle{hr} _;apply (Hdomh (y.`1,G2.chandle{hr}));
        rewrite !inE -Hmhimh H.
-  + move=> [x1 h];rewrite !(dom_set,rng_set, inE) => [[H|[_ ->]]| [/rng_rem_le H|[_->]]]//=.
+  + move=> [x1 h];rewrite !(dom_set,rng_set, inE) => -[[H|[_ ->]]| [/rng_rem_le H|[_->]]]//=.
     + by left;apply (Hdomh (x1,h));rewrite inE H.
     + by left;apply (Hdomh (x1,h));rewrite inE H.
     by left;rewrite in_dom Hget.
-  + by move=>h;rewrite dom_set !inE=> [/Hhbound|->]/#. 
-  + move=> [x1 h];rewrite !(dom_set, getP, inE) /==>[H|[->> ->> /=]].
+  + by move=>h;rewrite dom_set !inE=> -[/Hhbound|->]/#. 
+  + move=> [x1 h];rewrite !(dom_set, getP, inE) /==> -[H|[->> ->> /=]].
     + by cut /IntOrder.ltr_eqF->/#:= Hhbound h _;1: apply (Hdomh (x1,h));rewrite inE -Hmhimh H.
     by rewrite oget_some /==>{Hy};right;case y.
-  move=> [x1 h];rewrite !(dom_set, getP, inE) /==>[H|[->> ->>]].
+  move=> [x1 h];rewrite !(dom_set, getP, inE) /==> -[H|[->> ->>]].
   + by cut /IntOrder.ltr_eqF->/#:= Hhbound h _;1:apply (Hdomh (x1,h));rewrite inE -Hmhimh H.
   cut ->/=:oget (hinvD G2.handles{hr} x{hr}.`2) <> G2.chandle{hr}.
   + by cut /#:= Hhbound (oget (hinvD G2.handles{hr} x{hr}.`2)) _;1:by rewrite in_dom Hget.

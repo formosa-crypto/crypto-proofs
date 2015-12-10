@@ -198,7 +198,7 @@ lemma eqm_dom_mh_m handles m mh hx2 f (x:state):
 proof.
   move=>[]H1 H2 Hhx2;rewrite !in_dom.
   case: (mh.[_]) (H2 (x.`1,hx2))=> //= bh' /(_ bh') [c c' f1 f1'].
-  by rewrite Hhx2=> /=[][]<<- _;case:(x)=> ??[]_->.
+  by rewrite Hhx2=> /= -[][]<<- _;case:(x)=> ??[]_->.
 qed.
 
 lemma chandle_ge0 handles chandle : handles_spec handles chandle => 0 < chandle.
@@ -324,9 +324,9 @@ section PROOF.
           inline{2} RO.f;rcondt{2} 4.
            + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
             rewrite in_dom;case:(G1.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
-            rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => [][]<- <- /=.
+            rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => -[][]<- <- /=.
             rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
-            by rewrite Hh=>[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
+            by rewrite Hh=> -[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
           swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
           + progress [-split];rewrite getP_eq oget_some H2/=.
             by move:H2;rewrite in_dom;case:(G1.paths{2}.[_]).
@@ -359,9 +359,9 @@ section PROOF.
           + by move:Hinv;rewrite /INV_CF_G1/handles_spec.
           by rewrite oget_some /=!inE/=;move:Hrng;apply NewLogic.contraLR=>/=;apply rng_rem_le.
         rcondf{2} 1.
-        + move=> &ml;skip=> &mr[][]_[][]-> _ []Hinv[]Hndom _[]_ Hh;rewrite -not_def in_dom=>[].
+        + move=> &ml;skip=> &mr[][]_[][]-> _ []Hinv[]Hndom _[]_ Hh;rewrite -not_def in_dom=> -[].
           move:Hinv=>[][][]_ /(_ (x{mr}.`1, hx2{mr}));case (G1.mh{mr}.[_])=>// bh' /(_ bh') [c c' f f'] /=. 
-          by rewrite Hh/= =>[][]<- _ []_ H;case: (x{mr}) H Hndom => [x1 x2];rewrite in_dom=>->.
+          by rewrite Hh/= => -[][]<- _ []_ H;case: (x{mr}) H Hndom => [x1 x2];rewrite in_dom=>->.
         auto.
   (* Stopped here *)
         admit.

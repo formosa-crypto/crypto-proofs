@@ -17,7 +17,7 @@ proof. by rewrite dom_rem in_fsetD. qed.
 
 lemma rng_rem_le (x : 'a) (m : ('a,'b) fmap) (x' : 'b):
   mem (rng (rem x m)) x' => mem (rng m) x'.
-proof. by rewrite rng_rm in_rng=> [x0] [_ h]; exists x0. qed.
+proof. by rewrite rng_rm in_rng=> -[x0] [_ h]; exists x0. qed.
 
 
 (* -------------------------------------------------------------------- *)
@@ -34,7 +34,7 @@ lemma dom_reindex (f : 'a -> 'c) (m : ('a, 'b) fmap) x:
 proof.
   rewrite reindexE dom_oflist imageP mapP /fst; split.
     move=> [[x' y] [+ ->>]].
-    rewrite mapP=> [[x0 y0]] /= [h [->> ->>]] {x' y}.
+    rewrite mapP=> -[[x0 y0]] /= [h [->> ->>]] {x' y}.
     by exists x0; rewrite domE mem_oflist mapP /fst; exists (x0,y0).
   move=> [a] [a_in_m <<-].
   exists (f a,oget m.[a])=> /=; rewrite mapP /=.
@@ -64,13 +64,13 @@ proof.
       rewrite /reduce=> s0 x0; rewrite -{2}(cat0s s0); pose acc:= [].
       elim s0 acc x0=> {s'} [acc x0 /=|x' s' ih acc x0 /=].
         by rewrite cats0.
-      move=> /ih; rewrite -cat1s catA cats1 !mem_cat=> [|-> //=].
+      move=> /ih; rewrite -cat1s catA cats1 !mem_cat=> -[|-> //=].
       rewrite /augment; case (mem (map fst acc) x'.`1)=> _ h'; left=> //.
       by rewrite mem_rcons /=; right.
-    rewrite /s' mapP=> [[a' b']] /= [xy_in_m []].
+    rewrite /s' mapP=> -[[a' b']] /= [xy_in_m []].
     rewrite eq_sym. have h0 /h0 ->> <<- {a' b'}:= f_pinj a' x _; 1:by smt.
     by apply/mem_assoc_uniq; 1:exact uniq_keys.
-  rewrite -mem_oflist {1}/s -domE=> [] h; have := h; rewrite dom_reindex.
+  rewrite -mem_oflist {1}/s -domE=> -[] h; have := h; rewrite dom_reindex.
   rewrite imageP=> h'. have {h'} h': forall (a : 'a), !mem (dom m) a \/ f a <> f x by smt.
   have /= := h' x.
   rewrite in_dom !getE /=.
