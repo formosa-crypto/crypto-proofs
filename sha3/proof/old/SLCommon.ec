@@ -53,7 +53,7 @@ proof.
 qed.
 
 (** We can now define the squeezeless sponge construction **)
-module SqueezelessSponge (P:PRIMITIVE): CONSTRUCTION(P), FUNCTIONALITY = {
+module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
   proc init () = {} 
 
   proc f(p : block list): block = {

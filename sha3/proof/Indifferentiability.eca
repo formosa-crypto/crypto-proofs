@@ -30,12 +30,12 @@ module type DFUNCTIONALITY = {
       functionality and returns a boolean (its guess as to whether it
       is playing with constructed functionality and ideal primitive or
       with ideal functionality and simulated primitive). **)
-module type CONSTRUCTION (P : PRIMITIVE) = {
-  proc init() : unit
+module type CONSTRUCTION (P : DPRIMITIVE) = {
+  proc init() : unit {}
   proc f(x : f_in): f_out { P.f }
 }.
 
-module type SIMULATOR (F : FUNCTIONALITY) = {
+module type SIMULATOR (F : DFUNCTIONALITY) = {
   proc init() : unit { (* F.init *) }
   proc f(x : p) : p { F.f }
   proc fi(x : p) : p { F.f }
