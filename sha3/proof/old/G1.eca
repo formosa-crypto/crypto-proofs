@@ -14,7 +14,6 @@ module G1(D:DISTINGUISHER) = {
 
 
   module C = {
-    proc init(): unit = { }
 
     proc f(p : block list): block = {
       var sa, sa', sc;
@@ -44,7 +43,7 @@ module G1(D:DISTINGUISHER) = {
   }
 
   module S = {
-    (** Inner interface **)
+
     proc f(x : state): state = {
       var p, v, y, y1, y2, hy2, hx2;
 
@@ -281,24 +280,25 @@ proof.
   by apply handles_up_handles.
 qed.
 
-section PROOF.
+clone import ConcreteF as ConcreteF1.
 
-  declare module D : DISTINGUISHER {Perm, RO, G1}.
+section AUX.
+
+  declare module D : DISTINGUISHER {PF, RO, G1}.
 
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
-  local clone import ConcreteF as ConcreteF'.
-
-  local equiv CF_G1 : CF(D).main ~ G1(D).main : ={glob D} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
+  equiv CF_G1 : CF(D).main ~ G1(D).main: 
+                 ={glob D} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
   proof.
     proc.
-    call (_:(G1.bcol \/ G1.bext), INV_CF_G1 G1.handles{2} G1.chandle{2} CF.m{1} CF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).   
+    call (_:(G1.bcol \/ G1.bext), INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).   
     (* lossless D *)
     + apply D_ll.
     (** proofs for G1.S.f *)
-    (* equiv CF.P.f G1.S.f *)
+    (* equiv PF.P.f G1.S.f *)
     + proc;if{1}=>/=.
       (* x is not in m{1} so forall h, (x.1,h) is not in mh{2} *)
       + rcondt{2} 1.
@@ -307,8 +307,8 @@ section PROOF.
         exists* RO.m{2}, G1.paths{2};elim*=>ro0 paths0.
         seq 1 2 : (!G1.bcol{2} /\ (G1.bext = mem (rng G1.handles) (x.`2, I)){2} /\
                    ={x,y} /\
-                   INV_CF_G1 G1.handles{2} G1.chandle{2} CF.m{1} CF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} ro0 paths0 /\
-                  ! mem (dom CF.m{1}) x{1} /\
+                   INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} ro0 paths0 /\
+                  ! mem (dom PF.m{1}) x{1} /\
                   (if mem (dom paths0) x.`2 then 
                      let (p,v) = oget paths0.[x.`2] in
                      RO.m{2}  = ro0.[rcons p (v+^x.`1) <- y.`1] /\ 
@@ -322,11 +322,11 @@ section PROOF.
                             else RO.m{2} = ro0 /\ G1.paths{2} = paths0);1:smt ml=0.
           if{2};2:by auto=>/#.
           inline{2} RO.f;rcondt{2} 4.
-           + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnCFm.
+           + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnPFm.
             rewrite in_dom;case:(G1.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
             rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => -[][]<- <- /=.
             rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
-            by rewrite Hh=> -[][]<- _[]_ Hm;move:HnCFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
+            by rewrite Hh=> -[][]<- _[]_ Hm;move:HnPFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
           swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
           + progress [-split];rewrite getP_eq oget_some H2/=.
             by move:H2;rewrite in_dom;case:(G1.paths{2}.[_]).
@@ -336,13 +336,13 @@ section PROOF.
         case (mem (rng G1.handles{2}) (x{2}.`2, I)).
         + conseq (_:true);[by move=> ??[][]_[]->_->|auto].
         conseq (_: !G1.bcol{2} => 
-               oget CF.m{1}.[x{1}] = y{2} /\ 
-               INV_CF_G1 G1.handles{2} G1.chandle{2} CF.m{1} CF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).
+               oget PF.m{1}.[x{1}] = y{2} /\ 
+               INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).
         + by move=> ??[][]_[]->[][]-> _ _ ->. 
         seq 0 2: ((!G1.bcol{2} /\ ={x, y} /\
-                  INV_CF_G1 G1.handles{2} G1.chandle{2} CF.m{1} CF.mi{1} G1.m{2} G1.mi{2}
+                  INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
                      G1.mh{2} G1.mhi{2} ro0 paths0 /\
-                  ! mem (dom CF.m{1}) x{1} /\
+                  ! mem (dom PF.m{1}) x{1} /\
                   if mem (dom paths0) x{2}.`2 then
                     let (p0, v0) = oget paths0.[x{2}.`2] in
                     RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
@@ -366,21 +366,21 @@ section PROOF.
   (* Stopped here *)
         admit.
       admit.
-    (* lossless CF.P.f *)
+    (* lossless PF.P.f *)
     + admit.
     (* lossless and do not reset bad G1.S.f *)
     + admit.
     (** proofs for G1.S.fi *)
-    (* equiv CF.P.fi G1.S.fi *)
+    (* equiv PF.P.fi G1.S.fi *)
     + admit.
-    (* lossless CF.P.fi *)
+    (* lossless PF.P.fi *)
     + admit.
     (* lossless and do not reset bad G1.S.fi *)
     + admit.
     (** proofs for G1.C.f *)
-    (* equiv CF.C.f G1.C.f *)
+    (* equiv PF.C.f G1.C.f *)
     + admit.
-    (* lossless CF.C.f *)
+    (* lossless PF.C.f *)
     + admit.
     (* lossless and do not reset bad G1.C.f *)
     + admit.
@@ -388,18 +388,33 @@ section PROOF.
     + admit.
   qed.
 
-  lemma Concrete_G1 &m: 
-    Pr[RealIndif(SqueezelessSponge,Perm,D).main() @ &m: res] <=
-    Pr[G1(D).main() @ &m: res] + bound_concrete + Pr[G1(D).main() @&m: G1.bcol] + Pr[G1(D).main() @&m: G1.bext].
+end section AUX.
+
+section.
+
+  declare module D: DISTINGUISHER{Perm, C, PF, G1}.
+  
+  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+    islossless P.f => islossless P.fi =>
+    islossless F.f => islossless D(F, P).distinguish.
+
+  lemma Real_G1 &m: 
+    Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
+    Pr[G1(DRestr(D)).main() @ &m: res] + bound_concrete + 
+    Pr[G1(DRestr(D)).main() @&m: G1.bcol] + Pr[G1(DRestr(D)).main() @&m: G1.bext].
   proof. 
-    apply (RealOrder.ler_trans _ _ _ (Concrete_CF D &m)).
-    cut : Pr[CF(D).main() @ &m : res] <= 
-          Pr[G1(D).main() @ &m : res] + Pr[G1(D).main() @ &m : G1.bcol \/ G1.bext].
-    + by byequiv CF_G1 =>/#.
-    cut /# : Pr[G1(D).main() @ &m : G1.bcol \/ G1.bext] <= Pr[G1(D).main() @ &m : G1.bcol] + Pr[G1(D).main() @ &m : G1.bext].
+    apply (RealOrder.ler_trans _ _ _ (Real_Concrete D D_ll &m)).
+    cut : Pr[CF(DRestr(D)).main() @ &m : res] <= 
+          Pr[G1(DRestr(D)).main() @ &m : res] + 
+          Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext].
+    + byequiv (CF_G1 (DRestr(D)) _)=>//;1:by apply (DRestr_ll D D_ll).
+      smt ml=0.
+    cut /# : Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext] <= 
+             Pr[G1(DRestr(D)).main() @ &m : G1.bcol] + 
+             Pr[G1(DRestr(D)).main() @ &m : G1.bext].
     rewrite Pr [mu_or]; smt.
   qed.
 
-end section PROOF.
+end section.
 
 

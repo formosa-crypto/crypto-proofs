@@ -59,7 +59,7 @@ module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
   proc f(p : block list): block = {
     var (sa,sc) <- (b0,c0);
 
-    if (1 <= size p /\ p <> [b0]) {
+    if (1 <= size p (*/\ p <> [b0]*)) {
       while (p <> []) { (* Absorption *)
         (sa,sc) <@ P.f((sa +^ head witness p,sc));
         p <- behead p;
@@ -205,4 +205,198 @@ proof.
   by rewrite oget_some /==>Heq; exists v',h';rewrite -cats1.
 qed.
 
+
+(* -------------------------------------------------------------------------- *)
+
+module C = {
+  var c:int
+  proc init () = { c <- 0; }
+}.
+
+module PC (P:PRIMITIVE) = {
+
+  proc init () = {
+    C.init();
+    P.init();
+  }
+
+  proc f (x:state) = {  
+    var y;
+    C.c <- C.c + 1;
+    y     <@ P.f(x);
+    return y;
+  }
+
+  proc fi(x:state) = {
+    var y;
+    C.c <- C.c + 1;
+    y     <@ P.fi(x);
+    return y;
+  } 
+
+}.
+
+module DPRestr (P:DPRIMITIVE) = {
+
+  proc f (x:state) = {  
+    var y=(b0,c0);
+    if (C.c + 1 <= max_size) {
+      C.c <- C.c + 1;
+      y     <@ P.f(x);
+    }
+    return y;
+  }
+
+  proc fi(x:state) = {
+    var y=(b0,c0);
+    if (C.c + 1 <= max_size) {
+      C.c <- C.c + 1;
+      y     <@ P.fi(x);
+    }
+    return y;
+  } 
+
+}.
+
+module PRestr (P:PRIMITIVE) = {
+
+  proc init () = {
+    C.init();
+    P.init();
+  }
+
+  proc f = DPRestr(P).f
+
+  proc fi = DPRestr(P).fi
+
+}.
+
+module FC(F:FUNCTIONALITY) = {
+
+  proc init = F.init
+
+  proc f (bs:block list) = {
+    var b= b0;
+    C.c <- C.c + size bs;
+    b <@ F.f(bs);
+    return b;
+  }
+}.
+
+module DFRestr(F:DFUNCTIONALITY) = {
+
+  proc f (bs:block list) = {
+    var b= b0;
+    if (C.c + size bs <= max_size) {
+      C.c <- C.c + size bs;
+      b <@ F.f(bs);
+    }
+    return b;
+  }
+}.
+
+module FRestr(F:FUNCTIONALITY) = {
+
+  proc init = F.init
+
+  proc f = DFRestr(F).f 
+
+}.
+
+(* -------------------------------------------------------------------------- *)
+(* This allow swap the counting from oracle to adversary *)
+module DRestr(D:DISTINGUISHER, F:DFUNCTIONALITY, P:DPRIMITIVE) = {
+  proc distinguish() = {
+    var b;
+    C.init();
+    b <@ D(DFRestr(F), DPRestr(P)).distinguish();
+    return b;
+  }
+}.
+
+lemma rp_ll (P<:DPRIMITIVE): islossless P.f => islossless DPRestr(P).f.
+proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+
+lemma rpi_ll (P<:DPRIMITIVE): islossless P.fi => islossless DPRestr(P).fi.
+proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+
+lemma rf_ll (F<:DFUNCTIONALITY): islossless F.f => islossless DFRestr(F).f.
+proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+
+lemma DRestr_ll (D<:DISTINGUISHER{C}): 
+  (forall (F<:DFUNCTIONALITY{D})(P<:DPRIMITIVE{D}),
+     islossless P.f => islossless P.fi => islossless F.f =>
+     islossless D(F,P).distinguish) =>
+  forall (F <: DFUNCTIONALITY{DRestr(D)}) (P <: DPRIMITIVE{DRestr(D)}),
+    islossless P.f =>
+    islossless P.fi => islossless F.f => islossless DRestr(D, F, P).distinguish.
+proof.
+  move=> D_ll F P p_ll pi_ll f_ll;proc.
+  call (D_ll (DFRestr(F)) (DPRestr(P)) _ _ _).
+  + by apply (rp_ll P). + by apply (rpi_ll P). + by apply (rf_ll F). 
+  by inline *;auto.
+qed.
+
+(* Exemple *)
+(* 
+section RESTR. 
+  declare module F:FUNCTIONALITY{C}.
+  declare module P:PRIMITIVE{C,F}.
+  declare module D:DISTINGUISHER{F,P,C}.
+
+  lemma swap_restr &m: 
+    Pr[Indif(FRestr(F), PRestr(P), D).main()@ &m: res] =
+    Pr[Indif(F,P,DRestr(D)).main()@ &m: res].
+  proof.
+    byequiv=>//.
+    proc;inline *;wp;swap{1}1 2;sim. 
+  qed.
+
+end RESTR.
+*)
+
+section COUNT.
+
+  declare module P:PRIMITIVE{C}.
+  declare module CO:CONSTRUCTION{C,P}.
+  declare module D:DISTINGUISHER{C,P,CO}.
+
+  axiom f_ll  : islossless P.f.
+  axiom fi_ll : islossless P.fi.
+
+  axiom CO_ll : islossless CO(P).f.
+
+  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+    islossless P.f => islossless P.fi => islossless F.f => 
+    islossless D(F, P).distinguish.
+
+  lemma Pr_restr &m : 
+    Pr[Indif(FC(CO(P)), PC(P), D).main()@ &m:res /\ C.c <= max_size] <= 
+    Pr[Indif(CO(P), P, DRestr(D)).main()@ &m:res].
+  proof.
+    byequiv (_: ={glob D, glob P, glob CO} ==> C.c{1} <= max_size => ={res})=>//;
+      2:by move=> ??H[]?/H<-.
+    symmetry;proc;inline *;wp;swap{2}1 2.
+    call (_: max_size < C.c, ={glob P, glob CO, glob C}).
+    + apply D_ll.
+    + proc; sp 1 0;if{1};1:by call(_:true);auto. 
+      by call{2} f_ll;auto=>/#. 
+    + by move=> ?_;proc;sp;if;auto;call f_ll;auto.
+    + by move=> _;proc;call f_ll;auto=>/#.
+    + proc;sp 1 0;if{1};1:by call(_:true);auto.
+      by call{2} fi_ll;auto=>/#. 
+    + by move=> ?_;proc;sp;if;auto;call fi_ll;auto.
+    + by move=> _;proc;call fi_ll;auto=>/#.
+    + proc;sp 1 0;if{1};1:by call(_: ={glob P});auto;sim.
+      by call{2} CO_ll;auto=>/#.
+    + by move=> ?_;proc;sp;if;auto;call CO_ll;auto.
+    + move=> _;proc;call CO_ll;auto;smt ml=0 w=size_ge0. 
+    wp;call (_:true);call(_:true);auto=>/#.
+  qed.
+
+end section COUNT.
+
+(* -------------------------------------------------------------------------- *)
+(** The initial Game *)
+module GReal(D:DISTINGUISHER) = RealIndif(SqueezelessSponge, PC(Perm), D).
 
