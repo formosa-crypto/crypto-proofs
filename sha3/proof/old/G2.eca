@@ -1,6 +1,6 @@
-require import Pred Fun Option Pair Int Real StdOrder Ring.
-require import List FSet NewFMap Utils Common SLCommon.
-(*...*) import Dprod Dexcepted Capacity IntOrder.
+require import Pred Fun Option Pair Int Real StdOrder Ring StdBigop.
+require import List FSet NewFMap Utils Common SLCommon FelTactic Mu_mem.
+(*...*) import Dprod Dexcepted Capacity IntOrder Bigreal RealOrder BRA.
 
 require Handle.
 
@@ -20,11 +20,13 @@ section PROOF.
 
     proc sample_c () = {
       var c=c0;
-      if (card (image fst (rng G1.handles)) <= 2*max_size) {
+      if (card (image fst (rng G1.handles)) <= 2*max_size /\
+          count < max_size) {
         c <$ cdistr;
         G1.bcol <-  G1.bcol \/ mem (image fst (rng G1.handles)) c;
         count <- count + 1;  
       }
+
       return c;
     }
   
@@ -209,7 +211,7 @@ section PROOF.
          Gcol.count <= C.c <= max_size){2});last by auto;smt ml=0 w=card_rng_set.
       if=>//;inline Gcol.sample_c.
       + rcondt{2}4.
-        + auto;conseq (_:true)=>//;progress. 
+        + auto;conseq (_:true)=>//;progress;2: smt ml=0.
           cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
         wp;conseq (_: ={p,v,RO.m,y1} /\ y2{1}=c{2})=>//;1:smt ml=0 w=hinv_image.
         by sim.
@@ -284,3 +286,36 @@ section PROOF.
     by apply max_ge0. 
   qed.
 
+  (* TODO: move this *)
+  lemma c_gt0r : 0%r < (2^c)%r.
+  proof. by rewrite from_intM;apply /powPos. qed.
+
+  local lemma eps_ge0 : 0%r <= (2 * max_size)%r / (2 ^ c)%r. 
+  proof.
+    apply divr_ge0;1:by rewrite from_intMle;smt ml=0 w=max_ge0. 
+    by apply /ltrW/c_gt0r. 
+  qed.
+
+  local lemma Pr_col &m : 
+    Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size] <=
+    max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+    fel 10 Gcol.count (fun x=> (2*max_size)%r / (2^c)%r)
+      max_size G1.bcol 
+      [Gcol.sample_c : (card (image fst (rng G1.handles)) <= 2*max_size /\ Gcol.count < max_size)]=>//;2:by auto.
+    + rewrite /felsum Bigreal.sumr_const count_predT size_range.
+      apply ler_wpmul2r;1:by apply eps_ge0.
+      by rewrite from_intMle;smt ml=0 w=max_ge0. 
+    + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
+      wp.
+      rnd (mem (image fst (rng G1.handles)));skip;progress;2:smt ml=0.
+      rewrite (Mu_mem.mu_mem (image fst (rng G1.handles{hr})) cdistr (1%r/(2^c)%r))//.
+      + move=>x _;apply DWord.muxP.
+      rewrite (div_def (2 * _)%r) 1:from_intMeq;1:by apply /IntOrder.lt0r_neq0/powPos.
+      apply ler_wpmul2r;2:by rewrite from_intMle.
+      by apply divr_ge0=>//;apply /ltrW/c_gt0r. 
+    + move=>ci;proc;rcondt 2;auto=>/#.
+    move=> b c;proc;sp;if;auto;smt ml=0.
+  qed.
+
+end section PROOF.
