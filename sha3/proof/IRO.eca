@@ -16,38 +16,6 @@ module type IRO = {
   proc f(x : from, n : int) : to list
 }.
 
-module IRO : IRO = {
-  var mp : (from, to list) fmap
-
-  proc init() = { mp = map0; }
-
-  proc choose(n) = {
-    var b, bs;
-
-    bs <- [];
-    while (0 < n) {
-      b  <$ dto;
-      bs <- rcons bs b;
-      n  <- n - 1;
-    }
-    return bs;
-  }
-
-  proc f(x, n) = {
-    var ys, zs, aout;
-
-    aout <- [];
-    if (valid x) {
-      ys     <- odflt [] mp.[x];
-      zs     <@ choose (max 0 (n - size ys));
-      mp.[x] <- ys ++ zs;
-      aout   <- take n (oget mp.[x]);
-    }
-
-    return aout;
-  }
-}.
-
 pred prefix_closed (m : (from * int,to) fmap) =
   forall x n,
     mem (dom m) (x,n) =>
@@ -62,6 +30,41 @@ pred prefix_closed' (m : (from * int,to) fmap) =
 
 lemma cool m: prefix_closed m <=> prefix_closed' m
 by [].
+
+(* official version: *)
+
+module IRO : IRO = {
+  var mp : (from * int, to) fmap
+
+  proc init() = {
+    mp <- map0;
+  }
+
+  proc fill_in(x, n) = {
+    if (!mem (dom mp) (x, n)) {
+      mp.[(x,n)] <$ dto;
+    }
+    return oget mp.[(x,n)];
+  }
+
+  proc f(x, n) = {
+    var b, bs;
+    var i <- 0;
+
+    bs <- [];
+    if (valid x) {
+      while (i < n) {
+        b <@ fill_in(x, i);
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+    }
+
+    return bs;
+  }
+}.
+
+(* version for AbsorbToBlocks.ec attempt *)
 
 module IRO' : IRO = {
   var mp : (from * int, to)  fmap
@@ -118,4 +121,38 @@ module IRO' : IRO = {
   }
 }.
 
-(** The two are equivalent **)
+(*
+another implementation, but probably not useful
+
+module IRO : IRO = {
+  var mp : (from, to list) fmap
+
+  proc init() = { mp = map0; }
+
+  proc choose(n) = {
+    var b, bs;
+
+    bs <- [];
+    while (0 < n) {
+      b  <$ dto;
+      bs <- rcons bs b;
+      n  <- n - 1;
+    }
+    return bs;
+  }
+
+  proc f(x, n) = {
+    var ys, zs, aout;
+
+    aout <- [];
+    if (valid x) {
+      ys     <- odflt [] mp.[x];
+      zs     <@ choose (max 0 (n - size ys));
+      mp.[x] <- ys ++ zs;
+      aout   <- take n (oget mp.[x]);
+    }
+
+    return aout;
+  }
+}.
+*)

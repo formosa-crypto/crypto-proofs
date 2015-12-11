@@ -6,8 +6,8 @@ require (*--*) Blocks TopLevel.
 require import Common.
 
 (* -------------------------------------------------------------------- *)
-module UpperFun (F : Blocks.FUNCTIONALITY) = {
-  proc init = F.init
+module UpperFun (F : Blocks.DFUNCTIONALITY) = {
+  proc init() = {}
 
   proc f(p : bool list, n : int) = {
     var xs;
@@ -17,8 +17,8 @@ module UpperFun (F : Blocks.FUNCTIONALITY) = {
   }
 }.
 
-module LowerFun (F : TopLevel.FUNCTIONALITY) = {
-  proc init = F.init
+module LowerFun (F : TopLevel.DFUNCTIONALITY) = {
+  proc init() = {}
 
   proc f(xs : block list, n : int) = {
     var cs, ds : bool list;
@@ -43,18 +43,23 @@ proof.
   admit. (* done *)
 qed.
 
-module ModularSimulator (S : Blocks.SIMULATOR, F : TopLevel.FUNCTIONALITY) = S(LowerFun(F)).
+module ModularSimulator (S : Blocks.SIMULATOR, F : TopLevel.DFUNCTIONALITY) =
+  S(LowerFun(F)).
 
-module BlocksDist ( D : TopLevel.DISTINGUISHER, F : Blocks.FUNCTIONALITY, P : PRIMITIVE) =
-  D(UpperFun(F),P).
+module BlocksDist (D : TopLevel.DISTINGUISHER, F : Blocks.DFUNCTIONALITY) =
+  D(UpperFun(F)).
 
 section.
   declare module BlocksSim : Blocks.SIMULATOR.
   declare module TopLevelDist : TopLevel.DISTINGUISHER.
 
   lemma Conclusion &m:
-    `|Pr[TopLevel.RealIndif(TopLevel.Sponge,Perm,TopLevelDist).main() @ &m: res]
-      - Pr[TopLevel.IdealIndif(TopLevel.BIRO.IRO',ModularSimulator(BlocksSim),TopLevelDist).main() @ &m: res]|
-    = `|Pr[Blocks.RealIndif(Blocks.BlockSponge,Perm,BlocksDist(TopLevelDist)).main() @ &m: res]
-      - Pr[Blocks.IdealIndif(Blocks.BIRO.IRO',BlocksSim,BlocksDist(TopLevelDist)).main() @ &m: res]|.
+    `|Pr[TopLevel.RealIndif(TopLevel.Sponge, Perm, TopLevelDist).main() @ &m: res] -
+      Pr[TopLevel.IdealIndif(TopLevel.BIRO.IRO, ModularSimulator(BlocksSim),
+                             TopLevelDist).main() @ &m: res]| =
+    `|Pr[Blocks.RealIndif(Blocks.BlockSponge, Perm,
+                          BlocksDist(TopLevelDist)).main() @ &m: res] -
+      Pr[Blocks.IdealIndif(Blocks.BIRO.IRO, BlocksSim,
+                           BlocksDist(TopLevelDist)).main() @ &m: res]|.
   proof. admit. qed.
+end section.

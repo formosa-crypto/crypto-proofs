@@ -36,7 +36,7 @@ module type CONSTRUCTION (P : DPRIMITIVE) = {
 }.
 
 module type SIMULATOR (F : DFUNCTIONALITY) = {
-  proc init() : unit { (* F.init *) }
+  proc init() : unit { }
   proc f(x : p) : p { F.f }
   proc fi(x : p) : p { F.f }
 }.

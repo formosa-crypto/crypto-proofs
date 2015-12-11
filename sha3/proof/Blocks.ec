@@ -24,8 +24,8 @@ clone include Indifferentiability with
     [module] "GIdeal"  as "IdealIndif".
 
 (* -------------------------------------------------------------------- *)
-module BlockSponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
-  proc init = P.init
+module BlockSponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
+  proc init() = {}
 
   proc f(p : block list, n : int) : block list = {
     var z       <- [];
@@ -56,6 +56,6 @@ lemma top:
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
       `|  Pr[RealIndif(BlockSponge, Perm, D).main() @ &m : res]
-        - Pr[IdealIndif(IRO', S, D).main() @ &m : res]|
+        - Pr[IdealIndif(IRO, S, D).main() @ &m : res]|
        < eps.
 proof. admit. qed.

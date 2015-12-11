@@ -8,8 +8,8 @@ require import Common.
 op cast: 'a NewDistr.distr -> 'a distr.
 
 (* -------------------------------------------------------------------- *)
-module LowerFun(F : Blocks.FUNCTIONALITY) : Absorb.FUNCTIONALITY = {
-  proc init = F.init
+module LowerFun(F : Blocks.DFUNCTIONALITY) : Absorb.DFUNCTIONALITY = {
+  proc init() = {}
 
   proc f(xs : block list) : block = {
     var (ys, n) <- strip xs;
@@ -22,10 +22,10 @@ module LowerFun(F : Blocks.FUNCTIONALITY) : Absorb.FUNCTIONALITY = {
   }
 }.
 
-module Sim (S : Absorb.SIMULATOR, F : Blocks.FUNCTIONALITY) = S(LowerFun(F)).
+module Sim (S : Absorb.SIMULATOR, F : Blocks.DFUNCTIONALITY) = S(LowerFun(F)).
 
-module UpperFun (F : Absorb.FUNCTIONALITY) = {
-  proc init = F.init
+module UpperFun (F : Absorb.DFUNCTIONALITY) = {
+  proc init() = {}
 
   proc f(xs : block list, n : int) : block list = {
     var y <- b0;
@@ -43,9 +43,10 @@ module UpperFun (F : Absorb.FUNCTIONALITY) = {
   }
 }.
 
-module BlocksOfAbsorbBlockSponge (P : Blocks.PRIMITIVE) = UpperFun(Absorb.BlockSponge(P)).
+module BlocksOfAbsorbBlockSponge (P : Blocks.DPRIMITIVE) =
+  UpperFun(Absorb.BlockSponge(P)).
 
-module Dist ( D : Blocks.DISTINGUISHER, F : Absorb.FUNCTIONALITY, P : Absorb.PRIMITIVE ) = D(UpperFun(F),P).
+module Dist (D : Blocks.DISTINGUISHER, F : Absorb.DFUNCTIONALITY) = D(UpperFun(F)).
 
 section.
   declare module AbsorbSim  : Absorb.SIMULATOR { Perm, Blocks.BIRO.IRO', Absorb.Ideal.RO }.
@@ -232,7 +233,7 @@ section.
       by conseq ModularAbsorb=> &1 &2; case (arg{1}); case (arg{2}).
     inline *; wp;call (_: true)=> //=.
     auto; progress [-split]; split=> //=.
-    smt.
+    admit.
   done.
   qed.
 

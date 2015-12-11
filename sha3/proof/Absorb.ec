@@ -25,11 +25,10 @@ clone include Indifferentiability with
     [module] "Indif" as "Experiment"
     [module] "GReal"  as "RealIndif"
     [module] "GIdeal"  as "IdealIndif".
- 
 
 (* -------------------------------------------------------------------- *)
-module BlockSponge (P : PRIMITIVE) : RO, CONSTRUCTION(P) = {
-  proc init = P.init
+module BlockSponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
+  proc init() = {}
 
   proc f(p : block list): block = {
     var (sa,sc) <- (b0, Capacity.c0);

@@ -24,8 +24,8 @@ clone include Indifferentiability with
 
 (* -------------------------------------------------------------------- *)
 
-module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
-  proc init = P.init
+module Sponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
+  proc init() : unit = {}
 
   proc f(bp : bool list, n : int) : bool list = {
     var z       <- [];
@@ -52,10 +52,12 @@ module Sponge (P : PRIMITIVE) : BIRO.IRO, CONSTRUCTION(P) = {
 (* -------------------------------------------------------------------- *)
 op eps : real.
 
+print RealIndif.
+
 lemma top:
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
-      `|  Pr[Experiment(Sponge(Perm), Perm, D).main() @ &m : res]
-        - Pr[Experiment(IRO, S(IRO), D).main() @ &m : res]|
+      `|  Pr[RealIndif(Sponge, Perm, D).main() @ &m : res]
+        - Pr[IdealIndif(IRO, S, D).main() @ &m : res]|
        < eps.
 proof. admit. qed.
