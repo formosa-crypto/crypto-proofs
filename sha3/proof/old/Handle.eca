@@ -124,18 +124,18 @@ module G1(D:DISTINGUISHER) = {
       return y;
     }
 
-    (** Distinguisher interface **)
-    proc init() = { }
-
   }
 
   proc main(): bool = {
     var b;
 
+    RO.m     <- map0;
     m        <- map0;
     mi       <- map0;
+    mh       <- map0;
+    mhi      <- map0;
     bext     <- false;
-    bcol    <- false;
+    bcol     <- false;
 
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
     handles  <- map0.[0 <- (c0, D)];
@@ -280,7 +280,7 @@ proof.
   by apply handles_up_handles.
 qed.
 
-clone import ConcreteF as ConcreteF1.
+clone export ConcreteF as ConcreteF1.
 
 section AUX.
 

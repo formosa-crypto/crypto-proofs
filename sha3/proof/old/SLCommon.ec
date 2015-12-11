@@ -23,7 +23,7 @@ clone include Indifferentiability with
 
 (** max number of call to the permutation and its inverse, 
     including those performed by the construction. *)
-op max_size : int.
+op max_size : { int | 0 <= max_size } as max_ge0.
 
 (** Ideal Functionality **)
 clone export Tuple as TupleBl with

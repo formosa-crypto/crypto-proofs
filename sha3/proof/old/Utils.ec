@@ -2,25 +2,6 @@
 require import Option Pair List FSet NewFMap.
 
 (* -------------------------------------------------------------------- *)
-
-lemma rem_id (x : 'a) (m : ('a,'b) fmap):
-  !mem (dom m) x => rem x m = m.
-proof.
-  rewrite in_dom /= => x_notin_m; apply/fmapP=> x'; rewrite remP.
-  case (x' = x)=> //= ->>.
-  by rewrite x_notin_m.
-qed.
-
-lemma dom_rem_le (x : 'a) (m : ('a,'b) fmap) (x' : 'a):
-  mem (dom (rem x m)) x' => mem (dom m) x'.
-proof. by rewrite dom_rem in_fsetD. qed.
-
-lemma rng_rem_le (x : 'a) (m : ('a,'b) fmap) (x' : 'b):
-  mem (rng (rem x m)) x' => mem (rng m) x'.
-proof. by rewrite rng_rm in_rng=> -[x0] [_ h]; exists x0. qed.
-
-
-(* -------------------------------------------------------------------- *)
   (* In NewFMap *)
 
 op reindex (f : 'a -> 'c) (m : ('a, 'b) fmap) =
