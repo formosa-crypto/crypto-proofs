@@ -64,7 +64,7 @@ module G1(D:DISTINGUISHER) = {
           chandle <- chandle + 1;
         }
         hx2 <- oget (hinvD handles x.`2);
-        if (mem (dom mh) (x.`1, hx2) /\ (oget handles.[(oget mh.[(x.`1,hx2)]).`2]).`2 = I) {
+        if (mem (dom mh) (x.`1, hx2) /\ in_dom_with handles (oget mh.[(x.`1,hx2)]).`2 I) {
           hy2               <- (oget mh.[(x.`1, hx2)]).`2;
           y                 <- (y.`1, (oget handles.[hy2]).`1);
           handles.[hy2]     <- (y.`2, D);
@@ -99,15 +99,14 @@ module G1(D:DISTINGUISHER) = {
         }
         hx2 <- oget (hinvD handles x.`2);
         y                 <$ dstate;
-        if (mem (dom mhi) (x.`1, hx2) /\ (oget handles.[(oget mh.[(x.`1,hx2)]).`2]).`2 = I) {
+        if (mem (dom mhi) (x.`1,hx2) /\
+            in_dom_with handles (oget mhi.[(x.`1,hx2)]).`2 I) {
           (y1,hy2)          <- oget mhi.[(x.`1, hx2)];
           y                 <- (y.`1, (oget handles.[hy2]).`1);
           handles.[hy2]     <- (y.`2, D);
           (* bad               <- bad \/ mem X2 y.`2; *)
           mi.[x]            <- y;
-          mhi.[(x.`1, hx2)] <- (y.`1, hy2);
           m.[y]             <- x;
-          mh.[(y.`1, hy2)]  <- (x.`1, hx2);
         } else {
           bcol              <- bcol \/ hinv handles y.`2 <> None;          
           hy2               <- chandle;
