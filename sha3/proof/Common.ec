@@ -106,6 +106,10 @@ proof. by apply/BitChunking.in_chunk_size/gt0_r. qed.
 lemma chunkK bs : r %| size bs => flatten (chunk bs) = bs.
 proof. by apply/BitChunking.chunkK/gt0_r. qed.
 
+lemma chunk_cat (xs ys : bool list) :
+  r %| size xs => chunk (xs ++ ys) = chunk xs ++ chunk ys.
+proof. by apply/BitChunking.chunk_cat/gt0_r. qed.
+
 lemma padK : pcancel pad unpad.
 proof.
 move=> s @/unpad; rewrite last_pad /= rev_cat rev_mkpad.
