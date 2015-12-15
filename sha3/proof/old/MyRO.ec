@@ -520,6 +520,21 @@ proof.
   by auto=>?&mr[*]2!->??/=?->?->;rewrite!drop0 restr_set/=dom_set fsetDK-memE!inE.
 qed.
 
+section.
+
+declare module D:Distinguisher {RO}.
+
+lemma eager_D : eager [ERO.resample(); , D(RO).distinguish ~ 
+                       D(ERO).distinguish, ERO.resample(); :
+                       ={glob D,RO.m} ==> ={RO.m, glob D} /\ ={res} ].
+proof.
+  eager proc (H_: ERO.resample(); ~ ERO.resample();: ={RO.m} ==> ={RO.m})
+             (={RO.m})=>//; try by sim.
+  + by apply eager_init. + by apply eager_get. + by apply eager_set. 
+  + by apply eager_sample. + by apply eager_in_dom. + by apply eager_restrK. 
+qed.
+
+
 module Eager (D:Distinguisher) = {
 
   proc main1() = {
@@ -531,7 +546,7 @@ module Eager (D:Distinguisher) = {
 
   proc main2() = {
     var b;
-    ERO.init();
+    RO.init();
     b <@ D(ERO).distinguish();
     ERO.resample();
     return b;
@@ -539,25 +554,19 @@ module Eager (D:Distinguisher) = {
 
 }.
 
-equiv Eager_1_2 (D<:Distinguisher{RO}) : Eager(D).main1 ~ Eager(D).main2 : 
+equiv Eager_1_2: Eager(D).main1 ~ Eager(D).main2 : 
   ={glob D} ==> ={res,glob RO, glob D}.
 proof.
   proc.
   transitivity{1} 
-    { RO.init();
-      ERO.resample();
-      b <@ D(RO).distinguish(); }
+    { RO.init(); ERO.resample(); b <@ D(RO).distinguish(); }
     (={glob D} ==> ={b,RO.m,glob D})
     (={glob D} ==> ={b,RO.m,glob D})=> //.
   + by move=> ?&mr->;exists (glob D){mr}.
   + inline *;rcondf{2}3;2:by sim.
     by auto=>?;rewrite restr0 dom0 elems_fset0.
   seq 1 1: (={glob D, RO.m});1:by inline *;auto.
-  eager (H: ERO.resample(); ~ ERO.resample();: ={RO.m} ==> ={RO.m}): 
-        (={glob D, RO.m}) => //;1:by sim.
-  eager proc H (={RO.m}) => //;try sim.
-  + by apply eager_init. + by apply eager_get. + by apply eager_set. 
-  + by apply eager_sample. + by apply eager_in_dom. + by apply eager_restrK.
+  by eager call eager_D. 
 qed.
 
 end GenEager.
