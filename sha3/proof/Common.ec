@@ -54,12 +54,6 @@ proof.
 elim xs; smt ml=0.
 qed.
 
-lemma last_nseq (x0 x : 'a, n : int) :
-  0 < n => last x0 (nseq n x) = x.
-proof.
-admit.
-qed.
-
 (* -------------------------------------------------------------------- *)
 
 clone export LazyRP as Perm with
@@ -256,6 +250,15 @@ lemma blocks2bits_cat (xs ys : block list) :
   blocks2bits (xs ++ ys) = blocks2bits xs ++ blocks2bits ys.
 proof. by rewrite /blocks2bits map_cat flatten_cat. qed.
 
+lemma size_blocks2bits (xs : block list) :
+  size (blocks2bits xs) = r * size xs.
+proof.
+elim xs=> [| x xs ih].
+by rewrite blocks2bits_nil.
+rewrite -cat1s blocks2bits_cat blocks2bits_sing size_cat //
+         size_cat size_tolist ih /= #ring.
+qed.
+
 op bits2blocks (xs:bool list) : block list = map bits2w (chunk xs).
 
 lemma blocks2bitsK : cancel blocks2bits bits2blocks.
@@ -367,9 +370,21 @@ op valid_block (xs : block list) = unpad_blocks xs <> None.
 lemma nosmt valid_block_prop (xs : block list) :
   valid_block xs <=>
   exists (s : bool list, n : int),
+  0 <= n < r /\ blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
+proof.
+rewrite /unpad_blocks /(\o).
+split=> [vb | [s n] [rng_n btb]].
+have /# :
+  exists (s : bool list) (n : int),
   (0 <= n < r /\ r %| (size s + n + 2)) &&
-  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
-proof. rewrite /unpad_blocks /(\o); apply unpad_prop. qed.
+  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true]
+  by apply unpad_prop.
+have dvd : r %| (size s + n + 2).
+  have <- : size (blocks2bits xs) = size s + n + 2
+    by rewrite btb 3!size_cat /= size_nseq max_ler /#.
+  rewrite size_blocks2bits dvdz_mulr dvdzz.
+rewrite unpad_prop /#.
+qed.
 
 lemma valid_block_ends_not_b0 (xs : block list) :
   valid_block xs => last b0 xs <> b0.
@@ -377,8 +392,8 @@ proof.
 move=> vb_xs.
 have [s n [_ btb_eq]] :
   exists (s : bool list) (n : int),
-  (0 <= n < r /\ r %| (size s + n + 2)) &&
-  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true]
+  0 <= n < r /\ 
+  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
   by rewrite -valid_block_prop.
 case (last b0 xs <> b0)=> [// | last_xs_eq_b0].
 rewrite nnot in last_xs_eq_b0.
