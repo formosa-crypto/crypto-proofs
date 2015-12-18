@@ -66,13 +66,28 @@ section.
       + while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
         by wp;sp 1 1;if{2};[rcondt{1} 3|rcondf{1} 3];auto;
           progress;rewrite size_behead//;ring.
-      by auto; smt ml=0 w=size_ge0. 
-    cut p_ll : islossless Perm.f. 
-    + admit. (* We should have the lemma *)
-    cut pi_ll : islossless Perm.fi.
-    + admit. (* We should have the lemma *)
-    cut f_ll : islossless SqueezelessSponge(Perm).f.
-    + admit. (* We should have the lemma *)
+      by auto; smt ml=0 w=size_ge0.
+    have p_ll := P_f_ll _ _.
+    + apply/Dprod.lossless.
+      + exact/Block.DWord.bdistr_ll.
+      exact/Capacity.DWord.cdistr_ll.
+    + apply/fun_ext=> x; rewrite Dprod.supp_def /bdistr /cdistr.
+      rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Block.enumP.
+      by rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Capacity.enumP.
+    have pi_ll := P_fi_ll _ _.
+    + apply/Dprod.lossless.
+      + exact/Block.DWord.bdistr_ll.
+      exact/Capacity.DWord.cdistr_ll.
+    + apply/fun_ext=> x; rewrite Dprod.supp_def /bdistr /cdistr.
+      rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Block.enumP.
+      by rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Capacity.enumP.
+    have f_ll : islossless SqueezelessSponge(Perm).f.
+    + proc; sp; if=> //=.
+      while true (size p) (size p) 1%r=> //=.
+      * smt w=(size_ge0 size_eq0).
+      * by move=> hind; seq  2: true 1%r 1%r 0%r _=> //=; wp; call p_ll.
+      * by wp; call p_ll.
+      by move=> z; conseq (_: _ : =1%r); wp; call p_ll; skip; smt w=size_behead.
     apply (ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
     admit. (* Francois *)

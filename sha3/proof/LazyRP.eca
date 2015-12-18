@@ -1,4 +1,4 @@
-require import Option FSet NewFMap.
+require import Option Real FSet NewFMap Distr.
 require import Dexcepted.
 require (*..*) RP.
 
@@ -37,3 +37,22 @@ module P : RP, RP_ = {
     return oget mi.[x];
   }
 }.
+
+lemma P_init_ll: islossless P.init.
+proof. by proc; auto. qed.
+
+lemma P_f_ll: is_lossless d => support d = predT => islossless P.f.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have h:= endo_dom_rng P.m{m} _; first by exists x{m}.
+apply/lossless_restr; first by rewrite d_ll.
+smt. (* needs help *)
+qed.
+
+lemma P_fi_ll: is_lossless d => support d = predT => islossless P.fi.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have h:= endo_dom_rng P.mi{m} _; first by exists x{m}.
+apply/lossless_restr; first by rewrite d_ll.
+smt. (* needs help *)
+qed.
