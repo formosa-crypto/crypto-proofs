@@ -48,8 +48,14 @@ proof.
 admit. (* FIXME *)
 qed.
 
-lemma last_neq_cat (x : 'a) (xs : 'a list) :
+lemma last_eq_rcons (x : 'a) (xs : 'a list) :
   last x xs = x => xs = [] \/ exists ys, xs = rcons ys x.
+proof.
+elim xs; smt ml=0.
+qed.
+
+lemma last_neq_rcons (y x : 'a) (xs : 'a list) :
+  x <> y => last y xs = x => exists ys, xs = rcons ys x.
 proof.
 elim xs; smt ml=0.
 qed.
@@ -397,7 +403,7 @@ have [s n [_ btb_eq]] :
   by rewrite -valid_block_prop.
 case (last b0 xs <> b0)=> [// | last_xs_eq_b0].
 rewrite nnot in last_xs_eq_b0.
-move: last_xs_eq_b0=> /last_neq_cat [->> | [ys ->>]].
+move: last_xs_eq_b0=> /last_eq_rcons [->> | [ys ->>]].
 rewrite /blocks2bits /# in btb_eq.
 rewrite -cats1 blocks2bits_cat blocks2bits_sing in btb_eq.
 have left : last true (blocks2bits ys ++ w2bits b0) = false
