@@ -265,6 +265,9 @@ rewrite -cat1s blocks2bits_cat blocks2bits_sing size_cat //
          size_cat size_tolist ih /= #ring.
 qed.
 
+lemma size_blocks2bits_dvd_r (xs : block list) : r %| size(blocks2bits xs).
+proof. rewrite size_blocks2bits dvdz_mulr dvdzz. qed.
+
 op bits2blocks (xs:bool list) : block list = map bits2w (chunk xs).
 
 lemma blocks2bitsK : cancel blocks2bits bits2blocks.
@@ -378,30 +381,24 @@ lemma nosmt valid_block_prop (xs : block list) :
   exists (s : bool list, n : int),
   0 <= n < r /\ blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
 proof.
-rewrite /unpad_blocks /(\o).
+rewrite /valid_block /unpad_blocks /(\o).
 split=> [vb | [s n] [rng_n btb]].
-have /# :
-  exists (s : bool list) (n : int),
-  (0 <= n < r /\ r %| (size s + n + 2)) &&
-  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true]
-  by apply unpad_prop.
-have dvd : r %| (size s + n + 2).
-  have <- : size (blocks2bits xs) = size s + n + 2
-    by rewrite btb 3!size_cat /= size_nseq max_ler /#.
-  rewrite size_blocks2bits dvdz_mulr dvdzz.
-rewrite unpad_prop /#.
+cut [up _] := (unpad_prop (blocks2bits xs)).
+rewrite vb /= in up; elim up=> [s n] [[rng_n _] b2b].
+by exists s, n.
+apply unpad_prop; exists s, n; split=> //; split=> //.
+have <- : size (blocks2bits xs) = size s + n + 2
+  by rewrite btb 3!size_cat /= size_nseq max_ler /#ring.
+rewrite size_blocks2bits_dvd_r.
 qed.
 
 lemma valid_block_ends_not_b0 (xs : block list) :
   valid_block xs => last b0 xs <> b0.
 proof.
 move=> vb_xs.
-have [s n [_ btb_eq]] :
-  exists (s : bool list) (n : int),
-  0 <= n < r /\ 
-  blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
-  by rewrite -valid_block_prop.
-case (last b0 xs <> b0)=> [// | last_xs_eq_b0].
+cut bp := valid_block_prop xs.
+rewrite vb_xs /= in bp; elim bp=> [s n] [_ btb_eq].
+case: (last b0 xs <> b0)=> [// | last_xs_eq_b0].
 rewrite nnot in last_xs_eq_b0.
 move: last_xs_eq_b0=> /last_eq_rcons [->> | [ys ->>]].
 rewrite /blocks2bits /# in btb_eq.
@@ -426,12 +423,9 @@ lemma nosmt valid_absorb_prop (xs : block list) :
   exists (ys : block list, n : int),
   0 <= n /\ xs = ys ++ nseq n b0 /\ valid_block ys.
 proof.
-rewrite /valid_absorb.
-split=> [| [ys n] [ge0_n [-> vb_ys]]].
-move=> strp_xs_valid.
+rewrite /valid_absorb; split=> [strp_xs_valid | [ys n] [ge0_n [-> vb_ys]]].
 exists (strip xs).`1, (strip xs).`2.
-split; first apply (strip_ge0 xs).
-split=> //.
+split; [apply (strip_ge0 xs) | split=> //].
 by rewrite -/(extend (strip xs).`1 (strip xs).`2) eq_sym (stripK xs).
 by rewrite -/(extend ys n) extendK 1:valid_block_ends_not_b0.
 qed.
