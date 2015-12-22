@@ -224,7 +224,7 @@ lemma nosmt unpadP (t : bool list) :
   unpad t <> None <=> unpad_spec t.
 proof.
 split=> [|[s n lt_nr dvd ->]]; last by rewrite -padE ?padK.
-case: {-2}(unpad _) (eq_refl (unpad t)) => // s /eq_sym sE _.
+case _: (unpad t) => // s sE _.
 have ->: t = pad s by rewrite -(unpadK t) sE.
 apply/(Unpad s (num0 (size s))).
   by rewrite num0_ge0 num0_ltr. by rewrite dvd_r_num0.
