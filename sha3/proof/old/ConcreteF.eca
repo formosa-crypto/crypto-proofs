@@ -1,6 +1,7 @@
 require import Pred Fun Option Pair Int Real StdOrder Ring.
 require import List FSet NewFMap Utils Common SLCommon.
 (*...*) import Dprod Dexcepted Capacity IntOrder RealOrder.
+require (*..*) Strong_RP_RF.
 
 module PF = {
   var m, mi: (state,state) fmap
@@ -40,7 +41,6 @@ op bound_concrete : real.
 module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
      
 section.
-
   declare module D : DISTINGUISHER {Perm, C, PF}.
 
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
@@ -49,9 +49,32 @@ section.
 
   local module GReal' = Indif(FC(SqueezelessSponge(Perm)), PC(Perm), D).
 
+  (** TODO: this is expressed with restricted oracles rather than
+      restricted events. Extend the library and unify with the
+      statement as expressed in this file. **)
+  local clone Strong_RP_RF as Toto with
+    type D  <- state,
+      op uD <- dstate,
+    type K  <- unit,
+      op dK <- (Distr.Dunit.dunit<:unit> tt),
+      op q  <- max_size + 1
+  proof *.
+  realize gt0_q by smt w=max_ge0.
+  realize uD_uf_fu.
+  split.
+    case=> [x y]; rewrite Dprod.supp_def /fst /snd /=.
+    by rewrite Block.DWord.supportP Capacity.DWord.supportP.
+  apply/dprodU.
+    by rewrite Block.DWord.bdistr_uf.
+  by rewrite Capacity.DWord.cdistr_uf.
+  qed.
+  realize dK_ll.
+  by rewrite /is_lossless -/(Distr.weight _) Distr.Dunit.lossless.
+  qed.
+
   (* TODO move this *)
   lemma size_behead(l:'a list): l <> [] => size (behead l) = size l - 1.
-  proof. case l=>// ??/=;ring. qed.
+  proof. by case l=> // ?? /=; ring. qed.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
