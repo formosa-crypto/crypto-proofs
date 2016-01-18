@@ -214,7 +214,7 @@ have ->: j + k = (size s) - ((i-k) + 1) by rewrite /j #ring.
 by rewrite -nth_rev 1:/# &(@negbRL _ true) &(before_index) /#.
 qed.
 
-pred unpad_spec (t : bool list) =
+inductive unpad_spec (t : bool list) =
 | Unpad (s : bool list, n : int) of
       (0 <= n < r)
     & (r %| (size s + n + 2))
