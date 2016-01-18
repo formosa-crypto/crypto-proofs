@@ -49,9 +49,6 @@ section.
 
   local module GReal' = Indif(FC(SqueezelessSponge(Perm)), PC(Perm), D).
 
-  (** TODO: this is expressed with restricted oracles rather than
-      restricted events. Extend the library and unify with the
-      statement as expressed in this file. **)
   local clone import Strong_RP_RF as Switching with
     type D  <- state,
       op uD <- dstate,
