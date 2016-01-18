@@ -52,11 +52,11 @@ section.
   (** TODO: this is expressed with restricted oracles rather than
       restricted events. Extend the library and unify with the
       statement as expressed in this file. **)
-  local clone Strong_RP_RF as Toto with
+  local clone import Strong_RP_RF as Switching with
     type D  <- state,
       op uD <- dstate,
     type K  <- unit,
-      op dK <- (Distr.Dunit.dunit<:unit> tt),
+      op dK <- (NewDistr.MUnit.dunit<:unit> tt),
       op q  <- max_size + 1
   proof *.
   realize gt0_q by smt w=max_ge0.
@@ -69,16 +69,44 @@ section.
   by rewrite Capacity.DWord.cdistr_uf.
   qed.
   realize dK_ll.
-  by rewrite /is_lossless -/(Distr.weight _) Distr.Dunit.lossless.
+  by rewrite /is_lossless NewDistr.MUnit.dunit_ll.
   qed.
 
   (* TODO move this *)
-  lemma size_behead(l:'a list): l <> [] => size (behead l) = size l - 1.
+  lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
   proof. by case l=> // ?? /=; ring. qed.
+
+  local module D'(P' : PRPt.Oracles): PRPt.Distinguisher(P') = {
+    proc distinguish = DRestr(D,SqueezelessSponge(P'),P').distinguish
+  }.
+
+  local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder}) &m:
+    Pr[PRPt.IND(P,D').main() @ &m: res]
+    = Pr[PRPt.IND(P,DBounder(D')).main() @ &m: res].
+  proof.
+  byequiv=> //=; proc; inline *.
+  wp.
+  call (_: ={glob C, glob P} /\ DBounder.FBounder.c{2} = C.c{2}).
+  + proc; sp; if=> //=; inline *.
+    rcondt{2} 4; 1: by auto=> /#.
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *.
+    rcondt{2} 4; 1: by auto=> /#.
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *.
+    sp; if=> //=; last by wp; auto; smt w=size_ge0.
+    wp; while (   ={glob C, glob P, p, sa, sc}
+               /\ C.c{2} <= max_size
+               /\ DBounder.FBounder.c{2} = C.c{2} - size p{2}).
+      rcondt{2} 3; 1: by auto; smt w=size_ge0.
+      by wp; call (_: true); auto=> /#.
+    by auto; progress; ring.
+  by wp; call (_: true).
+  qed.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
-    Pr[CF(DRestr(D)).main()@ &m: res] + bound_concrete.
+    Pr[CF(DRestr(D)).main()@ &m: res] + ((max_size + 1) ^ 2)%r * mu dstate (pred1 witness).
   proof.
     cut->:
       Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:
@@ -89,7 +117,7 @@ section.
       + while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
         by wp;sp 1 1;if{2};[rcondt{1} 3|rcondf{1} 3];auto;
           progress;rewrite size_behead//;ring.
-      by auto; smt ml=0 w=size_ge0.
+      by auto; smt w=size_ge0.
     have p_ll := P_f_ll _ _.
     + apply/Dprod.lossless.
       + exact/Block.DWord.bdistr_ll.
@@ -113,7 +141,32 @@ section.
       by move=> z; conseq (_: _ : =1%r); wp; call p_ll; skip; smt w=size_behead.
     apply (ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
-    admit. (* Francois *)
+    have ->: Pr[Indif(SqueezelessSponge(Perm), Perm, DRestr(D)).main() @ &m: res]
+             = Pr[PRPt.IND(PRPi.PRPi,DBounder(D')).main() @ &m: res].
+    + rewrite -(DoubleBounding PRPi.PRPi &m).
+      byequiv=> //=; proc; inline *; sim (_: ={m,mi}(Perm,PRPi.PRPi) /\ ={glob C}).
+      * by proc; if=> //=; auto.
+      by proc; if=> //=; auto.
+    have ->: Pr[CF(DRestr(D)).main() @ &m: res]
+             = Pr[PRPt.IND(ARP,DBounder(D')).main() @ &m: res].
+    + rewrite -(DoubleBounding ARP &m).
+      byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
+      * by proc; if=> //=; auto.
+    have:= Conclusion D' &m _.
+    + move=> O O_f_ll O_fi_ll.
+      proc; call (_: true)=> //=.
+      * apply D_ll.
+      * by proc; sp; if=> //=; call O_f_ll; auto.
+      * by proc; sp; if=> //=; call O_fi_ll; auto.
+      * proc; inline *; sp; if=> //=; sp; if=> //=; auto.
+        while true (size p).
+        - by auto; call O_f_ll; auto=> /#.
+        by auto; smt w=size_ge0.
+      by inline *; auto.
+    move=> h.
+    (* to avoid asking smt to do the proof with probability expressions... *)
+    have -> //: forall (x y z : real), `|x - y| <= z => x <= y + z.
+    smt w=(@RealOrder).
   qed.
 
 end section.
