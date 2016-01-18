@@ -2,15 +2,15 @@ require import Pred Fun Option Pair Int Real StdOrder Ring StdBigop.
 require import List FSet NewFMap Utils Common SLCommon FelTactic Mu_mem.
 (*...*) import Dprod Dexcepted Capacity IntOrder Bigreal RealOrder BRA.
 
-require Handle.
+require import RndO.
+require (*..*) Handle.
 
 clone import Handle as Handle0.
 
 
 
-
-
 (* -------------------------------------------------------------------------- *)
+
 section PROOF.
   declare module D: DISTINGUISHER{C, PF, G1}.
 
@@ -125,9 +125,7 @@ section PROOF.
             y                 <- (y.`1, (oget G1.handles.[hy2]).`1);
             G1.handles.[hy2]     <- (y.`2, D);
             G1.mi.[x]            <- y;
-            G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
             G1.m.[y]             <- x;
-            G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
           } else {
             hy2               <- G1.chandle;
             G1.chandle           <- G1.chandle + 1;
@@ -239,13 +237,13 @@ section PROOF.
                (G1.bcol{1} => G1.bcol{2}) /\
                (card (rng G1.handles) + 1 <= 2 * C.c + 1 /\ 
                 Gcol.count + 1 <= C.c <= max_size){2}).
-      + auto;smt ml=0 w=card_rng_set. 
+      + by auto;smt ml=0 w=card_rng_set. 
       seq 1 2: 
         (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
            C.c,x0,hx2} /\ y0{1} = (y1,y2){2} /\
          ((G1.bcol\/hinv G1.handles y0.`2 <> None){1} => G1.bcol{2}) /\
          (card (rng G1.handles) + 1 <= 2 * C.c + 1 /\ 
-         Gcol.count <= C.c <= max_size){2});last by auto;smt ml=0 w=card_rng_set.
+         Gcol.count <= C.c <= max_size){2});2:by auto;smt w=card_rng_set.
       inline Gcol.sample_c.
       rcondt{2}3.
       + by auto;progress;cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
@@ -322,7 +320,167 @@ section PROOF.
   qed.
 
 end section PROOF.
-*)
+
+
+
+(*section PROOF_ext.
+  
+  declare module D: DISTINGUISHER{C, PF, G1}.
+  
+  local clone import GenEager as Gen with
+    type from <- int,
+    type to = 
+    
+type from, to.
+
+op sampleto : from -> to distr.
+axiom sampleto_ll : forall x, Distr.weight (sampleto x) = 1%r.
+
+
+print Gen.
+
+  clone import 
+
+  module G2(D:DISTINGUISHER,HS:SAMPLE) = {
+
+  module C = {
+
+    proc f(p : block list): block = {
+      var sa, sa';
+      var h, i <- 0; 
+      sa <- b0;
+      if (1 <= size p /\ p <> [b0]) {
+        while (i < size p ) {
+          if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+            (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
+          } else {
+            HS.sampleI(G1.chandle);
+            sa'                 <- RO.f(take (i+1) p);
+            sa                  <- sa +^ nth witness p i;
+            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
+            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+            (sa,h)              <- (sa',G1.chandle);
+            G1.chandle             <- G1.chandle + 1;
+          }
+          i        <- i + 1;
+        }
+        sa <- RO.f(p);
+      }
+      return sa;
+    }
+  }
+
+  module S = {
+
+    proc f(x : state): state = {
+      var p, v, y, y1, y2, hy2, hx2, handles_,t;
+
+      if (!mem (dom G1.m) x) {
+        if (mem (dom G1.paths) x.`2) {
+          (p,v) <- oget G1.paths.[x.`2]; 
+          y1    <- RO.f (rcons p (v +^ x.`1));
+          y2    <$ cdistr;
+          y     <- (y1, y2);
+          G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
+        } else {
+          y <$ dstate;
+        }
+(*        G1.bext <- G1.bext \/ mem (rng handles) (x.`2, I);   *)
+          (*  exists x2 h, handles.[h] = Some (X2,I) *)
+        (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
+
+        handles_ <@ HS.restrD();
+        if (!mem (rng handles_) x.`2) {
+          HS.setD(G1.chandle, x.`2);
+          G1.chandle <- G1.chandle + 1;
+        }
+        handles_ <- HS.restrD();
+        hx2      <- oget (hinvc handles_ x.`2);
+        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
+        if (mem (dom G1.mh) (x.`1, hx2) /\ t) {
+          hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
+          y2                   <@ HS.get(hy2);
+          (* bad <-  bad \/ mem (map snd (dom G1.m)) y2 *)
+
+(* bext{1} => bad{2} \/  exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
+          y                    <- (y.`1, y2);
+          G1.m.[x]             <- y;
+          G1.mi.[y]            <- x;
+        } else {
+          hy2                  <- G1.chandle;
+          G1.chandle           <- G1.chandle + 1;
+          HS.setD(hy2, y.`2); 
+          G1.m.[x]             <- y;
+          G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
+          G1.mi.[y]            <- x;
+          G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
+        }
+      } else {   
+        y <- oget G1.m.[x];
+      }
+      return y;
+    }
+
+    proc fi(x : state): state = {
+      var y, y1, y2, hx2, hy2, handles_, t;
+
+      if (!mem (dom G1.mi) x) {
+        (* bext <- bext \/ mem (rng handles) (x.`2, I);   *)
+          (*  exists x2 h, handles.[h] = Some (X2,I) *)
+        handles_ <@ HS.restrD();
+        if (!mem (rng handles_) x.`2) {
+          HS.setD(G1.chandle, x.`2);
+          G1.chandle <- G1.chandle + 1;
+        }
+        handles_ <@ HS.restrD();
+        hx2      <- oget (hinvc handles_ x.`2);
+        y        <$ dstate;
+        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
+        if (mem (dom G1.mhi) (x.`1, hx2) /\ t) {
+          (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
+          y2                   <@ HS.get(hy2);
+          y                    <- (y.`1, y2);
+          (* bad               <- bad \/ mem X2 y.`2; *)
+          G1.mi.[x]            <- y;
+          G1.m.[y]             <- x;
+        } else {
+          hy2                  <- G1.chandle;
+          G1.chandle           <- G1.chandle + 1;
+          HS.setD(hy2, y.`2); 
+          G1.mi.[x]            <- y;
+          G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
+          G1.m.[y]             <- x;
+          G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
+        }
+      } else {
+        y <- oget G1.mi.[x];
+      }
+      return y;
+    }
+
+  }
+
+  proc main(): bool = {
+    var b;
+
+    RO.m     <- map0;
+    G1.m     <- map0;
+    G1.mi    <- map0;
+    G1.mh    <- map0;
+    G1.mhi   <- map0;
+    G1.bext  <- false;
+
+    (* the empty path is initially known by the adversary to lead to capacity 0^c *)
+    HS.setD(0,c0);
+    G1.paths    <- map0.[c0 <- ([<:block>],b0)];
+    G1.chandle  <- 1;
+    b        <@ D(C,S).distinguish();
+    return b;
+  }    
+}.
+
+
+
 
 module type SAMPLE = {
   proc sampleI(h:handle) : unit
@@ -545,3 +703,4 @@ module G2(D:DISTINGUISHER,HS:SAMPLE) = {
     return b;
   }    
 }.
+*)
