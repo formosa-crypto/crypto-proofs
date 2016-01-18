@@ -35,9 +35,6 @@ module PF = {
 
 }.
 
-(* Fixme *)
-op bound_concrete : real.
-
 module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
      
 section.
