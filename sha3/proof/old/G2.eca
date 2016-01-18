@@ -8,7 +8,7 @@ clone import Handle as Handle0.
 
 
 
-(*
+
 
 (* -------------------------------------------------------------------------- *)
 section PROOF.
@@ -454,6 +454,8 @@ module G2(D:DISTINGUISHER,HS:SAMPLE) = {
         }
 (*        G1.bext <- G1.bext \/ mem (rng handles) (x.`2, I);   *)
           (*  exists x2 h, handles.[h] = Some (X2,I) *)
+        (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
+
         handles_ <@ HS.restrD();
         if (!mem (rng handles_) x.`2) {
           HS.setD(G1.chandle, x.`2);
@@ -465,8 +467,10 @@ module G2(D:DISTINGUISHER,HS:SAMPLE) = {
         if (mem (dom G1.mh) (x.`1, hx2) /\ t) {
           hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
           y2                   <@ HS.get(hy2);
+          (* bad <-  bad \/ mem (map snd (dom G1.m)) y2 *)
+
+(* bext{1} => bad{2} \/  exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
           y                    <- (y.`1, y2);
-          (* bad               <- bad \/ mem X2 y.`2; *)
           G1.m.[x]             <- y;
           G1.mi.[y]            <- x;
         } else {
