@@ -679,3 +679,5 @@ proof.
 qed.
 
 end section.
+
+end GenEager.
