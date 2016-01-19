@@ -4,7 +4,6 @@ require import List FSet NewFMap Utils Common SLCommon RndO.
 
 require ConcreteF.
 
-
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
   var mh, mhi             : hsmap
@@ -27,7 +26,7 @@ module G1(D:DISTINGUISHER) = {
           } else {
             sc                  <$ cdistr;
             bcol                <- bcol \/ hinv handles sc <> None;
-            sa'                 <- RO.f(take (i+1) p);
+            sa'                 <@ RO.f(take (i+1) p);
             sa                  <- sa +^ nth witness p i;
             mh.[(sa,h)]         <- (sa', chandle);
             mhi.[(sa',chandle)] <- (sa, h);

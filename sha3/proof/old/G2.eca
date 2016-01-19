@@ -7,10 +7,8 @@ require (*..*) Handle.
 
 clone import Handle as Handle0.
 
-
-
 (* -------------------------------------------------------------------------- *)
-
+(*
 section PROOF.
   declare module D: DISTINGUISHER{C, PF, G1}.
 
@@ -320,28 +318,26 @@ section PROOF.
   qed.
 
 end section PROOF.
+*)
 
+print RO.
 
+clone import GenEager as Gen with
+    type from   <- int,
+    type to     <- capacity,
+    op sampleto <- fun (_:int) => cdistr
+    proof sampleto_ll by apply DWord.cdistr_ll.
 
-(*section PROOF_ext.
-  
-  declare module D: DISTINGUISHER{C, PF, G1}.
-  
-  local clone import GenEager as Gen with
-    type from <- int,
-    type to = 
-    
-type from, to.
+print RO.
+print Functionality.RO.
 
-op sampleto : from -> to distr.
-axiom sampleto_ll : forall x, Distr.weight (sampleto x) = 1%r.
+op bad_ext (m:('a*'b,'c)fmap) (y:'b) = 
+  mem (map snd (elems (dom m))) y.
 
+op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
+  find (+ pred1 c) handles.
 
-print Gen.
-
-  clone import 
-
-  module G2(D:DISTINGUISHER,HS:SAMPLE) = {
+ module G2(D:DISTINGUISHER,HS:FRO) = {
 
   module C = {
 
@@ -354,8 +350,8 @@ print Gen.
           if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
             (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
           } else {
-            HS.sampleI(G1.chandle);
-            sa'                 <- RO.f(take (i+1) p);
+            HS.sample(G1.chandle);
+            sa'                 <@ Functionality.RO.f(take (i+1) p);
             sa                  <- sa +^ nth witness p i;
             G1.mh.[(sa,h)]      <- (sa', G1.chandle);
             G1.mhi.[(sa',G1.chandle)] <- (sa, h);
@@ -364,7 +360,7 @@ print Gen.
           }
           i        <- i + 1;
         }
-        sa <- RO.f(p);
+        sa <- Functionality.RO.f(p);
       }
       return sa;
     }
@@ -378,38 +374,34 @@ print Gen.
       if (!mem (dom G1.m) x) {
         if (mem (dom G1.paths) x.`2) {
           (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- RO.f (rcons p (v +^ x.`1));
+          y1    <- Functionality.RO.f (rcons p (v +^ x.`1));
           y2    <$ cdistr;
           y     <- (y1, y2);
           G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
         } else {
           y <$ dstate;
         }
-(*        G1.bext <- G1.bext \/ mem (rng handles) (x.`2, I);   *)
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
         (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
 
-        handles_ <@ HS.restrD();
+        handles_ <@ HS.restrK();
         if (!mem (rng handles_) x.`2) {
-          HS.setD(G1.chandle, x.`2);
+          HS.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <- HS.restrD();
+        handles_ <- HS.restrK();
         hx2      <- oget (hinvc handles_ x.`2);
-        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
+        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if (mem (dom G1.mh) (x.`1, hx2) /\ t) {
           hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
           y2                   <@ HS.get(hy2);
-          (* bad <-  bad \/ mem (map snd (dom G1.m)) y2 *)
-
-(* bext{1} => bad{2} \/  exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
+          G1.bext              <- G1.bext \/ bad_ext G1.m y2;
           y                    <- (y.`1, y2);
           G1.m.[x]             <- y;
           G1.mi.[y]            <- x;
         } else {
           hy2                  <- G1.chandle;
           G1.chandle           <- G1.chandle + 1;
-          HS.setD(hy2, y.`2); 
+          HS.set(hy2, y.`2); 
           G1.m.[x]             <- y;
           G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
           G1.mi.[y]            <- x;
@@ -425,28 +417,26 @@ print Gen.
       var y, y1, y2, hx2, hy2, handles_, t;
 
       if (!mem (dom G1.mi) x) {
-        (* bext <- bext \/ mem (rng handles) (x.`2, I);   *)
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
-        handles_ <@ HS.restrD();
+        handles_ <@ HS.restrK();
         if (!mem (rng handles_) x.`2) {
-          HS.setD(G1.chandle, x.`2);
+          HS.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <@ HS.restrD();
+        handles_ <@ HS.restrK();
         hx2      <- oget (hinvc handles_ x.`2);
         y        <$ dstate;
-        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
+        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if (mem (dom G1.mhi) (x.`1, hx2) /\ t) {
           (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
           y2                   <@ HS.get(hy2);
           y                    <- (y.`1, y2);
-          (* bad               <- bad \/ mem X2 y.`2; *)
+          G1.bext              <- G1.bext \/ bad_ext G1.m y2;
           G1.mi.[x]            <- y;
           G1.m.[y]             <- x;
         } else {
           hy2                  <- G1.chandle;
           G1.chandle           <- G1.chandle + 1;
-          HS.setD(hy2, y.`2); 
+          HS.set(hy2, y.`2); 
           G1.mi.[x]            <- y;
           G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
           G1.m.[y]             <- x;
@@ -471,7 +461,8 @@ print Gen.
     G1.bext  <- false;
 
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-    HS.setD(0,c0);
+    HS.init();
+    HS.set(0,c0);
     G1.paths    <- map0.[c0 <- ([<:block>],b0)];
     G1.chandle  <- 1;
     b        <@ D(C,S).distinguish();
@@ -479,6 +470,30 @@ print Gen.
   }    
 }.
 
+
+section EXT.
+  
+  declare module D: DISTINGUISHER{C, PF, G1, G2}.
+  
+  equiv G1_G2 : G1(D).main ~ G2(D,FRO).main : 
+     ={glob D} ==> ={res} /\ G1.bext{1} => (G1.bext{2} \/ 
+         exists x h, mem (dom G1.m{2}) x /\ FRO.m{2}.[h] = Some (x.`2, Unknown)).
+
+
+    
+
+col.main
+type from, to.
+
+op sampleto : from -> to distr.
+axiom sampleto_ll : forall x, Distr.weight (sampleto x) = 1%r.
+
+
+print Gen.
+
+  clone import 
+
+ 
 
 
 
