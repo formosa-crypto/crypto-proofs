@@ -4,6 +4,13 @@ require import List FSet NewFMap Utils Common SLCommon RndO.
 
 require ConcreteF.
 
+clone import GenEager as Gen with
+    type from   <- handle,
+    type to     <- capacity,
+    op sampleto <- fun (_:int) => cdistr
+    proof sampleto_ll by apply DWord.cdistr_ll.
+
+print hinv.
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
   var mh, mhi             : hsmap

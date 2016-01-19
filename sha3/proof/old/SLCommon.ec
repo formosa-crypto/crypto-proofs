@@ -4,14 +4,13 @@
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
 require import Pred Fun Option Pair Int Real StdOrder Ring.
-require import List FSet NewFMap Utils Common.
+require import List FSet NewFMap Utils Common RndO.
 
-require (*..*) RndOrcl Indifferentiability.
+require (*..*) Indifferentiability.
 (*...*) import Dprod Dexcepted Capacity IntOrder.
 
 type state  = block  * capacity.
 op   dstate = bdistr * cdistr.
-
 
 clone include Indifferentiability with
   type p     <- state, 
@@ -34,23 +33,14 @@ clone export Tuple as TupleBl with
 op bl_enum = flatten (mkseq (fun i => wordn i) (max_size + 1)). 
 op bl_univ = FSet.oflist bl_enum.
 
-clone RndOrcl as RndOrclB with 
+(* -------------------------------------------------------------------------- *)
+(* Random oracle from block list to block                                     *)
+
+clone import RndO.GenEager as F with
   type from <- block list,
-  type to   <- block.
- 
-clone export RndOrclB.RestrIdeal as Functionality with
-  op sample _ <- bdistr,
-  op test l   <- List.size l <= max_size,
-  op univ     <- bl_univ,
-  op dfl      <- b0
-  proof *.
-realize sample_ll by exact Block.DWord.bdistr_ll.
-realize testP.
-proof.
-  move=> x; rewrite mem_oflist-flattenP; split=>[_|[s[/mkseqP[i[/=_->>]]/wordnP->/#]]].
-  exists (wordn (size x));cut Hsx := size_ge0 x.
-  rewrite wordnP max_ler //= mkseqP /=;exists (size x);smt ml=0.
-qed.
+  type to   <- block,
+  op sampleto <- fun (_:block list)=> bdistr
+  proof * by exact Block.DWord.bdistr_ll.
 
 (** We can now define the squeezeless sponge construction **)
 module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
@@ -90,7 +80,7 @@ type handle  = int.
 
 type hstate = block * handle.
  
-type ccapacity = capacity * caller.
+type ccapacity = capacity * flag.
 
 type smap    = (state , state    ) fmap.
 type hsmap   = (hstate, hstate   ) fmap.
@@ -124,63 +114,6 @@ proof.
   move=> [dom_mi dom_m].
   by split; apply/half_permutation_set.
 qed.    
-
-(** Operators and properties of handles *)
-
-op hinv (handles:handles) (c:capacity) = 
-   find (fun _ => pred1 c \o fst) handles.
-
-op hinvD (handles:handles) (c:capacity) = 
-   find (fun _ => pred1 (c,D)) handles.
-
-op huniq (handles:handles) = 
-  forall h1 h2 cf1 cf2, 
-     handles.[h1] = Some cf1 => 
-     handles.[h2] = Some cf2 => 
-     cf1.`1 = cf2.`1 => h1 = h2.
-
-lemma hinvP handles c:
-  if hinv handles c = None then forall h f, handles.[h] <> Some(c,f)
-  else exists f, handles.[oget (hinv handles c)] = Some(c,f).
-proof.
-  cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
-    findP (fun (_ : handle) => pred1 c \o fst) handles.
-  + by exists (oget handles.[h]).`2;rewrite oget_some get_oget;2:case (oget handles.[h]).
-  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq.
-qed.
-
-lemma huniq_hinv (handles:handles) (h:handle): 
-  huniq handles => mem (dom handles) h => hinv handles (oget handles.[h]).`1 = Some h.
-proof.
-  move=> Huniq;pose c := (oget handles.[h]).`1.
-  cut:=Huniq h;cut:=hinvP handles c.
-  case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')];1:by rewrite in_dom /#.
-  by move=> [f ->] /(_ (oget handles.[h]) (c,f)) H1 H2;rewrite H1 // get_oget.
-qed.
-
-lemma hinvDP handles c:
-  if hinvD handles c = None then forall h, handles.[h] <> Some(c,D)
-  else handles.[oget (hinvD handles c)] = Some(c,D).
-proof.
-  cut @/pred1/=[[h []->[]Hmem ]|[]->H h ]/= := 
-    findP (fun (_ : handle) => pred1 (c,D)) handles.
-  + by rewrite oget_some get_oget.
-  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq. 
-qed.
-
-lemma huniq_hinvD (handles:handles) c: 
-  huniq handles => mem (rng handles) (c,D) => handles.[oget (hinvD handles c)] = Some(c,D).
-proof.
-  move=> Huniq;rewrite in_rng=> -[h]H;case: (hinvD _ _) (Huniq h) (hinvDP handles c)=>//=.
-  by move=>_/(_ h);rewrite H.
-qed.
-
-lemma huniq_hinvD_h h (handles:handles) c: 
-  huniq handles => handles.[h] = Some (c,D) => hinvD handles c = Some h.
-proof.
-  move=> Huniq;case: (hinvD _ _) (hinvDP handles c)=>/= [H|h'];1: by apply H. 
-  by rewrite oget_some=> /Huniq H/H. 
-qed.
 
 (* Functionnal version of the construction using handle *)
 
@@ -337,9 +270,8 @@ proof.
   by inline *;auto.
 qed.
 
-(* Exemple *)
-(* 
 section RESTR. 
+
   declare module F:FUNCTIONALITY{C}.
   declare module P:PRIMITIVE{C,F}.
   declare module D:DISTINGUISHER{F,P,C}.
@@ -352,8 +284,7 @@ section RESTR.
     proc;inline *;wp;swap{1}1 2;sim. 
   qed.
 
-end RESTR.
-*)
+end section RESTR.
 
 section COUNT.
 
@@ -396,7 +327,67 @@ section COUNT.
 
 end section COUNT.
 
+
+
+(* -------------------------------------------------------------------------- *)
+(** Operators and properties of handles *)
+op hinv (handles:handles) (c:capacity) = 
+   find (fun _ => pred1 c \o fst) handles.
+
+op hinvK (handles:handles) (c:capacity) = 
+   find (fun _ => pred1 (c,Known)) handles.
+
+op huniq (handles:handles) = 
+  forall h1 h2 cf1 cf2, 
+     handles.[h1] = Some cf1 => 
+     handles.[h2] = Some cf2 => 
+     cf1.`1 = cf2.`1 => h1 = h2.
+
+lemma hinvP handles c:
+  if hinv handles c = None then forall h f, handles.[h] <> Some(c,f)
+  else exists f, handles.[oget (hinv handles c)] = Some(c,f).
+proof.
+  cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
+    findP (fun (_ : handle) => pred1 c \o fst) handles.
+  + by exists (oget handles.[h]).`2;rewrite oget_some get_oget;2:case (oget handles.[h]).
+  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq.
+qed.
+
+lemma huniq_hinv (handles:handles) (h:handle): 
+  huniq handles => mem (dom handles) h => hinv handles (oget handles.[h]).`1 = Some h.
+proof.
+  move=> Huniq;pose c := (oget handles.[h]).`1.
+  cut:=Huniq h;cut:=hinvP handles c.
+  case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')];1:by rewrite in_dom /#.
+  by move=> [f ->] /(_ (oget handles.[h]) (c,f)) H1 H2;rewrite H1 // get_oget.
+qed.
+
+lemma hinvKP handles c:
+  if hinvK handles c = None then forall h, handles.[h] <> Some(c,Known)
+  else handles.[oget (hinvK handles c)] = Some(c,Known).
+proof.
+  cut @/pred1/=[[h []->[]Hmem ]|[]->H h ]/= := 
+    findP (fun (_ : handle) => pred1 (c,Known)) handles.
+  + by rewrite oget_some get_oget.
+  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq. 
+qed.
+
+lemma huniq_hinvK (handles:handles) c: 
+  huniq handles => mem (rng handles) (c,Known) => handles.[oget (hinvK handles c)] = Some(c,Known).
+proof.
+  move=> Huniq;rewrite in_rng=> -[h]H;case: (hinvK _ _) (Huniq h) (hinvKP handles c)=>//=.
+  by move=>_/(_ h);rewrite H.
+qed.
+
+lemma huniq_hinvK_h h (handles:handles) c: 
+  huniq handles => handles.[h] = Some (c,Known) => hinvK handles c = Some h.
+proof.
+  move=> Huniq;case: (hinvK _ _) (hinvKP handles c)=>/= [H|h'];1: by apply H. 
+  by rewrite oget_some=> /Huniq H/H. 
+qed.
+
 (* -------------------------------------------------------------------------- *)
 (** The initial Game *)
 module GReal(D:DISTINGUISHER) = RealIndif(SqueezelessSponge, PC(Perm), D).
+
 
