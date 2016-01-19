@@ -1,6 +1,8 @@
 require import Pred Fun Option Pair Int Real StdOrder Ring.
 require import List FSet NewFMap Utils Common SLCommon.
+
 (*...*) import Dprod Dexcepted Capacity IntOrder RealOrder.
+
 require (*..*) Strong_RP_RF.
 
 module PF = {
@@ -53,6 +55,7 @@ section.
       op dK <- (NewDistr.MUnit.dunit<:unit> tt),
       op q  <- max_size + 1
   proof *.
+
   realize gt0_q by smt w=max_ge0.
   realize uD_uf_fu.
   split.
@@ -146,21 +149,17 @@ section.
     + rewrite -(DoubleBounding ARP &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
       * by proc; if=> //=; auto.
-    have:= Conclusion D' &m _.
-    + move=> O O_f_ll O_fi_ll.
-      proc; call (_: true)=> //=.
-      * apply D_ll.
-      * by proc; sp; if=> //=; call O_f_ll; auto.
-      * by proc; sp; if=> //=; call O_fi_ll; auto.
-      * proc; inline *; sp; if=> //=; sp; if=> //=; auto.
-        while true (size p).
-        - by auto; call O_f_ll; auto=> /#.
-        by auto; smt w=size_ge0.
-      by inline *; auto.
-    move=> h.
-    (* to avoid asking smt to do the proof with probability expressions... *)
-    have -> //: forall (x y z : real), `|x - y| <= z => x <= y + z.
-    smt w=(@RealOrder).
+    have /#:= Conclusion D' &m _.
+    move=> O O_f_ll O_fi_ll.
+    proc; call (_: true)=> //=.
+    + apply D_ll.
+    + by proc; sp; if=> //=; call O_f_ll; auto.
+    + by proc; sp; if=> //=; call O_fi_ll; auto.
+    + proc; inline *; sp; if=> //=; sp; if=> //=; auto.
+      while true (size p).
+      * by auto; call O_f_ll; auto=> /#.
+      by auto; smt w=size_ge0.
+    by inline *; auto.
   qed.
 
 end section.

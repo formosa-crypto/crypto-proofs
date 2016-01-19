@@ -1,346 +1,21 @@
-require import Pred Fun Option Pair Int Real StdOrder Ring StdBigop.
-require import List FSet NewFMap Utils Common SLCommon FelTactic Mu_mem.
+require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
+require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 (*...*) import Dprod Dexcepted Capacity IntOrder Bigreal RealOrder BRA.
 
-require import RndO.
-require (*..*) Handle.
+require (*..*) Gcol.
 
-clone import Handle as Handle0.
+clone export Gcol as Gcol0.
 
-(* -------------------------------------------------------------------------- *)
-(*
-section PROOF.
-  declare module D: DISTINGUISHER{C, PF, G1}.
-
-  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
-    islossless P.f => islossless P.fi =>
-    islossless F.f => islossless D(F, P).distinguish.
-
-  local module Gcol = {
-    
-    var count : int
-
-    proc sample_c () = {
-      var c=c0;
-      if (card (image fst (rng G1.handles)) <= 2*max_size /\
-          count < max_size) {
-        c <$ cdistr;
-        G1.bcol <-  G1.bcol \/ mem (image fst (rng G1.handles)) c;
-        count <- count + 1;  
-      }
-
-      return c;
-    }
-  
-    module C = {
-  
-      proc f(p : block list): block = {
-        var sa, sa', sc;
-        var h, i <- 0; 
-        sa <- b0;
-        if (1 <= size p /\ p <> [b0]) {
-          while (i < size p ) {
-            if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
-              (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
-            } else {
-              sc                  <@ sample_c();
-              sa'                 <- RO.f(take (i+1) p);
-              sa                  <- sa +^ nth witness p i;
-              G1.mh.[(sa,h)]         <- (sa', G1.chandle);
-              G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-              (sa,h)              <- (sa',G1.chandle);
-              G1.handles.[G1.chandle]   <- (sc,I);
-              G1.chandle             <- G1.chandle + 1;
-            }
-            i        <- i + 1;
-          }
-          sa <- RO.f(p);
-        }
-        return sa;
-      }
-    }
-  
-    module S = {
-  
-      proc f(x : state): state = {
-        var p, v, y, y1, y2, hy2, hx2;
-  
-        if (!mem (dom G1.m) x) {
-          if (!(mem (rng G1.handles) (x.`2, D))) {
-            G1.handles.[G1.chandle] <- (x.`2, D);
-            G1.chandle <- G1.chandle + 1;
-          }
-          hx2 <- oget (hinvD G1.handles x.`2);
-
-          if (mem (dom G1.paths) x.`2) {
-            (p,v) <- oget G1.paths.[x.`2]; 
-            y1    <- RO.f (rcons p (v +^ x.`1));
-            y2    <@ sample_c();
-            y     <- (y1, y2);
-            G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
-          } else {
-            y1 <$ bdistr;
-            y2 <@ sample_c();
-            y  <- (y1,y2);
-          }
-          if (mem (dom G1.mh) (x.`1, hx2) /\ 
-              in_dom_with G1.handles (oget G1.mh.[(x.`1,hx2)]).`2 I) {
-            hy2               <- (oget G1.mh.[(x.`1, hx2)]).`2;
-            y                 <- (y.`1, (oget G1.handles.[hy2]).`1);
-            G1.handles.[hy2]     <- (y.`2, D);
-            G1.m.[x]             <- y;
-            G1.mi.[y]            <- x;
-          } else {
-            hy2               <- G1.chandle;
-            G1.chandle           <- G1.chandle + 1;
-            G1.handles.[hy2]     <- (y.`2, D);
-            G1.m.[x]             <- y;
-            G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
-            G1.mi.[y]            <- x;
-            G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
-          }
-        } else {   
-          y <- oget G1.m.[x];
-        }
-        return y;
-      }
-  
-      proc fi(x : state): state = {
-        var y, y1, y2, hx2, hy2;
-  
-        if (!mem (dom G1.mi) x) {
-          if (!(mem (rng G1.handles) (x.`2, D))) {
-            G1.handles.[G1.chandle] <- (x.`2, D);
-            G1.chandle <- G1.chandle + 1;
-          }
-          hx2 <- oget (hinvD G1.handles x.`2);
-          y1  <$ bdistr;
-          y2  <@ sample_c();
-          y   <- (y1,y2);
-          if (mem (dom G1.mhi) (x.`1, hx2) /\ 
-              in_dom_with G1.handles (oget G1.mhi.[(x.`1,hx2)]).`2 I) {
-            (y1,hy2)          <- oget G1.mhi.[(x.`1, hx2)];
-            y                 <- (y.`1, (oget G1.handles.[hy2]).`1);
-            G1.handles.[hy2]     <- (y.`2, D);
-            G1.mi.[x]            <- y;
-            G1.m.[y]             <- x;
-          } else {
-            hy2               <- G1.chandle;
-            G1.chandle           <- G1.chandle + 1;
-            G1.handles.[hy2]     <- (y.`2, D);
-            G1.mi.[x]            <- y;
-            G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
-            G1.m.[y]             <- x;
-            G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
-          }
-        } else {
-          y <- oget G1.mi.[x];
-        }
-        return y;
-      }
-    
-    }
-  
-    proc main(): bool = {
-      var b;
-
-      RO.m        <- map0;
-      G1.m        <- map0;
-      G1.mi       <- map0;
-      G1.mh       <- map0;
-      G1.mhi      <- map0;
-      G1.bcol     <- false;
-  
-      G1.handles  <- map0.[0 <- (c0, D)];
-      G1.paths    <- map0.[c0 <- ([<:block>],b0)];
-      G1.chandle  <- 1;
-      count       <- 0;
-      b           <@ DRestr(D,C,S).distinguish();
-      return b;
-    }    
-  }.
-
-  lemma card_rng_set (m:('a,'b)fmap) x y: card(rng m.[x<-y]) <= card(rng m) + 1.
-  proof. 
-    rewrite rng_set fcardU fcard1. 
-    cut := subset_leq_fcard (rng (rem x m)) (rng m) _;2:smt ml=0 w=fcard_ge0.
-    rewrite subsetP=> z;apply rng_rem_le.
-  qed.
-
-  lemma hinv_image handles c: 
-    hinv handles c <> None =>
-    mem (image fst (rng handles)) c.
-  proof.
-    case: (hinv handles c) (hinvP handles c)=>//= h[f] Heq.
-    rewrite imageP;exists (c,f)=>@/fst/=. 
-    by rewrite in_rng;exists (oget (Some h)).
-  qed.
-
-  local equiv G1col : G1(DRestr(D)).main ~ Gcol.main : 
-    ={glob D} ==> (G1.bcol{1} => G1.bcol{2}) /\ Gcol.count{2} <= max_size.
-  proof.
-    proc;inline*;wp.
-    call (_: ={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,C.c}/\
-             (G1.bcol{1} => G1.bcol{2}) /\
-             (card (rng G1.handles) <= 2*C.c + 1 /\ 
-              Gcol.count <= C.c <= max_size){2}).
-    + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).S.f Gcol.S.f. 
-      seq 2 2 : (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-                   C.c,x0} /\ 
-                 (G1.bcol{1} => G1.bcol{2}) /\
-                 (card(rng G1.handles) + 2 <= 2*C.c + 1/\ 
-                  Gcol.count + 1 <= C.c <= max_size){2});1:by auto=>/#.
-      if=>//;last by auto=>/#.
-      swap{1}[2..4]-1. 
-      seq 3 2:(={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-                 C.c,x0,hx2} /\ 
-               (G1.bcol{1} => G1.bcol{2}) /\
-               (card (rng G1.handles) + 1 <= 2 * C.c + 1/\ 
-                Gcol.count + 1 <= C.c <= max_size){2}).
-      + auto;smt ml=0 w=card_rng_set. 
-      seq 1 1: 
-        (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-           C.c,x0,hx2,y0} /\ 
-         ((G1.bcol\/hinv G1.handles y0.`2 <> None){1} => G1.bcol{2}) /\
-         (card (rng G1.handles) + 1 <= 2 * C.c + 1 /\ 
-         Gcol.count <= C.c <= max_size){2});last by auto;smt ml=0 w=card_rng_set.
-      if=>//;inline Gcol.sample_c.
-      + rcondt{2}4.
-        + auto;conseq (_:true)=>//;progress;2: smt ml=0.
-          cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
-        wp;conseq (_: ={p,v,RO.m,y1} /\ y2{1}=c{2})=>//;1:smt ml=0 w=hinv_image.
-        by sim.
-      rcondt{2}3.
-      + by auto;progress;cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
-      swap{2}2-1;sp 0 1;wp;conseq(_:y0{1}=(y1,c){2})=>//;1:smt ml=0 w=hinv_image.
-      transitivity{1} {y0 <- S.sample();} 
-          (true ==> ={y0}) 
-          (true ==> y0{1}=(y1,c){2})=>//;1:by inline*;auto.
-      transitivity{2} {(y1,c) <- S.sample2();} 
-          (true==>y0{1}=(y1,c){2})
-          (true==> ={y1,c})=>//;2:by inline*;auto.
-      by call sample_sample2;auto=> /=?[??]->.
-   
-    + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).S.fi Gcol.S.fi. 
-      seq 2 2 : (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-                   C.c,x0} /\ 
-                 (G1.bcol{1} => G1.bcol{2}) /\
-                 (card(rng G1.handles) + 2 <= 2*C.c + 1 /\ 
-                  Gcol.count + 1 <= C.c <= max_size){2});1:by auto=>/#.
-      if=>//;last by auto=>/#.
-      seq 3 2:(={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-                 C.c,x0,hx2} /\ 
-               (G1.bcol{1} => G1.bcol{2}) /\
-               (card (rng G1.handles) + 1 <= 2 * C.c + 1 /\ 
-                Gcol.count + 1 <= C.c <= max_size){2}).
-      + by auto;smt ml=0 w=card_rng_set. 
-      seq 1 2: 
-        (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,
-           C.c,x0,hx2} /\ y0{1} = (y1,y2){2} /\
-         ((G1.bcol\/hinv G1.handles y0.`2 <> None){1} => G1.bcol{2}) /\
-         (card (rng G1.handles) + 1 <= 2 * C.c + 1 /\ 
-         Gcol.count <= C.c <= max_size){2});2:by auto;smt w=card_rng_set.
-      inline Gcol.sample_c.
-      rcondt{2}3.
-      + by auto;progress;cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
-      swap{2}2-1;sp 0 1;wp;conseq(_:y0{1}=(y1,c){2})=>//;1:smt ml=0 w=hinv_image.
-      transitivity{1} {y0 <- S.sample();} 
-          (true ==> ={y0}) 
-          (true ==> y0{1}=(y1,c){2})=>//;1:by inline*;auto.
-      transitivity{2} {(y1,c) <- S.sample2();} 
-          (true==>y0{1}=(y1,c){2})
-          (true==> ={y1,c})=>//;2:by inline*;auto.
-      by call sample_sample2;auto=> /=?[??]->.
-    
-    + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).C.f Gcol.C.f. 
-      seq 5 5:
-       (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,C.c,b,
-          p,h,i,sa} /\ i{1}=0 /\
-        (G1.bcol{1} => G1.bcol{2}) /\
-        card (rng G1.handles{2}) + 2*(size p{2}) <= 2 * C.c{2} + 1 /\
-        Gcol.count{2} + size p{2} <= C.c{2} <= max_size);1:by auto=>/#.
-      wp;if=>//;2:by auto;smt ml=0 w=size_ge0.
-      call (_: ={RO.m});1:by sim.
-      while 
-       (={RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,G1.handles,C.c,b,
-          p,h,i,sa} /\ (i <= size p){1} /\
-        (G1.bcol{1} => G1.bcol{2}) /\
-        (card (rng G1.handles) + 2*(size p - i) <= 2 * C.c + 1 /\
-        Gcol.count + size p - i <= C.c <= max_size){2});
-        last by auto; smt ml=0 w=size_ge0.
-      if=>//;auto;1:smt ml=0 w=size_ge0.
-      call (_: ={RO.m});1:by sim.
-      inline *;rcondt{2} 2. 
-      + auto;progress;cut /#:= fcard_image_leq fst (rng G1.handles{hr}).
-      auto;smt ml=0 w=(hinv_image card_rng_set).
-    
-    auto;progress;3:by smt ml=0.
-    + by rewrite rng_set rem0 rng0 fset0U fcard1.
-    by apply max_ge0. 
-  qed.
-
-  (* TODO: move this *)
-  lemma c_gt0r : 0%r < (2^c)%r.
-  proof. by rewrite from_intM;apply /powPos. qed.
-
-  lemma c_ge0r : 0%r <= (2^c)%r.
-  proof. by apply /ltrW/c_gt0r. qed. 
-
-  local lemma eps_ge0 : 0%r <= (2 * max_size)%r / (2 ^ c)%r. 
-  proof.
-    apply divr_ge0;1:by rewrite from_intMle;smt ml=0 w=max_ge0. 
-    by apply c_ge0r. 
-  qed.
-
-  local lemma Pr_col &m : 
-    Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size] <=
-    max_size%r * ((2*max_size)%r / (2^c)%r).
-  proof.
-    fel 10 Gcol.count (fun x=> (2*max_size)%r / (2^c)%r)
-      max_size G1.bcol 
-      [Gcol.sample_c : (card (image fst (rng G1.handles)) <= 2*max_size /\ Gcol.count < max_size)]=>//;2:by auto.
-    + rewrite /felsum Bigreal.sumr_const count_predT size_range.
-      apply ler_wpmul2r;1:by apply eps_ge0.
-      by rewrite from_intMle;smt ml=0 w=max_ge0. 
-    + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
-      wp.
-      rnd (mem (image fst (rng G1.handles)));skip;progress;2:smt ml=0.
-      rewrite (Mu_mem.mu_mem (image fst (rng G1.handles{hr})) cdistr (1%r/(2^c)%r))//.
-      + move=>x _;apply DWord.muxP.
-      rewrite (div_def (2 * _)%r) 1:from_intMeq;1:by apply /IntOrder.lt0r_neq0/powPos.
-      apply ler_wpmul2r;2:by rewrite from_intMle.
-      by apply divr_ge0=>//;apply /c_ge0r. 
-    + move=>ci;proc;rcondt 2;auto=>/#.
-    move=> b c;proc;sp;if;auto;smt ml=0.
-  qed.
-
-end section PROOF.
-*)
-
-print RO.
-
-clone import GenEager as Gen with
-    type from   <- int,
-    type to     <- capacity,
-    op sampleto <- fun (_:int) => cdistr
-    proof sampleto_ll by apply DWord.cdistr_ll.
-
-print RO.
-print Functionality.RO.
-
-op bad_ext (m:('a*'b,'c)fmap) (y:'b) = 
+op bad_ext (m:smap) y = 
   mem (map snd (elems (dom m))) y.
 
-op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
-  find (+ pred1 c) handles.
+op hinvc (m:(handle,capacity)fmap) (c:capacity) =
+  find (+ pred1 c) m.
 
- module G2(D:DISTINGUISHER,HS:FRO) = {
+module G2(D:DISTINGUISHER,HS:FRO) = {
 
   module C = {
-
+ 
     proc f(p : block list): block = {
       var sa, sa';
       var h, i <- 0; 
@@ -351,7 +26,7 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
             (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
           } else {
             HS.sample(G1.chandle);
-            sa'                 <@ Functionality.RO.f(take (i+1) p);
+            sa'                 <@ F.RO.get(take (i+1) p);
             sa                  <- sa +^ nth witness p i;
             G1.mh.[(sa,h)]      <- (sa', G1.chandle);
             G1.mhi.[(sa',G1.chandle)] <- (sa, h);
@@ -360,21 +35,21 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
           }
           i        <- i + 1;
         }
-        sa <- Functionality.RO.f(p);
+        sa <- F.RO.get(p);
       }
       return sa;
     }
   }
-
+ 
   module S = {
-
+ 
     proc f(x : state): state = {
       var p, v, y, y1, y2, hy2, hx2, handles_,t;
-
+ 
       if (!mem (dom G1.m) x) {
         if (mem (dom G1.paths) x.`2) {
           (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- Functionality.RO.f (rcons p (v +^ x.`1));
+          y1    <- F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
           y     <- (y1, y2);
           G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
@@ -382,7 +57,7 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
           y <$ dstate;
         }
         (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
-
+ 
         handles_ <@ HS.restrK();
         if (!mem (rng handles_) x.`2) {
           HS.set(G1.chandle, x.`2);
@@ -412,10 +87,10 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
       }
       return y;
     }
-
+ 
     proc fi(x : state): state = {
       var y, y1, y2, hx2, hy2, handles_, t;
-
+ 
       if (!mem (dom G1.mi) x) {
         handles_ <@ HS.restrK();
         if (!mem (rng handles_) x.`2) {
@@ -447,19 +122,19 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
       }
       return y;
     }
-
+ 
   }
-
+ 
   proc main(): bool = {
     var b;
-
-    RO.m     <- map0;
+ 
+    F.RO.m     <- map0;
     G1.m     <- map0;
     G1.mi    <- map0;
     G1.mh    <- map0;
     G1.mhi   <- map0;
     G1.bext  <- false;
-
+ 
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
     HS.init();
     HS.set(0,c0);
@@ -470,7 +145,6 @@ op hinvc (handles : (int,capacity) fmap) (c : capacity) : handle option =
   }    
 }.
 
-
 section EXT.
   
   declare module D: DISTINGUISHER{C, PF, G1, G2}.
@@ -478,244 +152,12 @@ section EXT.
   equiv G1_G2 : G1(D).main ~ G2(D,FRO).main : 
      ={glob D} ==> ={res} /\ G1.bext{1} => (G1.bext{2} \/ 
          exists x h, mem (dom G1.m{2}) x /\ FRO.m{2}.[h] = Some (x.`2, Unknown)).
+  proof.
+    proc.  
+    admit.
+  qed.
+
+end section EXT.
 
 
     
-
-col.main
-type from, to.
-
-op sampleto : from -> to distr.
-axiom sampleto_ll : forall x, Distr.weight (sampleto x) = 1%r.
-
-
-print Gen.
-
-  clone import 
-
- 
-
-
-
-module type SAMPLE = {
-  proc sampleI(h:handle) : unit
-  proc setD(h:handle, c:capacity) : unit
-  proc get(h:handle) : capacity
-  proc in_dom(h:handle,c:caller) : bool
-  proc restrD() : (handle,capacity)fmap
-}.
-
-module type ADV_SAMPLEH(O:SAMPLE) = {
-  proc main() : bool
-}.
-
-
-module Lsample = {
-  var handles : (handle, ccapacity)fmap
-
-  proc sampleI(h:handle) = {
-    var c;
-    c           <$ cdistr;
-    handles.[h] <- (c,I);
-  }
-
-  proc setD (h:handle, c:capacity) = {
-    handles.[h] <- (c,D);
-  }
-
-  proc in_dom(h:handle, c:caller) = {
-    return in_dom_with handles h c;
-  }
-
-  proc restrD() = {
-    return (
-      let m = NewFMap.filter (fun _ (p:ccapacity) => p.`2=D) handles in
-      NewFMap.map (fun _ (p:ccapacity) => p.`1) m);
-  }
-
-  proc get(h:handle) = {
-    var c;
-    c <$ cdistr;
-    if (!mem (dom handles) h) {
-      handles.[h] <- (c,D);
-    }
-    return (oget (handles.[h])).`1;
-  }
-
-}.
-
-module Esample = {
-  var handles : (handle, ccapacity)fmap
-
-  proc sampleI(h:handle) = {
-    var c;
-    c           <$ cdistr;
-    handles.[h] <- (c,I);
-  }
-
-  proc setD (h:handle, c:capacity) = {
-    handles.[h] <- (c,D);
-  }
-
-  proc in_dom(h:handle, c:caller) = {
-    return in_dom_with handles h c;
-  }
-
-  proc restrD() = {
-    return (
-      let m = NewFMap.filter (fun _ (p:ccapacity) => p.`2=D) handles in
-      NewFMap.map (fun _ (p:ccapacity) => p.`1) m);
-  }
-
-  proc get(h:handle) = {
-    var c;
-    c <$ cdistr;
-    if (!mem (dom handles) h || (oget handles.[h]).`2 = I) {
-      handles.[h] <- (c,D);
-    }
-    return (oget (handles.[h])).`1;
-  }
-
-}.
-
-op hinvc (handles : (handle,capacity)fmap) (c : capacity) : handle option =
-  find (fun _ => pred1 c) handles.
-
-module G2(D:DISTINGUISHER,HS:SAMPLE) = {
-
-  module C = {
-
-    proc f(p : block list): block = {
-      var sa, sa';
-      var h, i <- 0; 
-      sa <- b0;
-      if (1 <= size p /\ p <> [b0]) {
-        while (i < size p ) {
-          if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
-            (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
-          } else {
-            HS.sampleI(G1.chandle);
-            sa'                 <- RO.f(take (i+1) p);
-            sa                  <- sa +^ nth witness p i;
-            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
-            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-            (sa,h)              <- (sa',G1.chandle);
-            G1.chandle             <- G1.chandle + 1;
-          }
-          i        <- i + 1;
-        }
-        sa <- RO.f(p);
-      }
-      return sa;
-    }
-  }
-
-  module S = {
-
-    proc f(x : state): state = {
-      var p, v, y, y1, y2, hy2, hx2, handles_,t;
-
-      if (!mem (dom G1.m) x) {
-        if (mem (dom G1.paths) x.`2) {
-          (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- RO.f (rcons p (v +^ x.`1));
-          y2    <$ cdistr;
-          y     <- (y1, y2);
-          G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
-        } else {
-          y <$ dstate;
-        }
-(*        G1.bext <- G1.bext \/ mem (rng handles) (x.`2, I);   *)
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
-        (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
-
-        handles_ <@ HS.restrD();
-        if (!mem (rng handles_) x.`2) {
-          HS.setD(G1.chandle, x.`2);
-          G1.chandle <- G1.chandle + 1;
-        }
-        handles_ <- HS.restrD();
-        hx2      <- oget (hinvc handles_ x.`2);
-        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
-        if (mem (dom G1.mh) (x.`1, hx2) /\ t) {
-          hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
-          y2                   <@ HS.get(hy2);
-          (* bad <-  bad \/ mem (map snd (dom G1.m)) y2 *)
-
-(* bext{1} => bad{2} \/  exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
-          y                    <- (y.`1, y2);
-          G1.m.[x]             <- y;
-          G1.mi.[y]            <- x;
-        } else {
-          hy2                  <- G1.chandle;
-          G1.chandle           <- G1.chandle + 1;
-          HS.setD(hy2, y.`2); 
-          G1.m.[x]             <- y;
-          G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
-          G1.mi.[y]            <- x;
-          G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
-        }
-      } else {   
-        y <- oget G1.m.[x];
-      }
-      return y;
-    }
-
-    proc fi(x : state): state = {
-      var y, y1, y2, hx2, hy2, handles_, t;
-
-      if (!mem (dom G1.mi) x) {
-        (* bext <- bext \/ mem (rng handles) (x.`2, I);   *)
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
-        handles_ <@ HS.restrD();
-        if (!mem (rng handles_) x.`2) {
-          HS.setD(G1.chandle, x.`2);
-          G1.chandle <- G1.chandle + 1;
-        }
-        handles_ <@ HS.restrD();
-        hx2      <- oget (hinvc handles_ x.`2);
-        y        <$ dstate;
-        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, I);
-        if (mem (dom G1.mhi) (x.`1, hx2) /\ t) {
-          (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
-          y2                   <@ HS.get(hy2);
-          y                    <- (y.`1, y2);
-          (* bad               <- bad \/ mem X2 y.`2; *)
-          G1.mi.[x]            <- y;
-          G1.m.[y]             <- x;
-        } else {
-          hy2                  <- G1.chandle;
-          G1.chandle           <- G1.chandle + 1;
-          HS.setD(hy2, y.`2); 
-          G1.mi.[x]            <- y;
-          G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
-          G1.m.[y]             <- x;
-          G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
-        }
-      } else {
-        y <- oget G1.mi.[x];
-      }
-      return y;
-    }
-
-  }
-
-  proc main(): bool = {
-    var b;
-
-    RO.m     <- map0;
-    G1.m     <- map0;
-    G1.mi    <- map0;
-    G1.mh    <- map0;
-    G1.mhi   <- map0;
-    G1.bext  <- false;
-
-    (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-    HS.setD(0,c0);
-    G1.paths    <- map0.[c0 <- ([<:block>],b0)];
-    G1.chandle  <- 1;
-    b        <@ D(C,S).distinguish();
-    return b;
-  }    
-}.
-*)

@@ -4,21 +4,18 @@ require import List FSet NewFMap Utils Common SLCommon RndO.
 
 require ConcreteF.
 
-clone import GenEager as Gen with
+clone import GenEager as ROhandle with
     type from   <- handle,
     type to     <- capacity,
     op sampleto <- fun (_:int) => cdistr
     proof sampleto_ll by apply DWord.cdistr_ll.
 
-print hinv.
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
   var mh, mhi             : hsmap
-  var handles             : handles
   var chandle             : int
   var paths               : (capacity, block list * block) fmap
   var bext, bcol          : bool
-
 
   module C = {
 
@@ -32,18 +29,18 @@ module G1(D:DISTINGUISHER) = {
             (sa, h) <- oget mh.[(sa +^ nth witness p i, h)];
           } else {
             sc                  <$ cdistr;
-            bcol                <- bcol \/ hinv handles sc <> None;
-            sa'                 <@ RO.f(take (i+1) p);
+            bcol                <- bcol \/ hinv FRO.m sc <> None;
+            sa'                 <@ F.RO.get(take (i+1) p);
             sa                  <- sa +^ nth witness p i;
             mh.[(sa,h)]         <- (sa', chandle);
             mhi.[(sa',chandle)] <- (sa, h);
             (sa,h)              <- (sa',chandle);
-            handles.[chandle]   <- (sc,I);
+            FRO.m.[chandle]     <- (sc,Unknown);
             chandle             <- chandle + 1;
           }
           i        <- i + 1;
         }
-        sa <- RO.f(p);
+        sa <- F.RO.get(p);
       }
       return sa;
     }
@@ -57,32 +54,32 @@ module G1(D:DISTINGUISHER) = {
       if (!mem (dom m) x) {
         if (mem (dom paths) x.`2) {
           (p,v) <- oget paths.[x.`2]; 
-          y1    <- RO.f (rcons p (v +^ x.`1));
+          y1    <- F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
           y     <- (y1, y2);
           paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
         } else {
           y <$ dstate;
         }
-        bext <- bext \/ mem (rng handles) (x.`2, I);   
+        bext <- bext \/ mem (rng FRO.m) (x.`2, Unknown);   
           (*  exists x2 h, handles.[h] = Some (X2,I) *)
-        if (!(mem (rng handles) (x.`2, D))) {
-          handles.[chandle] <- (x.`2, D);
+        if (!(mem (rng FRO.m) (x.`2, Known))) {
+          FRO.m.[chandle] <- (x.`2, Known);
           chandle <- chandle + 1;
         }
-        hx2 <- oget (hinvD handles x.`2);
-        if (mem (dom mh) (x.`1, hx2) /\ in_dom_with handles (oget mh.[(x.`1,hx2)]).`2 I) {
+        hx2 <- oget (hinvK FRO.m x.`2);
+        if (mem (dom mh) (x.`1, hx2) /\ in_dom_with FRO.m (oget mh.[(x.`1,hx2)]).`2 Unknown) {
           hy2               <- (oget mh.[(x.`1, hx2)]).`2;
-          y                 <- (y.`1, (oget handles.[hy2]).`1);
-          handles.[hy2]     <- (y.`2, D);
+          y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
+          FRO.m.[hy2]     <- (y.`2, Known);
           (* bad               <- bad \/ mem X2 y.`2; *)
           m.[x]             <- y;
           mi.[y]            <- x;
         } else {
-          bcol              <- bcol \/ hinv handles y.`2 <> None;          
+          bcol              <- bcol \/ hinv FRO.m y.`2 <> None;          
           hy2               <- chandle;
           chandle           <- chandle + 1;
-          handles.[hy2]     <- (y.`2, D);
+          FRO.m.[hy2]     <- (y.`2, Known);
           m.[x]             <- y;
           mh.[(x.`1, hx2)]  <- (y.`1, hy2);
           mi.[y]            <- x;
@@ -98,27 +95,27 @@ module G1(D:DISTINGUISHER) = {
       var y, y1, hx2, hy2;
 
       if (!mem (dom mi) x) {
-        bext <- bext \/ mem (rng handles) (x.`2, I);   
+        bext <- bext \/ mem (rng FRO.m) (x.`2, Unknown);   
           (*  exists x2 h, handles.[h] = Some (X2,I) *)
-        if (!(mem (rng handles) (x.`2, D))) {
-          handles.[chandle] <- (x.`2, D);
+        if (!(mem (rng FRO.m) (x.`2, Known))) {
+          FRO.m.[chandle] <- (x.`2, Known);
           chandle <- chandle + 1;
         }
-        hx2 <- oget (hinvD handles x.`2);
+        hx2 <- oget (hinvK FRO.m x.`2);
         y                 <$ dstate;
         if (mem (dom mhi) (x.`1,hx2) /\
-            in_dom_with handles (oget mhi.[(x.`1,hx2)]).`2 I) {
+            in_dom_with FRO.m (oget mhi.[(x.`1,hx2)]).`2 Unknown) {
           (y1,hy2)          <- oget mhi.[(x.`1, hx2)];
-          y                 <- (y.`1, (oget handles.[hy2]).`1);
-          handles.[hy2]     <- (y.`2, D);
+          y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
+          FRO.m.[hy2]     <- (y.`2, Known);
           (* bad               <- bad \/ mem X2 y.`2; *)
           mi.[x]            <- y;
           m.[y]             <- x;
         } else {
-          bcol              <- bcol \/ hinv handles y.`2 <> None;          
+          bcol              <- bcol \/ hinv FRO.m y.`2 <> None;          
           hy2               <- chandle;
           chandle           <- chandle + 1;
-          handles.[hy2]     <- (y.`2, D);
+          FRO.m.[hy2]     <- (y.`2, Known);
           mi.[x]            <- y;
           mhi.[(x.`1, hx2)] <- (y.`1, hy2);
           m.[y]             <- x;
@@ -135,7 +132,7 @@ module G1(D:DISTINGUISHER) = {
   proc main(): bool = {
     var b;
 
-    RO.m     <- map0;
+    F.RO.m     <- map0;
     m        <- map0;
     mi       <- map0;
     mh       <- map0;
@@ -144,7 +141,7 @@ module G1(D:DISTINGUISHER) = {
     bcol     <- false;
 
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-    handles  <- map0.[0 <- (c0, D)];
+    FRO.m  <- map0.[0 <- (c0, Known)];
     paths    <- map0.[c0 <- ([<:block>],b0)];
     chandle  <- 1;
     b        <@ D(C,S).distinguish();
@@ -171,7 +168,7 @@ op mh_spec (handles:handles) (m2:smap) (mh:hsmap) (ro:(block list, block)fmap) =
     exists c f c' f', 
       handles.[bh .`2]=Some(c,f) /\
       handles.[bh'.`2]=Some(c',f') /\
-      if f' = D then m2.[(bh.`1,c)] = Some(bh'.`1,c') /\ f = D
+      if f' = Known then m2.[(bh.`1,c)] = Some(bh'.`1,c') /\ f = Known
       else 
         exists p v b, 
           ro.[rcons p b] = Some bh'.`1 /\
@@ -186,10 +183,10 @@ op paths_spec (handles:handles) (mh:hsmap) (paths:(capacity,block list * block)f
   forall c p v, paths.[c] = Some(p,v) <=> 
     exists h, 
       build_hpath mh p = Some(v,h) /\ 
-      handles.[h] = Some(c,D).
+      handles.[h] = Some(c,Known).
 
 op handles_spec handles chandle = 
-  huniq handles /\ handles.[0] = Some (c0,D) /\ forall h, mem (dom handles) h => h < chandle.
+  huniq handles /\ handles.[0] = Some (c0,Known) /\ forall h, mem (dom handles) h => h < chandle.
 
 op INV_CF_G1 (handles:handles) chandle (m1 mi1 m2 mi2:smap) (mh2 mhi2:hsmap) (ro:(block list, block) fmap) paths =
    (eqm_handles handles m1 mh2 /\ eqm_handles handles mi1 mhi2) /\ 
@@ -215,7 +212,7 @@ proof.  move=> Hh;apply /IntOrder.ltr_eqF/(chandle_ge0 _ _ Hh). qed.
 lemma eqm_up_handles handles chandle m mh x2 : 
    handles_spec handles chandle =>
    eqm_handles handles m mh => 
-   eqm_handles handles.[chandle <- (x2, D)] m mh.
+   eqm_handles handles.[chandle <- (x2, Known)] m mh.
 proof.
   move=> []Hu[Hh0 Hlt][]H1 H2;split=>
    [bc bc'/H1 [h h' f f'][]Hh[]Hh' Hmh| bh bh'/H2 [c c' f f'][]Hh []Hh' Hm]. 
@@ -257,7 +254,7 @@ proof.
 qed.
 
 lemma handles_up_handles handles chandle x2 f':
-  (forall (f : caller), ! mem (rng handles) (x2, f)) =>
+  (forall (f : flag), ! mem (rng handles) (x2, f)) =>
   handles_spec handles chandle =>
   handles_spec handles.[chandle <- (x2, f')] (chandle + 1).
 proof.
@@ -276,7 +273,7 @@ qed.
 lemma INV_CF_G1_up_handles handles chandle m1 mi1 m2 mi2 mh mhi ro paths x2:
    INV_CF_G1 handles chandle m1 mi1 m2 mi2 mh mhi ro paths =>
    (forall f, ! mem (rng handles) (x2, f)) => 
-   INV_CF_G1 handles.[chandle <- (x2, D)](chandle+1) m1 mi1 m2 mi2 mh mhi ro paths.
+   INV_CF_G1 handles.[chandle <- (x2, Known)](chandle+1) m1 mi1 m2 mi2 mh mhi ro paths.
 proof.
   move=>[][]Heqm Heqmi[]Hincl[]Hmh[]Hp Hh Hx2;split.
   + by split;apply eqm_up_handles.
@@ -300,7 +297,9 @@ section AUX.
                  ={glob D} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
   proof.
     proc.
-    call (_:(G1.bcol \/ G1.bext), INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).   
+    call (_:(G1.bcol \/ G1.bext), 
+           INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} 
+              G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2}).   
     (* lossless D *)
     + apply D_ll.
     (** proofs for G1.S.f *)
@@ -310,58 +309,59 @@ section AUX.
       + rcondt{2} 1.
         + move=> &hr;skip=> &hr'[][]_[]<-[]_[][]Hincl Hincli _. 
           rewrite !in_dom/==>H; by case:(G1.m{hr'}.[x{hr}]) (Hincl x{hr})=> //=;rewrite H.
-        exists* RO.m{2}, G1.paths{2};elim*=>ro0 paths0.
-        seq 1 2 : (!G1.bcol{2} /\ (G1.bext = mem (rng G1.handles) (x.`2, I)){2} /\
+        exists* F.RO.m{2}, G1.paths{2};elim*=>ro0 paths0.
+        seq 1 2 : (!G1.bcol{2} /\ (G1.bext = mem (rng FRO.m) (x.`2, Unknown)){2} /\
                    ={x,y} /\
-                   INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} ro0 paths0 /\
+                   INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} 
+                      G1.mh{2} G1.mhi{2} ro0 paths0 /\
                   ! mem (dom PF.m{1}) x{1} /\
                   (if mem (dom paths0) x.`2 then 
                      let (p,v) = oget paths0.[x.`2] in
-                     RO.m{2}  = ro0.[rcons p (v+^x.`1) <- y.`1] /\ 
+                     F.RO.m{2}  = ro0.[rcons p (v+^x.`1) <- y.`1] /\ 
                      G1.paths = paths0.[y.`2 <- (rcons p (v +^ x.`1), y.`1)]
-                   else RO.m = ro0 /\ G1.paths = paths0){2}).
+                   else F.RO.m = ro0 /\ G1.paths = paths0){2}).
         + wp 1 1;conseq (_: ={y} /\
                             if mem (dom paths0) x{2}.`2 then
                               let (p0, v0) = oget paths0.[x{2}.`2] in
-                              RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
+                              F.RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
                               G1.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
-                            else RO.m{2} = ro0 /\ G1.paths{2} = paths0);1:smt ml=0.
+                            else F.RO.m{2} = ro0 /\ G1.paths{2} = paths0);1:smt ml=0.
           if{2};2:by auto=>/#.
-          inline{2} RO.f;rcondt{2} 4.
+          inline{2} F.RO.get;rcondt{2} 4.
            + move=> &ml;auto=>/= &mr[][]_[][]_[]->[][][]_ Heqm _[]_[][]_ Hro[] Hpath _ HnPFm.
             rewrite in_dom;case:(G1.paths{mr}.[_]) (Hpath x{mr}.`2)=>//[[p v]]/(_ p v)/=[h][]Hbu Hh b _.
             rewrite -not_def=> /Hro [??h'];rewrite oget_some Hbu => -[][]<- <- /=.
             rewrite  Block.xorwA Block.xorwK Block.xorwC Block.xorw0 -not_def=>/Heqm [c c' f f'].
             by rewrite Hh=> -[][]<- _[]_ Hm;move:HnPFm;rewrite in_dom;case:(x{mr}) Hm=> ??->.
-          swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(rd,y2){2}).
+          swap{2} 3-2;swap{2}6-4;wp;conseq (_:y{1} =(r,y2){2}).
           + progress [-split];rewrite getP_eq oget_some H2/=.
             by move:H2;rewrite in_dom;case:(G1.paths{2}.[_]).
-          transitivity{1} {y <- S.sample();} (true ==> ={y}) (true==>y{1}=(rd,y2){2})=>//;1:by inline*;auto.
-          transitivity{2} {(rd,y2) <- S.sample2();} (true==>y{1}=(rd,y2){2}) (true==> ={rd,y2})=>//;2:by inline*;auto.
+          transitivity{1} {y <- S.sample();} (true ==> ={y}) (true==>y{1}=(r,y2){2})=>//;1:by inline*;auto.
+          transitivity{2} {(r,y2) <- S.sample2();} (true==>y{1}=(r,y2){2}) (true==> ={r,y2})=>//;2:by inline*;auto.
           by call sample_sample2;auto=> /=?[??]->.
-        case (mem (rng G1.handles{2}) (x{2}.`2, I)).
+        case (mem (rng FRO.m{2}) (x{2}.`2, Unknown)).
         + conseq (_:true);[by move=> ??[][]_[]->_->|auto].
         conseq (_: !G1.bcol{2} => 
                oget PF.m{1}.[x{1}] = y{2} /\ 
-               INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} RO.m{2} G1.paths{2}).
+               INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2}).
         + by move=> ??[][]_[]->[][]-> _ _ ->. 
         seq 0 2: ((!G1.bcol{2} /\ ={x, y} /\
-                  INV_CF_G1 G1.handles{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
+                  INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
                      G1.mh{2} G1.mhi{2} ro0 paths0 /\
                   ! mem (dom PF.m{1}) x{1} /\
                   if mem (dom paths0) x{2}.`2 then
                     let (p0, v0) = oget paths0.[x{2}.`2] in
-                    RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
+                    F.RO.m{2} = ro0.[rcons p0 (v0 +^ x{2}.`1) <- y{2}.`1] /\
                     G1.paths{2} = paths0.[y{2}.`2 <- (rcons p0 (v0 +^ x{2}.`1), y{2}.`1)]
-                  else RO.m{2} = ro0 /\ G1.paths{2} = paths0) /\
-                 !mem (rng G1.handles{2}) (x{2}.`2, I) /\
-                 (G1.handles.[hx2]=Some(x.`2,D)){2}).
+                  else F.RO.m{2} = ro0 /\ G1.paths{2} = paths0) /\
+                 !mem (rng FRO.m{2}) (x{2}.`2, Unknown) /\
+                 (FRO.m.[hx2]=Some(x.`2,Known)){2}).
         + auto=> &ml&mr[][]->[]_[][]-> ->[]Hinv []-> -> ^Hrng-> /=.   
-          case (mem (rng G1.handles{mr}) (x{mr}.`2, D))=> Hmem /=.
-          + by split=>//;apply /huniq_hinvD=>//;move:Hinv;rewrite /INV_CF_G1/handles_spec.
+          case (mem (rng FRO.m{mr}) (x{mr}.`2, Known))=> Hmem /=.
+          + by split=>//;apply /huniq_hinvK=>//;move:Hinv;rewrite /INV_CF_G1/handles_spec.
           rewrite -anda_and;split=> [ | {Hinv}Hinv].
           + by apply INV_CF_G1_up_handles=>//[[]]. 
-          rewrite rng_set (huniq_hinvD_h G1.chandle{mr}) ?getP//. 
+          rewrite rng_set (huniq_hinvK_h G1.chandle{mr}) ?getP//. 
           + by move:Hinv;rewrite /INV_CF_G1/handles_spec.
           by rewrite oget_some /=!inE/=;move:Hrng;apply NewLogic.contraLR=>/=;apply rng_rem_le.
         rcondf{2} 1.
@@ -398,7 +398,7 @@ end section AUX.
 
 section.
 
-  declare module D: DISTINGUISHER{Perm, C, PF, G1}.
+  declare module D: DISTINGUISHER{Perm, C, PF, G1, RO}.
   
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi =>
@@ -406,7 +406,7 @@ section.
 
   lemma Real_G1 &m: 
     Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
-    Pr[G1(DRestr(D)).main() @ &m: res] + bound_concrete + 
+    Pr[G1(DRestr(D)).main() @ &m: res] +  ((max_size + 1) ^ 2)%r * mu dstate (pred1 witness) + 
     Pr[G1(DRestr(D)).main() @&m: G1.bcol] + Pr[G1(DRestr(D)).main() @&m: G1.bext].
   proof. 
     apply (RealOrder.ler_trans _ _ _ (Real_Concrete D D_ll &m)).

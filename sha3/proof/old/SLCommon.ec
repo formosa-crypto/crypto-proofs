@@ -19,7 +19,6 @@ clone include Indifferentiability with
   rename [module] "GReal" as "RealIndif"
          [module] "GIdeal"  as "IdealIndif".
 
-
 (** max number of call to the permutation and its inverse, 
     including those performed by the construction. *)
 op max_size : { int | 0 <= max_size } as max_ge0.
@@ -74,8 +73,6 @@ op incl (m m':('a,'b)fmap) =
 (* -------------------------------------------------------------------------- *)
 (** usefull type and operators for the proof **)
 
-type caller = [ I | D ].
-
 type handle  = int.
 
 type hstate = block * handle.
@@ -85,14 +82,6 @@ type ccapacity = capacity * flag.
 type smap    = (state , state    ) fmap.
 type hsmap   = (hstate, hstate   ) fmap.
 type handles = (handle, ccapacity) fmap.
-
-(* Did we use it? *)
-op (<=) (o1 o2 : caller) = o1 = I \/ o2 = D.
-
-(* Did we use it? *)
-op max (o1 o2 : caller) =
-  with o1 = I => o2
-  with o1 = D => D.
 
 pred is_pre_permutation (m mi : ('a,'a) fmap) =
      (forall x, mem (rng m) x => mem (dom mi) x)
