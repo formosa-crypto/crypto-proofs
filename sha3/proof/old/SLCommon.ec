@@ -316,15 +316,13 @@ section COUNT.
 
 end section COUNT.
 
-
-
 (* -------------------------------------------------------------------------- *)
 (** Operators and properties of handles *)
 op hinv (handles:handles) (c:capacity) = 
    find (fun _ => pred1 c \o fst) handles.
 
 op hinvK (handles:handles) (c:capacity) = 
-   find (fun _ => pred1 (c,Known)) handles.
+   find (fun _ => pred1 c) (restr Known handles).
 
 op huniq (handles:handles) = 
   forall h1 h2 cf1 cf2, 
@@ -355,10 +353,10 @@ lemma hinvKP handles c:
   if hinvK handles c = None then forall h, handles.[h] <> Some(c,Known)
   else handles.[oget (hinvK handles c)] = Some(c,Known).
 proof.
-  cut @/pred1/=[[h []->[]Hmem ]|[]->H h ]/= := 
-    findP (fun (_ : handle) => pred1 (c,Known)) handles.
-  + by rewrite oget_some get_oget.
-  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq. 
+  rewrite /hinvK.
+  cut @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
+  + by rewrite oget_some in_dom restrP;case (handles.[h])=>//= /#.
+  by move=>+h-/(_ h);rewrite in_dom restrP -!not_def=> H1 H2;apply H1;rewrite H2. 
 qed.
 
 lemma huniq_hinvK (handles:handles) c: 

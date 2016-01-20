@@ -1,3 +1,4 @@
+pragma -oldip.
 require import Pair Option List FSet NewFMap.
         import NewLogic Fun.
 require IterProc.
@@ -447,7 +448,7 @@ proof.
       { Iter(RRO.I).iter_1s(x,elems (dom (restr Unknown FRO.m) `\` fset1 x)); }
       (={x,FRO.m}/\(in_dom_with FRO.m x Unknown){1}==> ={x,FRO.m}) 
       (={x,FRO.m}/\ (in_dom_with FRO.m x Unknown){1} ==> (rem x FRO.m){1} = FRO.m{2})=>//.
-    + by move=>?&mr[*]2!->_;exists FRO.m{mr}, x{mr}.   
+    + by move=>?&mr[*]2!->?;exists FRO.m{mr}, x{mr}.   
     + symmetry;call (iter1_perm RRO.I iter_perm2);skip=>?&mr[*]2!->?/=;split=>//.
       by apply /perm_eq_sym/perm_to_rem/dom_restr. 
     inline{1}Iter(RRO.I).iter_1s.
@@ -496,7 +497,7 @@ proof.
   eager proc;inline *;wp.
   while (={l,FRO.m} /\ (forall z, mem l z => in_dom_with FRO.m z Unknown){1} /\
          restr Known FRO.m{1} = result{2}).
-  + auto=>?&mr[*]2!->Hz<-?_/=?->/=. 
+  + auto=>?&mr[*]2!->Hz<-?H/=?->/=. 
     split=>[z /mem_drop Hm|];1:by rewrite /in_dom_with dom_set getP !inE /#.
     rewrite restr_set rem_id?dom_restr//.
     by move:H=>/(mem_head_behead witness) /(_ (head witness l{mr})) /= /Hz /#.
