@@ -1,4 +1,5 @@
-(* -------------------------------------------------------------------- *)
+(*------------------- Common Definitions and Lemmas --------------------*)
+
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding.
 require (*--*) FinType BitWord LazyRP Monoid.
@@ -82,7 +83,8 @@ case (zs = [])=> // zs_non_nil. elim ih=> // ->.
 by rewrite (@last_nonempty y z).
 qed.
 
-(* -------------------------------------------------------------------- *)
+(*------------------------------ Primitive -----------------------------*)
+
 clone export LazyRP as Perm with
   type D <- block * capacity,
   op   d <- bdistr * Capacity.cdistr
@@ -91,7 +93,6 @@ clone export LazyRP as Perm with
     [module] "P" as "Perm".
 
 (* ------------------------- Padding/Unpadding ------------------------ *)
-op chunk (bs : bool list) = BitChunking.chunk r bs.
 
 op num0 (n : int) = (-(n + 2)) %% r.
 
@@ -215,7 +216,7 @@ by rewrite -nth_rev 1:/# &(@negbRL _ true) &(before_index) /#.
 qed.
 
 inductive unpad_spec (t : bool list) =
-| Unpad (s : bool list, n : int) of
+  Unpad (s : bool list, n : int) of
       (0 <= n < r)
     & (r %| (size s + n + 2))
     & (t = s ++ [true] ++ nseq n false ++ [true]).
@@ -230,6 +231,10 @@ apply/(Unpad s (num0 (size s))).
   by rewrite num0_ge0 num0_ltr. by rewrite dvd_r_num0.
 by rewrite -padE ?dvd_r_num0 // num0_ge0 num0_ltr.
 qed.
+
+(*------------------------------ Chunking ------------------------------*)
+
+op chunk (bs : bool list) = BitChunking.chunk r bs.
 
 lemma size_chunk bs : size (chunk bs) = size bs %/ r.
 proof. by apply/BitChunking.size_chunk/gt0_r. qed.
@@ -257,6 +262,8 @@ lemma flattenK bs :
   (forall b, mem bs b => size b = r) => chunk (flatten bs) = bs.
 proof. by apply/BitChunking.flattenK/gt0_r. qed.
 
+(*--------------- Converting Between Block Lists and Bits --------------*)
+
 op blocks2bits (xs:block list) : bool list = flatten (map w2bits xs).
 
 lemma blocks2bits_nil : blocks2bits [] = [].
@@ -280,7 +287,6 @@ qed.
 lemma size_blocks2bits_dvd_r (xs : block list) : r %| size(blocks2bits xs).
 proof. by rewrite size_blocks2bits dvdz_mulr dvdzz. qed.
 
-(* -------------------------------------------------------------------- *)
 op bits2blocks (xs : bool list) : block list = map bits2w (chunk xs).
 
 lemma bits2blocks_nil : bits2blocks [] = [].
@@ -319,7 +325,8 @@ have map_tolistK :
 by rewrite map_tolistK; [apply in_chunk_size | exact chunkK].
 qed.
 
-(* -------------------------------------------------------------------- *)
+(*-------------- Padding to Blocks / Unpadding from Blocks -------------*)
+
 op pad2blocks : bool list -> block list  = bits2blocks \o pad.
 op unpad_blocks : block list -> bool list option = unpad \o blocks2bits.
 
@@ -342,7 +349,8 @@ have -> : pad(oget(unpad bs)) = bs
 by rewrite /bs blocks2bitsK.
 qed.
 
-(* ------------------------ Extending/Stripping ----------------------- *)
+(*-------------------------- Extending/Stripping -----------------------*)
+
 op extend (xs : block list) (n : int) =
   xs ++ nseq n b0.
 
@@ -392,35 +400,40 @@ pose s := (_ - _)%Int; rewrite -/i (_ : s = i - (j+1)) /s 1:#ring.
 by rewrite subr_ge0 -ltzE lt_ji /= ltr_snaddr // oppr_lt0 ltzS.
 qed.
 
-(*------------------------------ Validity ----------------------------- *)
+(*------------------------------ Validity ------------------------------*)
 
 (* in TopLevel *)
+
 op valid_toplevel (_ : bool list) = true.
 
 (* in Block *)
+
 op valid_block (xs : block list) = unpad_blocks xs <> None.
 
-lemma nosmt valid_block_prop (xs : block list) :
-  valid_block xs <=>
-  exists (s : bool list, n : int),
-  0 <= n < r /\ blocks2bits xs = s ++ [true] ++ nseq n false ++ [true].
+inductive valid_block_spec (xs : block list) =
+  ValidBlock (s : bool list, n : int) of
+      (0 <= n < r)
+    & (blocks2bits xs = s ++ [true] ++ nseq n false ++ [true]).
+
+lemma nosmt valid_blockP (xs : block list) :
+  valid_block xs <=> valid_block_spec xs.
 proof.
-rewrite /valid_block /unpad_blocks /(\o).
-split=> [vb | [s n] [rng_n b2b]].
+split=> [vb | [s n] [rng_n b2b] b2b_xs_eq].
 have [up _] := (unpadP (blocks2bits xs)).
 rewrite vb /= in up; case: up=> [s n rng_n _ b2b].
-by exists s, n.
-apply unpadP; apply (Unpad s n)=> //.
+by apply (@ValidBlock xs s n).
+rewrite unpadP (@Unpad (blocks2bits xs) s n) //.
 have <- : size (blocks2bits xs) = size s + n + 2
-  by rewrite b2b 3!size_cat /= size_nseq max_ler /#ring.
-rewrite size_blocks2bits_dvd_r.
+  by rewrite b2b_xs_eq 3!size_cat /= size_nseq max_ler /#ring.
+by apply size_blocks2bits_dvd_r.
 qed.
 
 lemma valid_block_ends_not_b0 (xs : block list) :
   valid_block xs => last b0 xs <> b0.
 proof.
-move=> vb_xs; have bp := valid_block_prop xs.
-rewrite vb_xs /= in bp; elim bp=> [s n] [_ b2b_xs_eq].
+move=> vb_xs; have bp := valid_blockP xs.
+rewrite vb_xs /= in bp.
+move: bp=> [s n] _ b2b_xs_eq.
 case: (last b0 xs <> b0)=> [// | last_xs_eq_b0].
 rewrite nnot in last_xs_eq_b0.
 have xs_non_nil : xs <> [] by smt ml=0.
@@ -437,19 +450,23 @@ have last_b2b_xs_false : last true (blocks2bits xs) = false
 by rewrite last_b2b_xs_true in last_b2b_xs_false.
 qed.
 
-lemma nosmt valid_block_prop_alt (xs : block list) :
-  valid_block xs <=>
-  (exists (ys : block list, x : block, s : bool list, n : int),
-   xs = ys ++ [x] /\ 0 <= n /\
-   w2bits x = s ++ [true] ++ nseq n false ++ [true]) \/
-  (exists (ys : block list, y z : block),
-   xs = ys ++ [y; z] /\ last false (w2bits y) /\
-   w2bits z = nseq (r - 1) false ++ [true]).
+inductive valid_block_struct_spec (xs : block list) =
+  ValidBlockStruct1 (ys : block list, x : block, s : bool list, n : int) of
+      (xs = ys ++ [x])
+    & (0 <= n)
+    & (w2bits x = s ++ [true] ++ nseq n false ++ [true])
+| ValidBlockStruct2 (ys : block list, y z : block) of
+     (xs = ys ++ [y; z])
+   & (last false (w2bits y))
+   & (w2bits z = nseq (r - 1) false ++ [true]).
+
+lemma nosmt valid_block_structP (xs : block list) :
+  valid_block xs <=> valid_block_struct_spec xs.
 proof.
-rewrite valid_block_prop.
-split=>[[s n] [[ge0_n lt_nr] b2b_xs_eq] |
-        [[ys x s n] [xs_eq [ge0_n w2b_ys_eq]] |
-         [ys y z] [xs_eq [lst_w2b_y w2b_z_eq]]]].
+rewrite valid_blockP.
+split=> [[s n] [ge0_n lt_nr] b2b_xs_eq |
+         [ys x s n xs_eq ge0_n w2b_x_eq |
+          ys y z xs_eq lst w2b_z_eq]].
 have sz_s_divz_eq : size s = size s %/ r * r + size s %% r
   by apply divz_eq.
 pose tke := take (size s %/ r * r) s; pose drp := drop (size s %/ r * r) s.
@@ -487,7 +504,6 @@ rewrite -(@cat_take_drop (size s %/ r * r) s) -!catA -/tke -/drp
 + have -> : size drp + (1 + (n + 1)) = size drp + n + 2 by ring.
 + rewrite sz_drp_plus_n_plus_2_dvd_r.
 case: (n = r - 1)=> [n_eq_r_min1 | n_neq_r_min1].
-right.
 have sz_drp_plus1_dvd_r : r %| (size drp + 1).
   rewrite dvdzE -(@addz0 (size drp + 1)) -{1}(@modzz r).
   have {1}-> : r = n + 1 by smt ml=0.
@@ -499,23 +515,16 @@ have sz_drp_plus1_eq_r : size drp + 1 = r.
   split=> [| _]; first rewrite ltr_paddl 1:size_ge0 ltr01.
   have -> : 2 * r = r + r by ring.
   rewrite ltr_add // 1:sz_drp 1:ltz_pmod 1:gt0_r ltzE ge2_r.
-exists (bits2blocks tke),
-       (bits2w (drp ++ [true])),
-       (bits2w (nseq n false ++ [true])).       
-split.
-rewrite xs_eq.
-rewrite (@catA drp [true]) bits2blocks_cat 1:size_cat //
-        1:size_cat 1:size_nseq 1:max_ler 1:ge0_n /= 1:/#.
-rewrite (@bits2blocks_sing (drp ++ [true])) 1:size_cat //.
-rewrite (@bits2blocks_sing (nseq n false ++ [true])).
-rewrite size_cat size_nseq max_ler /= 1:ge0_n /#.
-by rewrite catA.
-do 2! rewrite tolistK 1:size_cat //=.
-+ rewrite size_nseq max_ler 1:ge0_n /#.
-split; first rewrite cats1 last_rcons.
-have -> // : n = r - 1 by smt ml=0.
+apply (@ValidBlockStruct2 xs (bits2blocks tke)
+      (bits2w (drp ++ [true])) (bits2w (nseq n false ++ [true]))).
+rewrite xs_eq (@catA drp [true]) bits2blocks_cat 1:size_cat //
+        1:size_cat 1:size_nseq 1:max_ler 1:ge0_n /= 1:/#
+        (@bits2blocks_sing (drp ++ [true])) 1:size_cat //
+        (@bits2blocks_sing (nseq n false ++ [true]))
+        1:size_cat 1:size_nseq /= 1:max_ler 1:ge0_n /#.
+rewrite tolistK 1:size_cat //= cats1 last_rcons.
+rewrite n_eq_r_min1 tolistK 1:size_cat //= size_nseq max_ler /#.
 have lt_n_r_min1 : n < r - 1 by smt ml=0.
-left.
 move: xs_eq.
 have sz_drp_plus_n_plus_2_eq_r : size drp + n + 2 = r.
   rewrite (@dvdz_close (size drp + n + 2)) // sz_drp.
@@ -533,43 +542,47 @@ rewrite (@bits2blocks_sing
 + rewrite !size_cat /= size_nseq max_ler 1:ge0_n 1:sz_drp.
 +   have -> : size s %% r + (1 + (n + 1)) = size s %%r + n + 2 by ring.
 +   by rewrite -sz_drp.
-exists (bits2blocks tke),
-       (bits2w(drp ++ ([true] ++ (nseq n false ++ [true])))),
-       drp, n.
-split=> //; split=> //.
+apply (@ValidBlockStruct1 xs (bits2blocks tke)
+       (bits2w(drp ++ ([true] ++ (nseq n false ++ [true]))))
+       drp n)=> //.
 by rewrite tolistK 1:!size_cat /= 1:size_nseq 1:max_ler 1:ge0_n
            1:-sz_drp_plus_n_plus_2_eq_r 1:#ring -!catA cat1s.
-exists (blocks2bits ys ++ s), n; split.
 have sz_w2b_x_eq_r : size(w2bits x) = r by apply size_tolist.
-rewrite w2b_ys_eq !size_cat /= size_nseq max_ler // in sz_w2b_x_eq_r.
-split=> // _; smt ml=0 w=(size_ge0).
-by rewrite xs_eq blocks2bits_cat blocks2bits_sing w2b_ys_eq !catA.
-exists (blocks2bits ys ++ (take (r - 1) (w2bits y))), (r - 1).
-split; first smt ml=0 w=(gt0_r).
-rewrite xs_eq blocks2bits_cat; have -> : [y; z] = [y] ++ [z] by trivial.
-rewrite blocks2bits_cat 2!blocks2bits_sing -!catA; congr.
-have {1}-> : w2bits y = take (r - 1) (w2bits y) ++ [true].
+rewrite w2b_x_eq !size_cat /= size_nseq max_ler // in sz_w2b_x_eq_r.
+have lt_nr : n < r by smt ml=0 w=(size_ge0).
+apply (@ValidBlock xs (blocks2bits ys ++ s) n)=> //.
+by rewrite xs_eq blocks2bits_cat blocks2bits_sing w2b_x_eq -!catA.
+move: xs_eq. have -> : [y; z] = [y] ++ [z] by trivial. move=> xs_eq.
+have w2bits_y_eq : w2bits y = take (r - 1) (w2bits y) ++ [true].
   rewrite -{1}(@cat_take_drop (r - 1) (w2bits y)); congr.
   elim (last_drop_all_but_last false (w2bits y))=>
     [w2b_y_nil | drop_w2b_y_last].
     have not_lst_w2b_y : ! last false (w2bits y) by rewrite w2b_y_nil.
-    done.
-  rewrite lst_w2b_y in drop_w2b_y_last.
+    by rewrite w2b_y_nil.
+  rewrite lst in drop_w2b_y_last.
   by rewrite -drop_w2b_y_last size_tolist.
-by rewrite w2b_z_eq !catA.
+apply (@ValidBlock xs (blocks2bits ys ++ (take (r - 1) (w2bits y)))
+       (r - 1)).
+smt ml=0 w=(ge2_r).
+rewrite xs_eq 2!blocks2bits_cat 2!blocks2bits_sing -!catA; congr.
+by rewrite {1}w2bits_y_eq -catA w2b_z_eq.
 qed.
 
 (* in Absorb *)
+
 op valid_absorb (xs : block list) = valid_block((strip xs).`1).
 
-lemma nosmt valid_absorb_prop (xs : block list) :
-  valid_absorb xs <=>
-  exists (ys : block list, n : int),
-  0 <= n /\ xs = ys ++ nseq n b0 /\ valid_block ys.
+inductive valid_absorb_spec (xs : block list) =
+  ValidAbsorb (ys : block list, n : int) of
+      (valid_block ys)
+    & (0 <= n)
+    & (xs = ys ++ nseq n b0).
+
+lemma nosmt valid_absorbP (xs : block list) :
+  valid_absorb xs <=> valid_absorb_spec xs.
 proof.
-rewrite /valid_absorb; split=> [strp_xs_valid | [ys n] [ge0_n [-> vb_ys]]].
-exists (strip xs).`1, (strip xs).`2.
-split; [apply (@strip_ge0 xs) | split=> //].
-by rewrite -/(extend (strip xs).`1 (strip xs).`2) eq_sym (@stripK xs).
+rewrite /valid_absorb; split=> [strp_xs_valid | [ys n] ge0_n vb_ys ->].
+by rewrite (@ValidAbsorb xs (strip xs).`1 (strip xs).`2)
+           2:(@strip_ge0 xs) 2:(@stripK xs).
 by rewrite -/(extend ys n) extendK 1:valid_block_ends_not_b0.
 qed.
