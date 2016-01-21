@@ -410,6 +410,12 @@ op valid_toplevel (_ : bool list) = true.
 
 op valid_block (xs : block list) = unpad_blocks xs <> None.
 
+lemma valid_pad2blocks (bs : bool list) :
+  valid_block(pad2blocks bs).
+proof.
+by rewrite /valid_block pad2blocksK.
+qed.
+
 inductive valid_block_spec (xs : block list) =
   ValidBlock (s : bool list, n : int) of
       (0 <= n < r)
