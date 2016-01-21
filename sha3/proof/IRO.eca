@@ -1,6 +1,7 @@
-(* infinite random oracle: it ranges over infinite length bitstrings,
-   all of whose bits are sampled uniformly and independently. We
-   obviously make it lazy. *)
+(* Infinite random oracle, mapping values of type [from] to infinite
+   sequences of values of type [to], each sampled uniformly and
+   independently. We obviously make it lazy. Inputs not satisfying
+   a validity predicate are mapped to the empty list *)
 
 require import Option Int Bool List FSet NewFMap.
 
@@ -12,7 +13,7 @@ op dto   : to distr.
 module type IRO = {
   proc init() : unit
 
-  (* f x, returning the first n bits of the result *)
+  (* f x, returning the first n elements of the result *)
   proc f(x : from, n : int) : to list
 }.
 
@@ -28,7 +29,7 @@ pred prefix_closed' (m : (from * int,to) fmap) =
     0 <= i < n =>
     mem (dom m) (x,i).
 
-lemma cool m: prefix_closed m <=> prefix_closed' m
+lemma prefix_closed_equiv m: prefix_closed m <=> prefix_closed' m
 by [].
 
 (* official version: *)
