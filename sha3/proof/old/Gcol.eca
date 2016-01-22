@@ -9,6 +9,19 @@ clone export Handle as Handle0.
 
 (* -------------------------------------------------------------------------- *)
 
+ (* TODO: move this *)
+  lemma c_gt0r : 0%r < (2^c)%r.
+  proof. by rewrite lt_fromint;apply /powPos. qed.
+
+  lemma c_ge0r : 0%r <= (2^c)%r.
+  proof. by apply /ltrW/c_gt0r. qed. 
+
+  lemma eps_ge0 : 0%r <= (2 * max_size)%r / (2 ^ c)%r. 
+  proof.
+    apply divr_ge0;1:by rewrite le_fromint;smt ml=0 w=max_ge0. 
+    by apply c_ge0r. 
+  qed.
+
 section PROOF.
   declare module D: DISTINGUISHER{C, PF, G1}.
 
@@ -280,19 +293,6 @@ section PROOF.
     auto;progress;3:by smt ml=0.
     + by rewrite rng_set rem0 rng0 fset0U fcard1.
     by apply max_ge0. 
-  qed.
-
-  (* TODO: move this *)
-  lemma c_gt0r : 0%r < (2^c)%r.
-  proof. by rewrite lt_fromint;apply /powPos. qed.
-
-  lemma c_ge0r : 0%r <= (2^c)%r.
-  proof. by apply /ltrW/c_gt0r. qed. 
-
-  local lemma eps_ge0 : 0%r <= (2 * max_size)%r / (2 ^ c)%r. 
-  proof.
-    apply divr_ge0;1:by rewrite le_fromint;smt ml=0 w=max_ge0. 
-    by apply c_ge0r. 
   qed.
 
   local lemma Pr_col &m : 

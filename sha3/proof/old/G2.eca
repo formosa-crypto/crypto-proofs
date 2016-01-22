@@ -287,8 +287,7 @@ section EXT.
     proc f (h:handle) = {
       var c;
       c <$ cdistr;
-      if (card (dom G1.m) <= max_size /\ 
-          card (dom G1.mi) <= max_size /\ count < max_size) {
+      if (size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size) {
         G1.bext   <- G1.bext \/ mem (image snd (dom G1.m `|` dom G1.mi)) c;
         FRO.m.[h] <- (c,Unknown);
         count = count + 1 ; 
@@ -298,8 +297,7 @@ section EXT.
    proc f1 (x:capacity,h:handle) = {
       var c;
       c <$ cdistr;
-      if (card (dom G1.m) < max_size /\ 
-          card (dom G1.mi) < max_size /\ count < max_size) {
+      if (size G1.m < max_size /\ size G1.mi < max_size /\ ReSample.count < max_size) {
         G1.bext   <- G1.bext \/ mem (image snd (dom G1.m `|` dom G1.mi) `|` fset1 x) c;
         FRO.m.[h] <- (c,Unknown);
         count = count + 1;
@@ -505,20 +503,21 @@ section EXT.
 
   local equiv EG2_Gext : Eager(G2(DRestr(D))).main2 ~ Gext.distinguish: 
      ={glob D} ==> 
+       ReSample.count{2} <= max_size /\
        (G1.bext{1} \/ inv_ext G1.m{1} G1.mi{1} FRO.m{1}) =>
         G1.bext{2}.
   proof.
     proc;inline *;wp.
-    while (={l,FRO.m,G1.m,G1.mi} /\ card (dom G1.m){2} <= max_size /\ 
-             card (dom G1.mi){2} <= max_size /\ 
+    while (={l,FRO.m,G1.m,G1.mi} /\ size G1.m{2} <= max_size /\ 
+             size G1.mi{2} <= max_size /\ 
             ReSample.count{2} + size l{2} <= max_size /\ 
             ((G1.bext{1} \/
              exists (x : state) (h : handle),
                mem (dom G1.m{1} `|` dom G1.mi{1}) x /\
                FRO.m{1}.[h] = Some (x.`2, Unknown) /\ !mem l{1} h) => 
              G1.bext{2})). 
-    + rcondt{2} 3.
-      + by move=> &m;auto=> &m'[#] 6!-> /= + _ _;case (l{m'})=>//=; smt w=List.size_ge0.
+    + rcondt{2} 3.  
+      + move=> &m;auto=> &m'[#] 6!-> /= + _ _;case (l{m'})=>//=; smt w=List.size_ge0.
       auto=> &ml&mr[#]6!->;case(l{mr})=>[//|h1 l1/=Hle Hext c->/=];split.
       + smt w=(drop0 size_ge0).
       rewrite drop0=>-[H|[x h][#]];1:by rewrite Hext // H.
@@ -598,9 +597,47 @@ section EXT.
   qed.
 
   local lemma Pr_ext &m: 
-    Pr[Gext.distinguish()@ &m : G1.bext] <= (max_size^2)%r / (2^c)%r.
+    Pr[Gext.distinguish()@&m : G1.bext /\ ReSample.count <= max_size] <=
+       max_size%r * ((2*max_size)%r / (2^c)%r).
   proof. 
-    admit. 
+    fel 8 ReSample.count (fun x=> (2*max_size)%r / (2^c)%r)
+      max_size G1.bext 
+      [ReSample.f : 
+        (size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size);
+       ReSample.f1 : 
+        (size G1.m < max_size /\ size G1.mi < max_size /\ ReSample.count < max_size)
+      ]=> //; 2:by auto.
+    + rewrite /felsum Bigreal.sumr_const count_predT size_range.
+      apply ler_wpmul2r;1:by apply eps_ge0.
+      by rewrite le_fromint;smt ml=0 w=max_ge0. 
+    + proc. 
+      case ((size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size));
+       [rcondt 2 | rcondf 2]; 1,3:by auto. 
+      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi)));skip=> &hr[#]?->/=???.
+        rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr})) cdistr (1%r/(2^c)%r))//.
+        + move=>x _;apply DWord.muxP.
+        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+        rewrite imageU fcardU le_fromint. 
+        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
+        rewrite -!sizeE;smt w=fcard_ge0.
+      by hoare=>[??|];[apply eps_ge0|auto].
+    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
+    + by move=> b1 c1;proc;auto=> &hr [^H 2->].
+    + proc. 
+      case ((size G1.m < max_size /\ size G1.mi < max_size /\ ReSample.count < max_size));
+       [rcondt 2 | rcondf 2]; 1,3:by auto. 
+      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi ) `|` fset1 x));skip=> &hr[#]?->/=???.
+        rewrite (Mu_mem.mu_mem 
+                   (image snd (dom G1.m{hr} `|` dom G1.mi{hr}) `|` fset1 x{hr})
+                   cdistr (1%r/(2^c)%r))//.
+        + move=>x _;apply DWord.muxP.
+        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+        rewrite imageU !fcardU le_fromint fcard1. 
+        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
+        rewrite -!sizeE;smt w=fcard_ge0.
+      by hoare=>[??|];[apply eps_ge0|auto].
+    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
+    by move=> b1 c1;proc;auto=> &hr [^H 2->].
   qed.
 
 end section EXT.
