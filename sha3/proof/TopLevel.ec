@@ -1,7 +1,7 @@
 (*------------------------- Sponge Construction ------------------------*)
 
-require import Pair Int IntDiv Real List Option FSet NewFMap DBool.
-require import Fun Common.
+require import Fun Pair Int IntDiv Real List Option FSet NewFMap DBool.
+require import Common StdOrder. import IntOrder.
 require (*--*) IRO Block.
 
 (*------------------------- Indifferentiability ------------------------*)
@@ -186,7 +186,7 @@ local module RaiseBIROBLazy (F : BLOCK_IRO_BITS) : FUNCTIONALITY = {
     var cs;
 
     cs <@ F.g(pad2blocks bs, n);
-    return take n cs;
+    return cs;
   }
 }.
 
@@ -214,36 +214,58 @@ case (valid_block xs{1}).
 rcondt{1} 3; first auto. rcondt{2} 4; first auto.
 inline *. rcondt{1} 7; first auto.
 seq 6 3 : 
-  (={n, n0} /\ xs{1} = xs0{2} /\ n0{1} = n{1} * r /\
+  (={i, n0} /\ bs{1} = bs0{2} /\
    LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} /\
-   valid_block xs{1} /\ pad2blocks x{1} = xs0{2}).
+   pad2blocks x{1} = xs0{2}).
 auto; progress; have {2}<- /# := unpadBlocksK xs0{2}.
-admit.
+wp.
+while
+  (={i, n0} /\ bs{1} = bs0{2} /\
+   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} /\
+   pad2blocks x{1} = xs0{2}).
+sp; auto.
+if.
+progress; smt ml=0.
+rnd; auto; progress; smt. (* will get rid of smt's *)
+auto; progress; smt.
+auto.
 rcondf{1} 3; first auto. rcondf{2} 4; first auto.
 auto; progress; by rewrite bits2blocks_nil.
 qed.
 
-(* TODO:
- 
- IRO.f ~ RaiseBIROBLazy(BlockIROBitsLazy).f *)
-
-(* TODO:
-BlockIROBitsEager.f ~ Block.BIRO.IRO.f
-
-BlockIROBitsEager.fi ~ Block.BIRO.IRO.fi
-
-RaiseFun(BlockIROBitsEager).f ~ RaiseFun(Block.BIRO.IRO).f
-*)
+local lemma IRO_RaiseBIROBLazy_BlockIROBitsLazy_f :
+  equiv[IRO.f ~ RaiseBIROBLazy(BlockIROBitsLazy).f :
+        ={n} /\ x{1} = bs{2} /\
+        LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} ==>
+        ={res} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}].
+proof.
+proc=> /=; inline *.
+rcondt{1} 3; first auto.
+rcondt{2} 5; first auto; progress; apply valid_pad2blocks.
+seq 2 4 :
+  (={i, n} /\ n{1} = n0{2} /\ xs{2} = pad2blocks x{1} /\ bs{1} = bs0{2} /\
+   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}); first auto.
+wp.
+while
+  (={i, n} /\ n{1} = n0{2} /\ xs{2} = pad2blocks x{1} /\ bs{1} = bs0{2} /\
+   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}).
+wp; sp.
+if.
+progress; smt.  (* will get rid of smt's *)
+rnd; skip; progress; smt.
+auto; progress; smt.
+auto.
+qed.
 
 local lemma BlockIROBitsEager (D <: BLOCK_IRO_BITS_DIST) :
   equiv[D(BlockIROBitsEager).distinguish ~ D(BlockIROBitsLazy).distinguish : 
         ={glob D} /\ BlockIROBitsEager.mp{1} = BlockIROBitsLazy.mp{2} ==>
         ={glob D}].
 proof.
-admit.
+admit. (* use RndO.ec result *)
 qed.
 
-pred BlockIROBits_Eager_Invar
+pred EagerInvar
      (mp1 : (block list * int, block) fmap,
       mp2 : (block list * int, bool) fmap) =
   (forall (xs : block list, i : int),
@@ -255,6 +277,39 @@ pred BlockIROBits_Eager_Invar
   (forall (xs : block list, j : int),
    mem (dom mp2) (xs, j) =>
    0 <= j /\ mem (dom mp1) (xs, j %/ r)).
+
+local lemma BlockIROBitsEager_BlockIRO_f :
+  equiv[BlockIROBitsEager.f ~ Block.BIRO.IRO.f :
+        xs{1} = x{2} /\ ={n} /\
+        EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+        ={res} /\ EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}].
+proof.
+proc=> /=.
+inline BlockIROBitsEager.g.
+seq 5 2 :
+  (xs0{1} = x{2} /\ bs0{1} = [] /\ bs{2} = [] /\ n0{1} = n{2} * r /\
+   n0{1} = m{1} /\
+   EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}).
+auto; progress.
+rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r //.
+have -> // : (r - 1) %/ r = 0 by smt. (* TODO *)
+if=> //.
+(* 
+second while loop in {1} is redundant
+what's left is to deal with sampling... *)
+admit.
+auto; progress; by rewrite bits2blocks_nil.
+qed.
+
+local lemma RaiseFun_BlockIROBitsEager_BlockIRO_f :
+  equiv[RaiseFun(BlockIROBitsEager).f ~ RaiseFun(Block.BIRO.IRO).f :
+        ={bs, n} /\
+        EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+        ={res} /\
+        EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}].
+proof.
+proc=> /=; by call BlockIROBitsEager_BlockIRO_f.
+qed.
 
 local lemma Sponge_Raise_Block_Sponge_f :
   equiv[Sponge(Perm).f ~ RaiseFun(Block.Sponge(Perm)).f :
@@ -311,12 +366,14 @@ call
   ={glob Dist, glob BlockSim} /\
   IRO.mp{1} = map0 /\ BlockIROBitsLazy.mp{2} = map0 ==>
   ={res}).
-proc (={glob BlockSim}).
-smt.
-smt.
-admit.
-admit.
-admit.
+proc (={glob BlockSim} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}).
+smt.  (* will remove this *)
+trivial.
+proc (LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2})=> //.
+apply LowerFun_IRO_BlockIROBitsLazy_f.
+proc (LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2})=> //.
+apply LowerFun_IRO_BlockIROBitsLazy_f.
+by conseq IRO_RaiseBIROBLazy_BlockIROBitsLazy_f.
 auto.
 qed.
 
@@ -352,13 +409,15 @@ call
   ={glob Dist, glob BlockSim} /\
   BlockIROBitsEager.mp{1} = map0 /\ Block.BIRO.IRO.mp{2} = map0 ==>
   ={res}).
-proc (={glob BlockSim}).
-smt.
-smt.
-proc (true); first 2 smt.
-admit.
-admit.
-admit.
+proc
+  (={glob BlockSim} /\
+   EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}) => //.
+smt. (* TODO *)
+proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
+conseq BlockIROBitsEager_BlockIRO_f=> //.
+proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
+conseq BlockIROBitsEager_BlockIRO_f=> //.
+conseq RaiseFun_BlockIROBitsEager_BlockIRO_f=> //.
 auto.
 qed.
 
