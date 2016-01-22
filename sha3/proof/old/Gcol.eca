@@ -316,6 +316,14 @@ section PROOF.
     move=> b c;proc;sp;if;auto;smt ml=0.
   qed.
 
+  lemma Pr_G1col &m: 
+    Pr[G1(DRestr(D)).main() @ &m : G1.bcol] <= max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+    apply (ler_trans Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size]).
+    + byequiv G1col=> //#.
+    apply (Pr_col &m).
+  qed.
+
 end section PROOF.
 
 
