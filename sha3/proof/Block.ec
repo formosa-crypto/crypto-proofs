@@ -21,7 +21,8 @@ clone include Indifferentiability with
 clone import IRO as BIRO with
   type from <- block list,
   type to   <- block,
-  op valid  <- valid_block.
+  op valid  <- valid_block,
+  op dto    <- bdistr.
 
 (*------------------------- Sponge Construction ------------------------*)
 
