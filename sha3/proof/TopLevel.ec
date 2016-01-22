@@ -287,16 +287,20 @@ proof.
 proc=> /=.
 inline BlockIROBitsEager.g.
 seq 5 2 :
-  (xs0{1} = x{2} /\ bs0{1} = [] /\ bs{2} = [] /\ n0{1} = n{2} * r /\
+  (={i} /\ xs0{1} = x{2} /\ bs0{1} = [] /\ bs{2} = [] /\ n0{1} = n{2} * r /\
    n0{1} = m{1} /\
    EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}).
 auto; progress.
 rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r //.
 have -> // : (r - 1) %/ r = 0 by smt. (* TODO *)
 if=> //.
-(* 
-second while loop in {1} is redundant
-what's left is to deal with sampling... *)
+rcondf{1} 2; auto; first while (true); auto.
+conseq
+  (_ :
+   ={i} /\ n0{1} = n{2} * r /\ xs0{1} = x{2} /\ bs0{1} = [] /\ bs{2} = [] /\
+   EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+  bits2blocks bs0{1} = bs{2} /\
+  EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
 admit.
 auto; progress; by rewrite bits2blocks_nil.
 qed.
@@ -413,10 +417,10 @@ proc
   (={glob BlockSim} /\
    EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}) => //.
 smt. (* TODO *)
-proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
-conseq BlockIROBitsEager_BlockIRO_f=> //.
-proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
-conseq BlockIROBitsEager_BlockIRO_f=> //.
+proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //;
+  conseq BlockIROBitsEager_BlockIRO_f=> //.
+proc (EagerInvar Block.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //;
+  conseq BlockIROBitsEager_BlockIRO_f=> //.
 conseq RaiseFun_BlockIROBitsEager_BlockIRO_f=> //.
 auto.
 qed.
