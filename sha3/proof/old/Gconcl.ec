@@ -7,13 +7,7 @@ require (*..*) Gext.
 
 module IF = {
   proc init = F.RO.init
-  proc f(p:block list) = {
-    var sa <- b0;
-    if (1 <= size p /\ p <> [b0]) {
-      sa <@ F.RO.get(p);
-    }
-    return sa;
-  }
+  proc f = F.RO.get
 }.
 
 module S(F : DFUNCTIONALITY) = {
@@ -81,24 +75,22 @@ local module G3(RO:F.RO) = {
       var sa, sa';
       var h, i <- 0; 
       sa <- b0;
-      if (1 <= size p /\ p <> [b0]) {
-        while (i < size p ) {
-          if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
-            RO.sample(take (i+1) p);
-            (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
-          } else {
-            RRO.sample(G1.chandle);
-            sa'                 <@ RO.get(take (i+1) p);
-            sa                  <- sa +^ nth witness p i;
-            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
-            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-            (sa,h)              <- (sa',G1.chandle);
-            G1.chandle          <- G1.chandle + 1;
-          }
-          i        <- i + 1;
+      while (i < size p ) {
+        if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+          RO.sample(take (i+1) p);
+          (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
+        } else {
+          RRO.sample(G1.chandle);
+          sa'                 <@ RO.get(take (i+1) p);
+          sa                  <- sa +^ nth witness p i;
+          G1.mh.[(sa,h)]      <- (sa', G1.chandle);
+          G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+          (sa,h)              <- (sa',G1.chandle);
+          G1.chandle          <- G1.chandle + 1;
         }
-        sa <- RO.get(p);
+        i        <- i + 1;
       }
+      sa <- RO.get(p);
       return sa;
     }
   }
@@ -256,9 +248,6 @@ proof.
   by inline F.LRO.sample;sim.
 qed.
 
-local equiv G3_G3: G3(F.LRO).distinguish ~ G3(F.RO).distinguish : ={glob G3,F.RO.m} ==> ={res}.
-proof. symmetry;conseq (F.RO_LRO_D G3)=> //. qed.
-  
 local module G4(RO:F.RO) = {
 
   module C = {
@@ -267,13 +256,11 @@ local module G4(RO:F.RO) = {
       var sa;
       var h, i <- 0; 
       sa <- b0;
-      if (1 <= size p /\ p <> [b0]) {
-        while (i < size p ) {
-          RO.sample(take (i+1) p);
-          i        <- i + 1;
-        }
-        sa <- RO.get(p);
+      while (i < size p ) {
+        RO.sample(take (i+1) p);
+        i        <- i + 1;
       }
+      sa <- RO.get(p);
       return sa;
     }
   }
@@ -352,31 +339,20 @@ proof.
     by if{1};sim;inline *;auto.
   proc;sp;if=>//.
   call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
-  sp;if=>//;sim; while(={i,p,F.RO.m})=>//.
+  sp;sim; while(={i,p,F.RO.m})=>//.
   inline F.RO.sample F.RO.get;if{1};1:by auto. 
   by sim;inline *;auto;progress;apply DWord.cdistr_ll.
 qed.
   
-local equiv G4_G4 : G4(F.RO).distinguish ~ G4(F.LRO).distinguish : ={glob G4,F.RO.m} ==> ={res}.
-proof. conseq (F.RO_LRO_D G4)=> //. qed.
-
 local equiv G4_Ideal : G4(F.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :
    ={glob D} ==> ={res}.
 proof.
   proc;inline *;wp.
   call (_: ={C.c,F.RO.m} /\ G1.m{1}=S.m{2} /\ G1.mi{1}=S.mi{2} /\ G1.paths{1}=S.paths{2}).
-  + proc;sp;if=>//.
-    call (_: ={C.c,F.RO.m} /\ G1.m{1}=S.m{2} /\ G1.mi{1}=S.mi{2} /\ G1.paths{1}=S.paths{2});
-      2: by auto.
-    if=>//;sim;if=> //;2:by auto.
-    inline{2} IF.f;rcondt{2} 4.
-    + auto;progress. smt w=(size_rcons List.size_ge0). 
-      admit.
-    by inline *;sim.
-  + by sim.     
+  + by sim. + by sim.     
   + proc;sp;if=>//.
     call (_: ={F.RO.m});2:by auto.
-    sp;if=>//;sim.
+    inline F.LRO.get F.FRO.sample;wp 7 2;sim.
     by while{1} (true) (size p - i){1};auto;1:inline*;auto=>/#.
   by auto.
 qed.
@@ -396,9 +372,10 @@ proof.
   apply (ler_trans _ _ _ (Real_G2 D D_ll &m)).
   rewrite !(ler_add2l, ler_add2r);apply lerr_eq.
   apply (eq_trans _ Pr[G3(F.LRO).distinguish() @ &m : res]);1:by byequiv G2_G3.
-  apply (eq_trans _ Pr[G3(F.RO ).distinguish() @ &m : res]);1:by byequiv G3_G3.
+  apply (eq_trans _ Pr[G3(F.RO ).distinguish() @ &m : res]).
+  + by byequiv (_: ={glob G3, F.RO.m} ==> _)=>//;symmetry;conseq (F.RO_LRO_D G3).
   apply (eq_trans _ Pr[G4(F.RO ).distinguish() @ &m : res]);1:by byequiv G3_G4.
-  apply (eq_trans _ Pr[G4(F.LRO).distinguish() @ &m : res]);1:by byequiv G4_G4.
+  apply (eq_trans _ Pr[G4(F.LRO).distinguish() @ &m : res]);1:by byequiv (F.RO_LRO_D G4).
   by byequiv G4_Ideal.
 qed.
   

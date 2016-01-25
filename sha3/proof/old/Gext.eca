@@ -22,23 +22,21 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
       var sa, sa';
       var h, i <- 0; 
       sa <- b0;
-      if (1 <= size p /\ p <> [b0]) {
-        while (i < size p ) {
-          if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
-            (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
-          } else {
-            HS.sample(G1.chandle);
-            sa'                 <@ F.RO.get(take (i+1) p);
-            sa                  <- sa +^ nth witness p i;
-            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
-            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-            (sa,h)              <- (sa',G1.chandle);
-            G1.chandle          <- G1.chandle + 1;
-          }
-          i        <- i + 1;
+      while (i < size p ) {
+        if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+          (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
+        } else {
+          HS.sample(G1.chandle);
+          sa'                 <@ F.RO.get(take (i+1) p);
+          sa                  <- sa +^ nth witness p i;
+          G1.mh.[(sa,h)]      <- (sa', G1.chandle);
+          G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+          (sa,h)              <- (sa',G1.chandle);
+          G1.chandle          <- G1.chandle + 1;
         }
-        sa <- F.RO.get(p);
+        i        <- i + 1;
       }
+      sa <- F.RO.get(p);
       return sa;
     }
   }
@@ -262,7 +260,7 @@ section.
       conseq (_: ={sa,G1.mh,G1.mhi,F.RO.m, G1.chandle, FRO.m} /\
                  inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\
                  forall (h0 : handle), mem (dom FRO.m{1}) h0 => h0 < G1.chandle{1})=>//.
-      sp 3 3;if=>//;call (_: ={F.RO.m});1:by sim.
+      sp 3 3;call (_: ={F.RO.m});1:by sim.
       while (={sa,G1.mh,G1.mhi,F.RO.m,G1.chandle,FRO.m,i,h,sa,p} /\
              inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\
              forall (h0 : handle), mem (dom FRO.m{1}) h0 => h0 < G1.chandle{1})=>//.
@@ -323,23 +321,21 @@ section EXT.
         var sa, sa';
         var h, i <- 0; 
         sa <- b0;
-        if (1 <= size p /\ p <> [b0]) {
-          while (i < size p ) {
-            if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
-              (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
-            } else {
-              RRO.sample(G1.chandle);
-              sa'                 <@ F.RO.get(take (i+1) p);
-              sa                  <- sa +^ nth witness p i;
-              G1.mh.[(sa,h)]      <- (sa', G1.chandle);
-              G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-              (sa,h)              <- (sa',G1.chandle);
-              G1.chandle          <- G1.chandle + 1;
-            }
-            i        <- i + 1;
+        while (i < size p ) {
+          if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+            (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
+          } else {
+            RRO.sample(G1.chandle);
+            sa'                 <@ F.RO.get(take (i+1) p);
+            sa                  <- sa +^ nth witness p i;
+            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
+            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+            (sa,h)              <- (sa',G1.chandle);
+            G1.chandle          <- G1.chandle + 1;
           }
-          sa <- F.RO.get(p);
+          i        <- i + 1;
         }
+        sa <- F.RO.get(p);
         return sa;
       }
     }
@@ -588,19 +584,18 @@ section EXT.
 
     + proc;sp 1 1;if=>//.
       inline G2(DRestr(D), RRO).C.f Gext.C.f.
-      sp 5 5;elim *=> c0L c0R;if => //;last by auto;smt w=List.size_ge0.
+      sp 5 5;elim *=> c0L c0R. 
       wp;call (_: ={F.RO.m});1:by sim.
       while (={i,p,G1.mh,sa,h,FRO.m,F.RO.m,G1.mh,G1.mhi,G1.chandle} /\ 0 <= i{1} <= size p{1}/\ 
              c0R + size p{1} <= max_size /\
-             inv_le G1.m{2} G1.mi{2} (c0R + i){2} FRO.m{2} ReSample.count{2});last by auto=>/#.
+             inv_le G1.m{2} G1.mi{2} (c0R + i){2} FRO.m{2} ReSample.count{2});
+        last by auto;smt w=List.size_ge0.
       if=> //;1:by auto=>/#.  
       auto;call (_: ={F.RO.m});1:by sim.
-      (*inline *;auto=>/> ?&mr. BUG anomaly: EcLowGoal.InvalidProofTerm *)
       inline *;auto=> ?&mr [#]!->@/inv_le Hi [#]. 
       case (p{mr})=> [/#|/=p1 p2] 4?_ /= 2?-> /=;split=>/= Hmem 4? [#]2->/= => [|/#].
       by rewrite restr_set /= size_set dom_restr /in_dom_with Hmem/= /#.
    
-    (* auto=> />. BUG *)
     auto;progress[delta];rewrite ?(size0,restr0,restr_set,rem0,max_ge0,-sizeE,-cardE) //=.
     + smt ml=0. + smt ml=0. + smt ml=0. 
     + elim H7=>// [[x h] [#]];rewrite -memE dom_restr /in_dom_with in_dom=> _ ->/=.

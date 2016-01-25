@@ -48,12 +48,11 @@ module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
   proc f(p : block list): block = {
     var (sa,sc) <- (b0,c0);
 
-    if (1 <= size p (*/\ p <> [b0]*)) {
-      while (p <> []) { (* Absorption *)
-        (sa,sc) <@ P.f((sa +^ head witness p,sc));
-        p <- behead p;
-      }
+    while (p <> []) { (* Absorption *)
+      (sa,sc) <@ P.f((sa +^ head witness p,sc));
+      p <- behead p;
     }
+
     return sa;          (* Squeezing phase (non-iterated) *)
   }
 }.
