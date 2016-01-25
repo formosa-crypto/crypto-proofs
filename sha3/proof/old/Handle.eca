@@ -96,7 +96,7 @@ module G1(D:DISTINGUISHER) = {
     }
 
     proc fi(x : state): state = {
-      var y, y1, hx2, hy2;
+      var y, y1, y2, hx2, hy2;
 
       if (!mem (dom mi) x) {
         bext <- bext \/ mem (rng FRO.m) (x.`2, Unknown);   
@@ -105,19 +105,21 @@ module G1(D:DISTINGUISHER) = {
           chandle <- chandle + 1;
         }
         hx2 <- oget (hinvK FRO.m x.`2);
-        y                 <$ dstate;
+        y1 <$ bdistr;
+        y2 <$ cdistr;
+        y  <- (y1,y2);
         if (mem (dom mhi) (x.`1,hx2) /\
             in_dom_with FRO.m (oget mhi.[(x.`1,hx2)]).`2 Unknown) {
           (y1,hy2)          <- oget mhi.[(x.`1, hx2)];
           y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
-          FRO.m.[hy2]     <- (y.`2, Known);
+          FRO.m.[hy2]       <- (y.`2, Known);
           mi.[x]            <- y;
           m.[y]             <- x;
         } else {
           bcol              <- bcol \/ hinv FRO.m y.`2 <> None;          
           hy2               <- chandle;
           chandle           <- chandle + 1;
-          FRO.m.[hy2]     <- (y.`2, Known);
+          FRO.m.[hy2]       <- (y.`2, Known);
           mi.[x]            <- y;
           mhi.[(x.`1, hx2)] <- (y.`1, hy2);
           m.[y]             <- x;

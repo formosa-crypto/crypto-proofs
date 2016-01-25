@@ -1,3 +1,4 @@
+pragma -oldip.
 require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
 require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 (*...*) import Dprod Dexcepted Capacity IntOrder Bigreal RealOrder BRA.
@@ -244,24 +245,18 @@ section PROOF.
                (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
                 Gcol.count + 1 <= C.c <= max_size){2}).
       + by auto;smt ml=0 w=card_rng_set. 
-      seq 1 2: 
+      seq 3 3: 
         (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-           C.c,x0,hx2} /\ y0{1} = (y1,y2){2} /\
+           C.c,x0,hx2,y0,y1,y2} /\ y0{1} = (y1,y2){1} /\
          ((G1.bcol\/hinv FRO.m y0.`2 <> None){1} => G1.bcol{2}) /\
          (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
          Gcol.count <= C.c <= max_size){2});2:by auto;smt w=card_rng_set.
       inline Gcol.sample_c.
       rcondt{2}3.
       + by auto;progress;cut /#:= fcard_image_leq fst (rng FRO.m{hr}).
-      swap{2}2-1;sp 0 1;wp;conseq(_:y0{1}=(y1,c){2})=>//;1:smt ml=0 w=hinv_image.
-      transitivity{1} {y0 <- S.sample();} 
-          (true ==> ={y0}) 
-          (true ==> y0{1}=(y1,c){2})=>//;1:by inline*;auto.
-      transitivity{2} {(y1,c) <- S.sample2();} 
-          (true==>y0{1}=(y1,c){2})
-          (true==> ={y1,c})=>//;2:by inline*;auto.
-      by call sample_sample2;auto=> /=?[??]->.
-    
+(* BUG: auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | H].  marche pas ???? *)
+      auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | X];right;apply hinv_image=> //.  
+
     + proc;sp 1 1;if=>//.
       inline G1(DRestr(D)).C.f Gcol.C.f. 
       seq 5 5:
