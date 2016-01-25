@@ -71,7 +71,7 @@ module G1(D:DISTINGUISHER) = {
         if (mem (dom mh) (x.`1, hx2) /\ in_dom_with FRO.m (oget mh.[(x.`1,hx2)]).`2 Unknown) {
           hy2               <- (oget mh.[(x.`1, hx2)]).`2;
           y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
-          FRO.m.[hy2]     <- (y.`2, Known);
+          FRO.m.[hy2]       <- (y.`2, Known);
           (* bad               <- bad \/ mem X2 y.`2; *)
           m.[x]             <- y;
           mi.[y]            <- x;
