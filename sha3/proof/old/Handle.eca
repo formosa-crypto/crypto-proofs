@@ -56,13 +56,13 @@ module G1(D:DISTINGUISHER) = {
           (p,v) <- oget paths.[x.`2]; 
           y1    <- F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
-          y     <- (y1, y2);
-          paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
         } else {
-          y <$ dstate;
+          y1    <$ bdistr;
+          y2    <$ cdistr;
+
         }
+        y     <- (y1, y2);
         bext <- bext \/ mem (rng FRO.m) (x.`2, Unknown);   
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
         if (!(mem (rng FRO.m) (x.`2, Known))) {
           FRO.m.[chandle] <- (x.`2, Known);
           chandle <- chandle + 1;
@@ -72,7 +72,6 @@ module G1(D:DISTINGUISHER) = {
           hy2               <- (oget mh.[(x.`1, hx2)]).`2;
           y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
           FRO.m.[hy2]       <- (y.`2, Known);
-          (* bad               <- bad \/ mem X2 y.`2; *)
           m.[x]             <- y;
           mi.[y]            <- x;
         } else {
@@ -85,6 +84,11 @@ module G1(D:DISTINGUISHER) = {
           mi.[y]            <- x;
           mhi.[(y.`1, hy2)] <- (x.`1, hx2);
         }
+        if (mem (dom paths) x.`2) {
+          (p,v) <- oget paths.[x.`2]; 
+          paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+        }
+
       } else {   
         y <- oget m.[x];
       }
@@ -96,7 +100,6 @@ module G1(D:DISTINGUISHER) = {
 
       if (!mem (dom mi) x) {
         bext <- bext \/ mem (rng FRO.m) (x.`2, Unknown);   
-          (*  exists x2 h, handles.[h] = Some (X2,I) *)
         if (!(mem (rng FRO.m) (x.`2, Known))) {
           FRO.m.[chandle] <- (x.`2, Known);
           chandle <- chandle + 1;
@@ -108,7 +111,6 @@ module G1(D:DISTINGUISHER) = {
           (y1,hy2)          <- oget mhi.[(x.`1, hx2)];
           y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
           FRO.m.[hy2]     <- (y.`2, Known);
-          (* bad               <- bad \/ mem X2 y.`2; *)
           mi.[x]            <- y;
           m.[y]             <- x;
         } else {
@@ -426,6 +428,8 @@ section AUX.
   equiv CF_G1 : CF(D).main ~ G1(D).main: 
                  ={glob D} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
   proof.
+   admit.
+(*
     proc.
     call (_:(G1.bcol \/ G1.bext), 
            INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} 
@@ -582,6 +586,7 @@ section AUX.
     + move: H; rewrite in_dom getP; case (h = 0)=> //=.
       by rewrite map0P.
     + by move: H1=> /H0 [#].
+*)
   qed.
 
 end section AUX.

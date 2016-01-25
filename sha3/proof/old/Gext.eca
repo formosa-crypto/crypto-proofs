@@ -53,13 +53,11 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
           (p,v) <- oget G1.paths.[x.`2]; 
           y1    <- F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
-          y     <- (y1, y2);
-          G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
         } else {
-          
-          y <$ dstate;
+          y1    <$ bdistr;
+          y2    <$ cdistr;
         }
-        (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
+        y     <- (y1, y2);
  
         handles_ <@ HS.restrK();
         if (!mem (rng handles_) x.`2) {
@@ -85,6 +83,10 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
           G1.mi.[y]            <- x;
           G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
         }
+        if (mem (dom G1.paths) x.`2) {
+          (p,v) <- oget G1.paths.[x.`2]; 
+          G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+        } 
       } else {   
         y <- oget G1.m.[x];
       }
@@ -172,7 +174,7 @@ section.
              inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\
              (forall h, mem (dom FRO.m) h => h < G1.chandle){1}).
     + proc;if=>//;last by auto.
-      seq 1 1: (={F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.paths,G1.chandle,FRO.m,x,y} /\
+      seq 2 2: (={F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.paths,G1.chandle,FRO.m,x,y} /\
                 inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\
                 (forall h, mem (dom FRO.m) h => h < G1.chandle){1} /\
                 ! mem (dom G1.m{1}) x{1}).
@@ -190,9 +192,13 @@ section.
           right;right;exists x', h;rewrite getP. 
           by cut ->//:(h<> G1.chandle{mr});move:(Hhand h);rewrite in_dom H2 /#.
         by move:H0;rewrite dom_set !inE /#.
+      seq 1 1: (={x,y,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.paths,G1.chandle,FRO.m} /\
+                  inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\
+                  forall (h : handle), mem (dom FRO.m{1}) h => h < G1.chandle{1});2:by auto.
       if=>//.
       + inline *;rcondt{2} 4.
         + by move=> &m;auto;rewrite /in_dom_with.
+(*        auto=> |>.  (* Bug ???? *)  *)
         auto;progress. 
         + by apply  DWord.cdistr_ll.
         + rewrite /inv_ext1=>/H{H}[->//|[/in_rng[h]Hh|[[x1 x2] h [Hx Hh]]]].
@@ -345,12 +351,11 @@ section EXT.
           if (mem (dom G1.paths) x.`2) {
             (p,v) <- oget G1.paths.[x.`2]; 
             y1    <- F.RO.get (rcons p (v +^ x.`1));
-            y2    <$ cdistr;
-            y     <- (y1, y2);
-            G1.paths.[y2] <- (rcons p (v +^ x.`1), y.`1);
           } else {
-            y <$ dstate;
+            y1    <$ bdistr;
           }
+          y2    <$ cdistr;
+          y     <- (y1, y2);
           (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
    
           handles_ <@ RRO.restrK();
@@ -376,6 +381,10 @@ section EXT.
             G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
             G1.mi.[y]            <- x;
             G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
+          }
+          if (mem (dom G1.paths) x.`2) {
+            (p,v) <- oget G1.paths.[x.`2]; 
+            G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
           }
         } else {   
           y <- oget G1.m.[x];
@@ -528,7 +537,10 @@ section EXT.
                ={res,F.RO.m,FRO.m,G1.paths,G1.mh,G1.mhi,G1.m,G1.mi,G1.chandle,G1.bext,C.c} /\
                inv_le  G1.m{2} G1.mi{2} C.c{1} FRO.m{2}  ReSample.count{2});last by auto=> /#.
       proc;if=>//;last by auto=>/#.
-      seq 1 1 :
+      seq 8 9 : (={x, y, F.RO.m, FRO.m, G1.paths, G1.mh, G1.mhi, G1.m, G1.mi, G1.chandle,
+                   G1.bext, C.c} /\
+                 inv_le G1.m{2} G1.mi{2} C.c{1} FRO.m{2} ReSample.count{2});2:by auto.
+      seq 2 3 :
         (={y,x,F.RO.m,FRO.m,G1.paths,G1.mh,G1.mhi,G1.m,G1.mi,G1.chandle,G1.bext, C.c} /\
         inv_lt  G1.m{2} G1.mi{2} C.c{1} FRO.m{2}  ReSample.count{2}).
       + by if=>//;auto;call (_: ={F.RO.m});auto.
@@ -607,19 +619,6 @@ section EXT.
       apply ler_wpmul2r;1:by apply eps_ge0.
       by rewrite le_fromint;smt ml=0 w=max_ge0. 
     + proc. 
-      case ((size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size));
-       [rcondt 2 | rcondf 2]; 1,3:by auto. 
-      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi)));skip=> &hr[#]?->/=???.
-        rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr})) cdistr (1%r/(2^c)%r))//.
-        + move=>x _;apply DWord.muxP.
-        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
-        rewrite imageU fcardU le_fromint. 
-        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
-        rewrite -!sizeE;smt w=fcard_ge0.
-      by hoare=>[??|];[apply eps_ge0|auto].
-    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
-    + by move=> b1 c1;proc;auto=> &hr [^H 2->].
-    + proc. 
       case ((size G1.m < max_size /\ size G1.mi < max_size /\ ReSample.count < max_size));
        [rcondt 2 | rcondf 2]; 1,3:by auto. 
       + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi ) `|` fset1 x));skip=> &hr[#]?->/=???.
@@ -633,7 +632,20 @@ section EXT.
         rewrite -!sizeE;smt w=fcard_ge0.
       by hoare=>[??|];[apply eps_ge0|auto].
     + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
-    by move=> b1 c1;proc;auto=> &hr [^H 2->].
+    + by move=> b1 c1;proc;auto=> &hr [^H 2->].
+    + proc. 
+      case ((size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size));
+       [rcondt 2 | rcondf 2];1,3:by auto. 
+      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi)));skip=> &hr[#]?->/=???.
+        rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr})) cdistr (1%r/(2^c)%r))//.
+        + move=>x _;apply DWord.muxP.
+        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+        rewrite imageU fcardU le_fromint. 
+        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
+        rewrite -!sizeE;smt w=fcard_ge0.
+      by hoare=>[??|];[apply eps_ge0|auto].
+    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
+    by move=> b1 c1;proc;auto=> &hr [^H 2->]. 
   qed.
 
   axiom D_ll:
