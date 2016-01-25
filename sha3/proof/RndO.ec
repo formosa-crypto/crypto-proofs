@@ -192,7 +192,7 @@ qed.
 lemma RO_FRO_D (D<:RO_Distinguisher{RO,FRO}) : 
   equiv [D(RO).distinguish ~ D(FRO).distinguish : 
      ={glob D} /\ RO.m{1} = map (+fst) FRO.m{2} ==>
-     ={glob D} /\ RO.m{1} = map (+fst) FRO.m{2} ].
+     ={res,glob D} /\ RO.m{1} = map (+fst) FRO.m{2} ].
 proof.
   proc (RO.m{1} = map (+fst) FRO.m{2})=>//.
   + by conseq RO_FRO_init. + by conseq RO_FRO_get. + by conseq RO_FRO_set. 
@@ -626,7 +626,7 @@ qed.
 lemma LRO_RRO_D (D<:RO_Distinguisher{RO,FRO}) : 
   equiv [D(LRO).distinguish ~ D(RRO).distinguish : 
      ={glob D} /\ RO.m{1} = restr Known FRO.m{2} ==>
-     ={glob D} /\ RO.m{1} = restr Known FRO.m{2} ].
+     ={res,glob D} /\ RO.m{1} = restr Known FRO.m{2} ].
 proof.
   proc (RO.m{1} = restr Known FRO.m{2})=>//.
   + by conseq LRO_RRO_init. + by conseq LRO_RRO_get. + by conseq LRO_RRO_set.
@@ -655,23 +655,23 @@ local module M = {
 
 lemma RO_LRO_D : 
   equiv [D(RO).distinguish ~ D(LRO).distinguish : 
-     ={glob D,RO.m} ==> ={glob D}].
+     ={glob D,RO.m} ==> ={res,glob D}].
 proof.
   transitivity M.main1 
      (={glob D} /\ FRO.m{2} = map (fun _ c => (c,Known)) RO.m{1} ==>
-        ={glob D})
+        ={res,glob D})
      (={glob D} /\ FRO.m{1} = map (fun _ c => (c,Known)) RO.m{2} ==>
-        ={glob D})=>//.
+        ={res,glob D})=>//.
   + by move=>?&mr[]2!->;exists (glob D){mr},(map(fun _ c =>(c,Known))RO.m{mr}).
   + proc*;inline M.main1;wp;call (RO_FRO_D D);inline *.
     rcondf{2}2;auto.
     + move=> &mr[]_->;apply mem_eq0=>z;rewrite -memE dom_restr /in_dom_with mapP dom_map in_dom.
       by case(RO.m{m}.[_]).
-    by move=>?&mr[]2!->/=;rewrite map_comp /fst/= map_id.
+     by move=>?&mr[]2!->/=;rewrite map_comp /fst/= map_id.
   transitivity M.main2
-     (={glob D, FRO.m} ==> ={glob D})
+     (={glob D, FRO.m} ==> ={res, glob D})
      (={glob D} /\ FRO.m{1} = map (fun _ c => (c,Known)) RO.m{2} ==>
-        ={glob D})=>//.
+        ={res,glob D})=>//.
   + by move=>?&mr[]2!->;exists (glob D){mr},(map(fun _ c =>(c,Known))RO.m{mr}).
   + by proc; eager call (eager_D D);auto.
   proc*;inline M.main2;wp;call{1} RRO_resample_ll. 
