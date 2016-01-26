@@ -126,6 +126,13 @@ cut -> : r - 1 - (n + r - 1) %% r + 1 - r = -(n + r - 1) %% r by ring.
 by rewrite oppz_le0 modz_ge0 gtr_eqF 1:gt0_r.
 qed.
 
+lemma needed_blocks_prod_r (n : int) :
+  (n * r + r - 1) %/ r = n.
+proof.
+rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r // divz_small //.
+smt ml=0 w=(gt0_n).
+qed.
+
 (* ------------------------- Padding/Unpadding ------------------------ *)
 
 op num0 (n : int) = (-(n + 2)) %% r.
@@ -383,6 +390,12 @@ have -> : pad(oget(unpad bs)) = bs
 by rewrite /bs blocks2bitsK.
 qed.
 
+lemma pad2blocks_inj : injective pad2blocks.
+proof.
+search pcancel injective.
+apply /(pcan_inj pad2blocks unpad_blocks) /pad2blocksK.
+qed.
+
 (*-------------------------- Extending/Stripping -----------------------*)
 
 op extend (xs : block list) (n : int) =
@@ -436,11 +449,11 @@ qed.
 
 (*------------------------------ Validity ------------------------------*)
 
-(* in TopLevel *)
+(* in Sponge *)
 
 op valid_toplevel (_ : bool list) = true.
 
-(* in Block *)
+(* in BlockSponge *)
 
 op valid_block (xs : block list) = unpad_blocks xs <> None.
 
@@ -608,7 +621,7 @@ rewrite xs_eq 2!blocks2bits_cat 2!blocks2bits_sing -!catA; congr.
 by rewrite {1}w2bits_y_eq -catA w2b_z_eq.
 qed.
 
-(* in Absorb *)
+(* in AbsorbSponge *)
 
 op valid_absorb (xs : block list) = valid_block((strip xs).`1).
 

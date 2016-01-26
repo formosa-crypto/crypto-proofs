@@ -57,7 +57,7 @@ module Sponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
 
 op eps : real.
 
-lemma top:
+lemma conclusion :
   exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
       `|  Pr[RealIndif(Sponge, Perm, D).main() @ &m : res]
