@@ -14,23 +14,25 @@ module PF = {
   }
 
   proc f(x : state): state = {
-    var y;
+    var y1, y2;
 
     if (!mem (dom m) x) {
-      y <$ dstate;
-      m.[x]  <- y;
-      mi.[y] <- x;
+      y1           <$ bdistr;
+      y2           <$ cdistr;
+      m.[x]        <- (y1,y2);
+      mi.[(y1,y2)] <- x;
     }
     return oget m.[x];
   }
 
   proc fi(x : state): state = {
-    var y;
+    var y1, y2;
 
     if (!mem (dom mi) x) {
-      y <$ dstate;
-      mi.[x] <- y;
-      m.[y]  <- x;
+      y1          <$ bdistr;
+      y2          <$ cdistr;
+      mi.[x]      <- (y1,y2);
+      m.[(y1,y2)] <- x;
     }
     return oget mi.[x];
   }
@@ -100,6 +102,12 @@ section.
   by wp; call (_: true).
   qed.
 
+  local clone import Sample with
+    type t1 <- block,
+      op d1 <- bdistr,
+    type t2 <- capacity,
+      op d2 <- cdistr.
+
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
     Pr[CF(DRestr(D)).main()@ &m: res] + ((max_size + 1) ^ 2)%r * mu dstate (pred1 witness).
@@ -142,7 +150,26 @@ section.
              = Pr[PRPt.IND(ARP,DBounder(D')).main() @ &m: res].
     + rewrite -(DoubleBounding ARP &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
-      * by proc; if=> //=; auto.
+      * proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = x{2})=> //=.
+        transitivity{1} { (y1,y2) <@ S.sample2(); }
+                        (true ==> ={y1,y2})
+                        (true ==> (y1,y2){1} = x{2})=> //=.
+        - by inline *; auto.
+        transitivity{2} { x <@ S.sample(); }
+                        (true ==> (y1,y2){1} = x{2})
+                        (true ==> ={x})=> //=.
+        - by symmetry; call sample_sample2; skip=> /> [].
+        by inline *; auto.
+      proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = y{2})=> //=.
+      transitivity{1} { (y1,y2) <@ S.sample2(); }
+                      (true ==> ={y1,y2})
+                      (true ==> (y1,y2){1} = y{2})=> //=.
+      - by inline *; auto.
+      transitivity{2} { y <@ S.sample(); }
+                      (true ==> (y1,y2){1} = y{2})
+                      (true ==> ={y})=> //=.
+      - by symmetry; call sample_sample2; skip=> /> [].
+      by inline *; auto.
     have /#:= Conclusion D' &m _.
     move=> O O_f_ll O_fi_ll.
     proc; call (_: true)=> //=.
