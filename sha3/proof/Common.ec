@@ -392,7 +392,6 @@ qed.
 
 lemma pad2blocks_inj : injective pad2blocks.
 proof.
-search pcancel injective.
 apply /(pcan_inj pad2blocks unpad_blocks) /pad2blocksK.
 qed.
 
