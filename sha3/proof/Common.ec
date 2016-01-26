@@ -92,6 +92,40 @@ clone export LazyRP as Perm with
     [module type] "RP" as "PRIMITIVE"
     [module] "P" as "Perm".
 
+(*---------------------- Needed Blocks Computation ---------------------*)
+
+lemma needed_blocks_non_pos (n : int) :
+  n <= 0 => (n + r - 1) %/ r <= 0.
+proof.
+move=> le0_n.
+rewrite (lez_trans ((r - 1) %/ r)) 1:leq_div2r 1:/# 1:ge0_r.
+have -> // : (r - 1) %/ r = 0
+  by rewrite -divz_eq0 1:gt0_r; smt ml=0 w=(gt0_r).
+qed.
+
+lemma needed_blocks_suff (n : int) :
+  n <= (n + r - 1) %/ r * r.
+proof.
+have -> : (n + r - 1) %/r * r = (n + r - 1) - (n + r - 1)%% r
+  by rewrite {2}(@divz_eq (n + r - 1) r) #ring.
+by rewrite -(@addzA n) -(@addzA n) lez_addl subz_ge0 -ltzS -(@addzA r) /=
+           ltz_pmod gt0_r.
+qed.
+
+lemma needed_blocks_nec (n : int) :
+  0 <= (n + r - 1) %/ r * r - n < r.
+proof.
+split=> [| _].
+by rewrite subz_ge0 needed_blocks_suff.
+have -> : (n + r - 1) %/r * r = (n + r - 1) - (n + r - 1)%% r
+  by rewrite {2}(@divz_eq (n + r - 1) r) #ring.
+have -> : n + r - 1 - (n + r - 1) %% r - n = r - 1 - (n + r - 1) %% r
+  by ring.
+rewrite ltzE -(@ler_add2r (-r)) /=.
+cut -> : r - 1 - (n + r - 1) %% r + 1 - r = -(n + r - 1) %% r by ring.
+by rewrite oppz_le0 modz_ge0 gtr_eqF 1:gt0_r.
+qed.
+
 (* ------------------------- Padding/Unpadding ------------------------ *)
 
 op num0 (n : int) = (-(n + 2)) %% r.
