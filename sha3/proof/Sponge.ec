@@ -182,7 +182,7 @@ local module BlockIROBitsLazy : BLOCK_IRO_BITS, BlockSponge.BIRO.IRO = {
 local lemma BlockIROBitsEager (D <: BLOCK_IRO_BITS_DIST) :
   equiv[D(BlockIROBitsEager).distinguish ~ D(BlockIROBitsLazy).distinguish : 
         ={glob D} /\ BlockIROBitsEager.mp{1} = BlockIROBitsLazy.mp{2} ==>
-        ={glob D}].
+        ={res, glob D}].
 proof.
 admit. (* use RndO.ec result *)
 qed.
