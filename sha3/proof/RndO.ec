@@ -1,5 +1,5 @@
 pragma -oldip.
-require import Pair Option List FSet NewFMap.
+require import Pair Option List FSet NewFMap NewDistr.
         import NewLogic Fun.
 require IterProc.
 
@@ -168,7 +168,7 @@ proof. by proc;auto=>/=;rewrite map_map0. qed.
 
 equiv RO_FRO_get : RO.get ~ FRO.get :
    ={x} /\ RO.m{1} = map (+fst) FRO.m{2} ==> ={res} /\ RO.m{1} = map (+fst) FRO.m{2}.
-proof. 
+proof.
   proc;auto=>?&ml[]->->/=?->/=.
   rewrite !dom_map !map_set/fst/= getP_eq oget_some;progress.
   + by rewrite mapP oget_omap_some // -in_dom. 

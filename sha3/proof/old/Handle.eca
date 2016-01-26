@@ -1,6 +1,7 @@
 require import Pred Fun Option Pair Int Real StdOrder Ring.
 require import List FSet NewFMap Utils Common SLCommon RndO.
-(*...*) import Dprod Dexcepted Capacity IntOrder.
+require import DProd Dexcepted.
+(*...*) import Capacity IntOrder.
 
 require ConcreteF.
 

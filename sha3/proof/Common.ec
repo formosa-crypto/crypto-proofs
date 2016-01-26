@@ -1,9 +1,9 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
 
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
-require import Ring StdRing StdOrder StdBigop BitEncoding.
+require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
 require (*--*) FinType BitWord LazyRP Monoid.
-(*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv Dprod.
+(*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
 require import NewLogic.
 
 pragma +implicits.
@@ -87,7 +87,7 @@ qed.
 
 clone export LazyRP as Perm with
   type D <- block * capacity,
-  op   d <- bdistr * Capacity.cdistr
+  op   d <- bdistr `*` Capacity.cdistr
   rename
     [module type] "RP" as "PRIMITIVE"
     [module] "P" as "Perm".

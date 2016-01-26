@@ -1,4 +1,4 @@
-require import Option FSet NewFMap.
+require import Option FSet NewFMap NewDistr.
 (* TODO move this in NewFMap *)
 lemma dom_set (m:('a,'b) fmap) a b : dom m.[a<-b] = dom m `|` fset1 a.
 proof. by apply fsetP=> x;smt. qed.
@@ -45,7 +45,7 @@ abstract theory Ideal.
 
   section LL. 
 
-    axiom sample_ll : forall x, Distr.weight (sample x) = 1%r.
+    axiom sample_ll : forall x, weight (sample x) = 1%r.
 
     lemma f_ll : phoare[RO.f : true ==> true] = 1%r. 
     proof. proc;auto;progress;apply sample_ll. qed.

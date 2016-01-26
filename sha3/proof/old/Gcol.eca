@@ -1,7 +1,8 @@
 pragma -oldip.
 require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
 require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
-(*...*) import Dprod Dexcepted Capacity IntOrder Bigreal RealOrder BRA.
+require import DProd Dexcepted.
+(*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Handle.
 

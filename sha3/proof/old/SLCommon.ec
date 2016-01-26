@@ -4,13 +4,13 @@
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
 require import Pred Fun Option Pair Int Real StdOrder Ring.
-require import List FSet NewFMap Utils Common RndO.
+require import List FSet NewFMap Utils Common RndO DProd Dexcepted.
 
 require (*..*) Indifferentiability.
-(*...*) import Dprod Dexcepted Capacity IntOrder.
+(*...*) import Capacity IntOrder.
 
 type state  = block  * capacity.
-op   dstate = bdistr * cdistr.
+op   dstate = bdistr `*` cdistr.
 
 clone include Indifferentiability with
   type p     <- state, 
@@ -57,7 +57,7 @@ module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
   }
 }.
 
-clone export Pair.Dprod.Sample as Sample2 with 
+clone export DProd.ProdSampling as Sample2 with 
   type t1 <- block,
   type t2 <- capacity,
   op d1   <- bdistr,
