@@ -112,7 +112,7 @@ by rewrite -(@addzA n) -(@addzA n) lez_addl subz_ge0 -ltzS -(@addzA r) /=
            ltz_pmod gt0_r.
 qed.
 
-lemma needed_blocks_nec (n : int) :
+lemma needed_blocks_correct (n : int) :
   0 <= (n + r - 1) %/ r * r - n < r.
 proof.
 split=> [| _].
