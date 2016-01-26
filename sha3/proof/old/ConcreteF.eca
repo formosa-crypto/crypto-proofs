@@ -91,7 +91,6 @@ section.
     rcondt{2} 4; 1: by auto=> /#.
     by wp; call (_: true); auto.
   + proc; sp; if=> //=; inline *.
-    sp; if=> //=; last by wp; auto; smt w=size_ge0.
     wp; while (   ={glob C, glob P, p, sa, sc}
                /\ C.c{2} <= max_size
                /\ DBounder.FBounder.c{2} = C.c{2} - size p{2}).
@@ -110,11 +109,9 @@ section.
          res /\ C.c <= max_size] = Pr[GReal'.main()@ &m: res/\ C.c <= max_size].
     + byequiv=>//;proc;inline *;call (_: ={C.c,glob Perm});last by auto.
       + by sim. + by sim.
-      proc;inline *;sp 1 0;if{1};wp;[rcondt{2}5|rcondf{2}5];1,3:by auto.
-      + while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
-        by wp;sp 1 1;if{2};[rcondt{1} 3|rcondf{1} 3];auto;
-          progress;rewrite size_behead//;ring.
-      by auto; smt w=size_ge0.
+      proc; inline *; wp.
+      while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
+      by sp; if=> //=; auto=> /> &2 cL /size_behead=> ->; progress; ring.
     have p_ll := P_f_ll _ _.
     + apply/Dprod.lossless.
       + exact/Block.DWord.bdistr_ll.
@@ -130,12 +127,9 @@ section.
       rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Block.enumP.
       by rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Capacity.enumP.
     have f_ll : islossless SqueezelessSponge(Perm).f.
-    + proc; sp; if=> //=.
-      while true (size p) (size p) 1%r=> //=.
-      * smt w=(size_ge0 size_eq0).
-      * by move=> hind; seq  2: true 1%r 1%r 0%r _=> //=; wp; call p_ll.
-      * by wp; call p_ll.
-      by move=> z; conseq (_: _ : =1%r); wp; call p_ll; skip; smt w=size_behead.
+    + proc; while true (size p)=> //=.
+      * by move=> z; wp; call p_ll; skip=> /> &hr /size_behead /#.
+      by auto; smt w=size_ge0.
     apply (ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
     have ->: Pr[Indif(SqueezelessSponge(Perm), Perm, DRestr(D)).main() @ &m: res]
@@ -155,7 +149,7 @@ section.
     + apply D_ll.
     + by proc; sp; if=> //=; call O_f_ll; auto.
     + by proc; sp; if=> //=; call O_fi_ll; auto.
-    + proc; inline *; sp; if=> //=; sp; if=> //=; auto.
+    + proc; inline *; sp; if=> //=; auto.
       while true (size p).
       * by auto; call O_f_ll; auto=> /#.
       by auto; smt w=size_ge0.
