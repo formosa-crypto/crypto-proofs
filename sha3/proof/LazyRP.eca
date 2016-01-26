@@ -19,7 +19,7 @@ module P : RP, RP_ = {
     var y;
 
     if (!mem (dom m) x) {
-      y      <$ d \ rng m;
+      y      <$ d \ (mem (rng m));
       m.[x]  <- y;
       mi.[y] <- x;
     }
@@ -30,7 +30,7 @@ module P : RP, RP_ = {
     var y;
 
     if (!mem (dom mi) x) {
-      y      <$ d \ rng mi;
+      y      <$ d \ (mem (rng mi));
       mi.[x] <- y;
       m.[y]  <- x;
     }
@@ -45,14 +45,12 @@ lemma P_f_ll: is_lossless d => support d = predT => islossless P.f.
 proof.
 move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
 have h:= endo_dom_rng P.m{m} _; first by exists x{m}.
-apply/lossless_restr; first by rewrite d_ll.
-smt. (* needs help *)
+apply/dexcepted_ll=> //; smt. (* needs help *)
 qed.
 
 lemma P_fi_ll: is_lossless d => support d = predT => islossless P.fi.
 proof.
 move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
 have h:= endo_dom_rng P.mi{m} _; first by exists x{m}.
-apply/lossless_restr; first by rewrite d_ll.
-smt. (* needs help *)
+apply/dexcepted_ll=> //; smt. (* needs help *)
 qed.

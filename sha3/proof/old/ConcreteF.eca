@@ -120,15 +120,15 @@ section.
       + exact/Block.DWord.bdistr_ll.
       exact/Capacity.DWord.cdistr_ll.
     + apply/fun_ext=> x; rewrite Dprod.supp_def /bdistr /cdistr.
-      rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Block.enumP.
-      by rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Capacity.enumP.
+      rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Block.enumP.
+      by rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Capacity.enumP.
     have pi_ll := P_fi_ll _ _.
     + apply/Dprod.lossless.
       + exact/Block.DWord.bdistr_ll.
       exact/Capacity.DWord.cdistr_ll.
     + apply/fun_ext=> x; rewrite Dprod.supp_def /bdistr /cdistr.
-      rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Block.enumP.
-      by rewrite -/(Distr.support _ _) NewDistr.MUniform.support_duniform Capacity.enumP.
+      rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Block.enumP.
+      by rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Capacity.enumP.
     have f_ll : islossless SqueezelessSponge(Perm).f.
     + proc; sp; if=> //=.
       while true (size p) (size p) 1%r=> //=.
