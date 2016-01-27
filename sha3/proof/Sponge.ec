@@ -2,7 +2,7 @@
 
 require import Fun Pair Int IntDiv Real List Option FSet NewFMap DBool.
 require import Common StdOrder. import IntOrder.
-require (*--*) IRO BlockSponge.
+require (*--*) IRO BlockSponge RndO.
 
 (*------------------------- Indifferentiability ------------------------*)
 
@@ -85,22 +85,19 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
 
 (*------------------------------- Proof --------------------------------*)
 
-section.
+abstract theory HybridIRO.
 
-declare module BlockSim  : BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO}.
-declare module Dist : DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
-
-module type BLOCK_IRO_BITS = {
+module type HYBRID_IRO = {
   proc init() : unit
   proc g(x : block list, n : int) : bool list
   proc f(x : block list, n : int) : block list
 }.
 
-module type BLOCK_IRO_BITS_DIST(BIROB : BLOCK_IRO_BITS) = {
-  proc distinguish(): bool {BIROB.g BIROB.f}
+module type HYBRID_IRO_DIST(HI : HYBRID_IRO) = {
+  proc distinguish(): bool
 }.
 
-local module BlockIROBitsEager : BLOCK_IRO_BITS, BlockSponge.BIRO.IRO = {
+module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
   var mp : (block list * int, bool) fmap
 
   proc init() : unit = {
@@ -142,7 +139,7 @@ local module BlockIROBitsEager : BLOCK_IRO_BITS, BlockSponge.BIRO.IRO = {
   }
 }.
 
-local module BlockIROBitsLazy : BLOCK_IRO_BITS, BlockSponge.BIRO.IRO = {
+module HybridIROLazy : HYBRID_IRO, BlockSponge.BIRO.IRO = {
   var mp : (block list * int, bool) fmap
 
   proc init() : unit = {
@@ -179,23 +176,31 @@ local module BlockIROBitsLazy : BLOCK_IRO_BITS, BlockSponge.BIRO.IRO = {
   }
 }.
 
-local lemma BlockIROBitsEager (D <: BLOCK_IRO_BITS_DIST) :
-  equiv[D(BlockIROBitsEager).distinguish ~ D(BlockIROBitsLazy).distinguish : 
-        ={glob D} /\ BlockIROBitsEager.mp{1} = BlockIROBitsLazy.mp{2} ==>
-        ={res, glob D}].
+section.
+
+declare module D : HYBRID_IRO_DIST.
+
+local clone RndO.GenEager as RO.
+
+lemma HybridIROLazyEager (D <: HYBRID_IRO_DIST) &m :
+  Pr[D(HybridIROLazy).distinguish() @ &m : res] =
+  Pr[D(HybridIROEager).distinguish() @ &m : res].
 proof.
+byequiv=> //.
 admit. (* use RndO.ec result *)
 qed.
 
-local module RaiseBIROBLazy (F : BLOCK_IRO_BITS) : FUNCTIONALITY = {
+end section.
+
+module RaiseHybridIRO (HI : HYBRID_IRO) : FUNCTIONALITY = {
   proc init() = {
-    F.init();
+    HI.init();
   }
 
   proc f(bs : bool list, n : int) = {
     var cs;
 
-    cs <@ F.g(pad2blocks bs, n);
+    cs <@ HI.g(pad2blocks bs, n);
     return cs;
   }
 }.
@@ -211,7 +216,7 @@ pred LazyInvar
    mem (dom mp1) (bs, n) =>
    oget mp1.[(bs, n)] = oget mp2.[(pad2blocks bs, n)]).
 
-local lemma lazy_invar_upd_mem_dom_iff
+lemma lazy_invar_upd_mem_dom_iff
       (mp1 : (bool list * int, bool) fmap,
        mp2 : (block list * int, bool) fmap,
        bs cs : bool list, n m : int, b : bool) :
@@ -230,7 +235,7 @@ elim mem_upd_mp2=> [/# | [p2b_cs_p2b_bs eq_mn]].
 have /# : cs = bs by apply pad2blocks_inj.
 qed.
 
-local lemma lazy_invar_upd2_vb
+lemma lazy_invar_upd2_vb
       (mp1 : (bool list * int, bool) fmap,
        mp2 : (block list * int, bool) fmap,
        bs : bool list, xs : block list, n m : int, b : bool) :
@@ -244,7 +249,7 @@ elim mem_upd_mp2=> [/# | [-> _]].
 apply/valid_pad2blocks.
 qed.
 
-local lemma lazy_invar_upd_lu_eq
+lemma lazy_invar_upd_lu_eq
       (mp1 : (bool list * int, bool) fmap,
        mp2 : (block list * int, bool) fmap,
        bs cs : bool list, n m : int, b : bool) :
@@ -265,27 +270,27 @@ smt ml=0 w=(getP).
 smt ml=0 w=(getP).
 qed.
 
-local lemma LowerFun_IRO_BlockIROBitsLazy_f :
-  equiv[LowerFun(IRO).f ~ BlockIROBitsLazy.f :
-        ={xs, n} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} ==>
-        ={res} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}].
+lemma LowerFun_IRO_HybridIROLazy_f :
+  equiv[LowerFun(IRO).f ~ HybridIROLazy.f :
+        ={xs, n} /\ LazyInvar IRO.mp{1} HybridIROLazy.mp{2} ==>
+        ={res} /\ LazyInvar IRO.mp{1} HybridIROLazy.mp{2}].
 proof.
-proc=> /=; inline BlockIROBitsLazy.g.
+proc=> /=; inline HybridIROLazy.g.
 seq 0 1 :
   (={n} /\ xs{1} = xs0{2} /\
-   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}); first auto.
+   LazyInvar IRO.mp{1} HybridIROLazy.mp{2}); first auto.
 case (valid_block xs{1}).
 rcondt{1} 3; first auto. rcondt{2} 4; first auto.
 inline *. rcondt{1} 7; first auto.
 seq 6 3 : 
   (={i, n0} /\ bs{1} = bs0{2} /\
-   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} /\
+   LazyInvar IRO.mp{1} HybridIROLazy.mp{2} /\
    pad2blocks x{1} = xs0{2}).
 auto; progress; have {2}<- /# := unpadBlocksK xs0{2}.
 wp.
 while
   (={i, n0} /\ bs{1} = bs0{2} /\
-   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} /\
+   LazyInvar IRO.mp{1} HybridIROLazy.mp{2} /\
    pad2blocks x{1} = xs0{2}).
 sp; auto.
 if.
@@ -302,22 +307,22 @@ rcondf{1} 3; first auto. rcondf{2} 4; first auto.
 auto; progress; by rewrite bits2blocks_nil.
 qed.
 
-local lemma IRO_RaiseBIROBLazy_BlockIROBitsLazy_f :
-  equiv[IRO.f ~ RaiseBIROBLazy(BlockIROBitsLazy).f :
+lemma IRO_RaiseHybridIRO_HybridIROLazy_f :
+  equiv[IRO.f ~ RaiseHybridIRO(HybridIROLazy).f :
         ={n} /\ x{1} = bs{2} /\
-        LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2} ==>
-        ={res} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}].
+        LazyInvar IRO.mp{1} HybridIROLazy.mp{2} ==>
+        ={res} /\ LazyInvar IRO.mp{1} HybridIROLazy.mp{2}].
 proof.
 proc=> /=; inline *.
 rcondt{1} 3; first auto.
 rcondt{2} 5; first auto; progress; apply valid_pad2blocks.
 seq 2 4 :
   (={i, n} /\ n{1} = n0{2} /\ xs{2} = pad2blocks x{1} /\ bs{1} = bs0{2} /\
-   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}); first auto.
+   LazyInvar IRO.mp{1} HybridIROLazy.mp{2}); first auto.
 wp.
 while
   (={i, n} /\ n{1} = n0{2} /\ xs{2} = pad2blocks x{1} /\ bs{1} = bs0{2} /\
-   LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}).
+   LazyInvar IRO.mp{1} HybridIROLazy.mp{2}).
 wp; sp.
 if.
 progress; smt ml=0.
@@ -344,39 +349,38 @@ pred EagerInvar
    mem (dom mp2) (xs, j) =>
    0 <= j /\ mem (dom mp1) (xs, j %/ r)).
 
-local lemma BlockIROBitsEager_f_BlockIRO_g :
-  equiv[BlockIROBitsEager.f ~ BlockIROBitsEager.g :
-        ={xs, BlockIROBitsEager.mp} /\ n{1} * r = n{2} ==>
-        res{1} = bits2blocks res{2} /\ ={BlockIROBitsEager.mp}].
+lemma HybridIROEager_f_g :
+  equiv[HybridIROEager.f ~ HybridIROEager.g :
+        ={xs, HybridIROEager.mp} /\ n{1} * r = n{2} ==>
+        res{1} = bits2blocks res{2} /\ ={HybridIROEager.mp}].
 proof.
 proc=> /=; inline *.
 seq 5 3 :
-  (={i, BlockIROBitsEager.mp} /\ xs0{1} = xs{2} /\
+  (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\ m{2} = n{2}).
 auto; progress;
   first 2 rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r // divz_small //;
           smt ml=0 w=(gt0_n).
 if=> //; wp.
 while
-  (={i, BlockIROBitsEager.mp} /\ xs0{1} = xs{2} /\
+  (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\
    m{2} = n{2}).
 sp; wp; if=> //; rnd; auto.
 while
-  (={i, BlockIROBitsEager.mp} /\ xs0{1} = xs{2} /\
+  (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\
    m{2} = n{2})=> //.
 sp; wp; if=> //; rnd; auto.
 auto.
 qed.
 
-local lemma BlockIROBitsEager_g_Block_IRO_f
-            (n' : int) (x' : block list) :
-  equiv[BlockIROBitsEager.g ~ BlockSponge.BIRO.IRO.f :
+lemma HybridIROEager_g_BlockIRO_f (n' : int) (x' : block list) :
+  equiv[HybridIROEager.g ~ BlockSponge.BIRO.IRO.f :
         n' = n{1} /\ xs{1} = x{2} /\ x' = x{2} /\
         n{2} = (n{1} + r - 1) %/ r /\
-        EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
-        EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} /\
+        EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+        EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} /\
         (valid_block x' =>
          res{1} = take n' (blocks2bits res{2}) /\
          size res{2} = (n' + r - 1) %/ r) /\
@@ -387,7 +391,7 @@ seq 3 2 :
   (n' = n{1} /\ xs{1} = x{2} /\ x' = x{2} /\
    n{2} = (n{1} + r - 1) %/ r /\ n{2} * r = m{1} /\
    i{1} = 0 /\ i{2} = 0 /\ bs{1} = [] /\ bs{2} = [] /\
-  EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}).
+  EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
 auto; progress.
 if=> //.
 conseq
@@ -395,37 +399,37 @@ conseq
    xs{1} = x{2} /\ n' = n{1} /\ n{2} = (n{1} + r - 1) %/ r /\
    n{2} * r = m{1} /\ n{1} <= m{1} /\
    i{1} = 0 /\ i{2} = 0 /\ bs{1} = [] /\ bs{2} = [] /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    bs{1} = take n' (blocks2bits bs{2}) /\
    size bs{2} = (n' + r - 1) %/ r /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //.
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 progress; apply/needed_blocks_suff.
 admit.   
 qed.
 
-local lemma BlockIROBitsEager_BlockIRO_f :
-  equiv[BlockIROBitsEager.f ~ BlockSponge.BIRO.IRO.f :
+lemma HybridIROEager_BlockIRO_f :
+  equiv[HybridIROEager.f ~ BlockSponge.BIRO.IRO.f :
         xs{1} = x{2} /\ ={n} /\
-        EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
-        ={res} /\ EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}].
+        EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+        ={res} /\ EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}].
 proof.
 transitivity
-  BlockIROBitsEager.g
-  (={xs, BlockIROBitsEager.mp} /\ n{2} = n{1} * r /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
-   res{1} = bits2blocks res{2} /\ ={BlockIROBitsEager.mp})
+  HybridIROEager.g
+  (={xs, HybridIROEager.mp} /\ n{2} = n{1} * r /\
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   res{1} = bits2blocks res{2} /\ ={HybridIROEager.mp})
   (xs{1} = x{2} /\ n{1} = n{2} * r /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    res{1} = (blocks2bits res{2}) /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}).
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
 progress.
-exists BlockSponge.BIRO.IRO.mp{2}, BlockIROBitsEager.mp{1}, (xs{1}, n{1} * r).
+exists BlockSponge.BIRO.IRO.mp{2}, HybridIROEager.mp{1}, (xs{1}, n{1} * r).
   progress; by rewrite H0.
 progress; apply blocks2bitsK.
-conseq BlockIROBitsEager_f_BlockIRO_g.
+conseq HybridIROEager_f_g.
 progress; by rewrite H0.
 exists* n{1}; elim*=> n1. exists* xs{1}; elim*=> xs'.
-conseq (BlockIROBitsEager_g_Block_IRO_f n1 xs')=> //.
+conseq (HybridIROEager_g_BlockIRO_f n1 xs')=> //.
 progress; rewrite H0; by rewrite needed_blocks_prod_r.
 progress.
 case (valid_block xs{1})=> [vb_xs1 | not_vb_xs1].
@@ -437,22 +441,31 @@ by rewrite take_size.
 by have [->->] := H4 not_vb_xs1.
 qed.
 
-local lemma RaiseBIROBLazy_BlockIROBitsEager_RaiseFun_Block_IRO_f :
-  equiv[RaiseBIROBLazy(BlockIROBitsEager).f ~ RaiseFun(BlockSponge.BIRO.IRO).f :
+end HybridIRO.
+
+section.
+
+declare module BlockSim : BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO}.
+declare module Dist : DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
+
+local clone import HybridIRO as HIRO.
+
+local lemma RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f :
+  equiv[RaiseHybridIRO(HybridIROEager).f ~ RaiseFun(BlockSponge.BIRO.IRO).f :
   ={bs, n} /\ ={glob BlockSim} /\
-  EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1} ==>
+  EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
   ={res} /\ ={glob BlockSim} /\
-  EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}].
+  EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}].
 proof.
 proc=> /=.
 exists* n{1}; elim*=> n'.
 exists* (pad2blocks bs{2}); elim*=> xs2.
-call (BlockIROBitsEager_g_Block_IRO_f n' xs2).
+call (HybridIROEager_g_BlockIRO_f n' xs2).
 auto; progress.
 by have [-> _] := H2 _; first apply/valid_pad2blocks.
 qed.
 
-local lemma Sponge_Raise_Block_Sponge_f :
+local lemma Sponge_Raise_BlockSponge_f :
   equiv[Sponge(Perm).f ~ RaiseFun(BlockSponge.Sponge(Perm)).f :
         ={bs, n, glob Perm} ==> ={res, glob Perm}].
 proof.
@@ -479,7 +492,7 @@ auto; progress; by rewrite -cats1 blocks2bits_cat blocks2bits_sing.
 auto.
 qed.
 
-local lemma RealIndif &m :
+local lemma RealIndif_Sponge_BlockSponge &m :
   Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] =
   Pr[BlockSponge.RealIndif
      (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res].
@@ -487,86 +500,108 @@ proof.
 byequiv=> //; proc.
 seq 2 2 : (={glob Dist, glob Perm}); first sim.
 call (_ : ={glob Perm}); first 2 sim.
-conseq Sponge_Raise_Block_Sponge_f=> //.
+conseq Sponge_Raise_BlockSponge_f=> //.
 auto.
 qed.
 
-local lemma IdealIndifIROLazy &m :
+local lemma Ideal_IRO_Experiment_HybridLazy &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
   Pr[Experiment
-     (RaiseBIROBLazy(BlockIROBitsLazy), BlockSim(BlockIROBitsLazy),
+     (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
       Dist).main() @ &m : res].
 proof.
 byequiv=> //; proc.
 seq 2 2 :
   (={glob Dist, glob BlockSim} /\ IRO.mp{1} = NewFMap.map0 /\
-   BlockIROBitsLazy.mp{2} = NewFMap.map0).
+   HybridIROLazy.mp{2} = NewFMap.map0).
 inline *; wp; call (_ : true); auto.
 call
   (_ :
   ={glob Dist, glob BlockSim} /\
-  IRO.mp{1} = map0 /\ BlockIROBitsLazy.mp{2} = map0 ==>
+  IRO.mp{1} = map0 /\ HybridIROLazy.mp{2} = map0 ==>
   ={res}).
-proc (={glob BlockSim} /\ LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2}).
+proc (={glob BlockSim} /\ LazyInvar IRO.mp{1} HybridIROLazy.mp{2}).
 progress; rewrite dom0 in_fset0 in H; elim H.
 trivial.
-proc (LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2})=> //.
-apply LowerFun_IRO_BlockIROBitsLazy_f.
-proc (LazyInvar IRO.mp{1} BlockIROBitsLazy.mp{2})=> //.
-apply LowerFun_IRO_BlockIROBitsLazy_f.
-by conseq IRO_RaiseBIROBLazy_BlockIROBitsLazy_f.
+proc (LazyInvar IRO.mp{1} HybridIROLazy.mp{2})=> //.
+apply LowerFun_IRO_HybridIROLazy_f.
+proc (LazyInvar IRO.mp{1} HybridIROLazy.mp{2})=> //.
+apply LowerFun_IRO_HybridIROLazy_f.
+by conseq IRO_RaiseHybridIRO_HybridIROLazy_f.
 auto.
 qed.
 
-local lemma IdealIndifLazy &m :
+local module HybridIRODist(HI : HYBRID_IRO) : HYBRID_IRO_DIST (HI) = {
+
+  proc distinguish() : bool = {
+    var b : bool;
+    b <@ Experiment(RaiseHybridIRO(HI), BlockSim(HI), Dist).main();
+    return b;
+  }
+}.
+
+local lemma Experiment_Hybrid_Lazy_Eager &m :
   Pr[Experiment
-     (RaiseBIROBLazy(BlockIROBitsLazy), BlockSim(BlockIROBitsLazy),
+     (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
       Dist).main() @ &m : res] =
   Pr[Experiment
-     (RaiseBIROBLazy(BlockIROBitsEager), BlockSim(BlockIROBitsEager),
+     (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
       Dist).main() @ &m : res].
 proof.
-(* reduction to eager *)
-admit.
+have -> :
+  Pr[Experiment
+     (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+      Dist).main() @ &m : res] =
+  Pr[HybridIRODist(HybridIROLazy).distinguish() @ &m : res].
+  byequiv=> //; proc; inline *; sim.
+rewrite (HybridIROLazyEager(HybridIRODist) &m).
+have -> :
+  Pr[HybridIRODist(HybridIROEager).distinguish() @ &m : res] =
+  Pr[Experiment
+     (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+      Dist).main() @ &m : res].
+  byequiv=> //; proc; inline *; sim.
+done.
 qed.
 
-local lemma IdealIndifEager &m :
+local lemma Experiment_HybridEager_Ideal_BlockIRO &m :
   Pr[Experiment
-     (RaiseBIROBLazy(BlockIROBitsEager), BlockSim(BlockIROBitsEager),
+     (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
       Dist).main() @ &m : res] =
   Pr[BlockSponge.IdealIndif
      (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res].
 proof.
 byequiv=> //; proc.
 seq 2 2 :
-  (={glob Dist, glob BlockSim} /\ BlockIROBitsEager.mp{1} = NewFMap.map0 /\
+  (={glob Dist, glob BlockSim} /\ HybridIROEager.mp{1} = NewFMap.map0 /\
    BlockSponge.BIRO.IRO.mp{2} = NewFMap.map0).
 inline *; wp; call (_ : true); auto.
 call
   (_ :
   ={glob Dist, glob BlockSim} /\
-  BlockIROBitsEager.mp{1} = map0 /\ BlockSponge.BIRO.IRO.mp{2} = map0 ==>
+  HybridIROEager.mp{1} = map0 /\ BlockSponge.BIRO.IRO.mp{2} = map0 ==>
   ={res}).
 proc
   (={glob BlockSim} /\
-   EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1}) => //.
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}) => //.
 progress; rewrite dom0 in_fset0 in H; elim H.
-
-proc (EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //;
-  conseq BlockIROBitsEager_BlockIRO_f=> //.
-proc (EagerInvar BlockSponge.BIRO.IRO.mp{2} BlockIROBitsEager.mp{1})=> //;
-  conseq BlockIROBitsEager_BlockIRO_f=> //.
+proc (EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //;
+  conseq HybridIROEager_BlockIRO_f=> //.
+proc (EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //;
+  conseq HybridIROEager_BlockIRO_f=> //.
 exists* n{1}; elim *=> n'.
-conseq RaiseBIROBLazy_BlockIROBitsEager_RaiseFun_Block_IRO_f=> //.
+conseq RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f=> //.
 auto.
 qed.
 
-local lemma IdealIndif &m :
+local lemma IdealIndif_IRO_BlockIRO &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
   Pr[BlockSponge.IdealIndif
      (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res].
 proof.
-by rewrite (IdealIndifIROLazy &m) (IdealIndifLazy &m) (IdealIndifEager &m).
+by rewrite (Ideal_IRO_Experiment_HybridLazy &m)
+           (Experiment_Hybrid_Lazy_Eager &m)
+           (Experiment_HybridEager_Ideal_BlockIRO &m).
 qed.
 
 lemma Conclusion' &m :
@@ -577,7 +612,7 @@ lemma Conclusion' &m :
     Pr[BlockSponge.IdealIndif
        (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main() @ &m : res]|.
 proof.
-by rewrite (RealIndif &m) (IdealIndif &m).
+by rewrite (RealIndif_Sponge_BlockSponge &m) (IdealIndif_IRO_BlockIRO &m).
 qed.
 
 end section.
