@@ -85,6 +85,8 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
 
 (*------------------------------- Proof --------------------------------*)
 
+(*------------------- abstract theory of hybrid IROs -------------------*)
+
 abstract theory HybridIRO.
 
 module type HYBRID_IRO = {
@@ -94,7 +96,7 @@ module type HYBRID_IRO = {
 }.
 
 module type HYBRID_IRO_DIST(HI : HYBRID_IRO) = {
-  proc distinguish(): bool
+  proc distinguish() : bool
 }.
 
 module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
@@ -176,18 +178,209 @@ module HybridIROLazy : HYBRID_IRO, BlockSponge.BIRO.IRO = {
   }
 }.
 
+module HybridIROExper(HI : HYBRID_IRO, D : HYBRID_IRO_DIST) = {
+  proc main() : bool = {
+    var b : bool;
+    HI.init();
+    b <@ D(HI).distinguish();
+    return b;
+  }
+}.
+
 section.
 
-declare module D : HYBRID_IRO_DIST.
+declare module D : HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}.
 
-local clone RndO.GenEager as RO.
+local clone RndO.GenEager as ERO with
+  type from   <- block list * int,
+  type to     <- bool,
+  op sampleto <- fun _ => dbool.
 
-lemma HybridIROLazyEager (D <: HYBRID_IRO_DIST) &m :
-  Pr[D(HybridIROLazy).distinguish() @ &m : res] =
-  Pr[D(HybridIROEager).distinguish() @ &m : res].
+local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
+  proc main() : bool = {
+    var b : bool;
+    O.init();
+    b <@ D(O).distinguish();
+    return b;
+  }
+}.
+
+local lemma LRO_RO (D <: ERO.RO_Distinguisher{ERO.RO, ERO.FRO}) &m :
+  Pr[EROExper(ERO.LRO, D).main() @ &m : res] =
+  Pr[EROExper(ERO.RO, D).main() @ &m : res].
 proof.
-byequiv=> //.
-admit. (* use RndO.ec result *)
+byequiv=> //; proc.
+seq 1 1 : (={glob D, ERO.RO.m}); first sim.
+symmetry; call (ERO.RO_LRO_D D); auto.
+qed.
+
+local module HIRO(RO : ERO.RO) = {
+  proc init() : unit = {
+      RO.init();
+  }
+
+  proc g(xs, n) = {
+    var b, bs;
+    var m <- ((n + r - 1) %/ r) * r;
+    var i <- 0;
+
+    bs <- [];
+    if (valid_block xs) {
+      while (i < n) {
+        b <@ RO.get(xs, i);
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+      while (i < m) {
+        RO.sample(xs, i);
+        i <- i + 1;
+      }
+    }
+    return bs;
+  }
+
+  proc f(xs, n) = {
+    var bs, ys;
+    bs <@ g(xs, n * r);
+    ys <- bits2blocks bs;
+    return ys;
+  }
+}.
+
+local lemma HybridIROLazy_fill_in_LRO_get :
+  equiv[HybridIROLazy.fill_in ~ ERO.LRO.get :
+        (xs, i){1} = x{2} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
+        ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
+proof.
+proc=> /=.
+case: (mem (dom HybridIROLazy.mp{1}) (xs{1}, i{1})).
+rcondf{1} 1; first auto. rcondf{2} 2; first auto.
+rnd{2}; auto; progress; apply/dbool_ll.
+rcondt{1} 1; first auto. rcondt{2} 2; first auto.
+wp; rnd; auto.
+qed.
+
+local lemma HybridIROLazy_HIRO_LRO_init :
+  equiv[HybridIROLazy.init ~ HIRO(ERO.LRO).init :
+        true ==> HybridIROLazy.mp{1} = ERO.RO.m{2}].
+proof. proc; inline*; auto. qed.
+
+local lemma HybridIROLazy_HIRO_LRO_g :
+  equiv[HybridIROLazy.g ~ HIRO(ERO.LRO).g :
+        ={xs, n} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
+        ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
+proof.
+proc; inline ERO.LRO.sample; sp=> /=.
+if=> //.
+while{2} (true) (m{2} - i{2}).
+progress; auto; progress; smt ml=0.
+while (={xs, n, i, bs} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}).
+wp; call HybridIROLazy_fill_in_LRO_get; auto.
+auto; progress; smt ml=0.
+qed.
+
+local lemma HybridIROLazy_HIRO_LRO_f :
+  equiv[HybridIROLazy.f ~ HIRO(ERO.LRO).f :
+        ={xs, n} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
+        ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
+proof.
+proc; wp; call HybridIROLazy_HIRO_LRO_g; auto.
+qed.
+
+local lemma RO_get_HybridIROEager_fill_in :
+  equiv[ERO.RO.get ~ HybridIROEager.fill_in :
+        x{1} = (xs, i){2} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
+        ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
+proof.
+proc=> /=.
+case: (mem (dom HybridIROEager.mp{2}) (xs{2}, i{2})).
+rcondf{1} 2; first auto. rcondf{2} 1; first auto.
+rnd{1}; auto; progress; apply/dbool_ll.
+rcondt{1} 2; first auto. rcondt{2} 1; first auto.
+wp; rnd; auto.
+qed.
+
+local lemma RO_sample_HybridIROEager_fill_in :
+  equiv[ERO.RO.sample ~ HybridIROEager.fill_in :
+        x{1} = (xs, i){2} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
+         ERO.RO.m{1} = HybridIROEager.mp{2}].
+proof.
+proc=> /=; inline ERO.RO.get; sp.
+case: (mem (dom HybridIROEager.mp{2}) (xs{2}, i{2})).
+rcondf{1} 2; first auto. rcondf{2} 1; first auto.
+rnd{1}; auto; progress; apply/dbool_ll.
+rcondt{1} 2; first auto. rcondt{2} 1; first auto.
+wp; rnd; auto.
+qed.
+
+local lemma HIRO_RO_HybridIROEager_init :
+  equiv[HIRO(ERO.RO).init ~ HybridIROEager.init :
+        true ==> ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
+proof. proc; inline*; auto. qed.
+
+local lemma HIRO_RO_HybridIROEager_g :
+  equiv[HIRO(ERO.RO).g ~ HybridIROEager.g :
+        ={xs, n} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
+        ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
+proof.
+proc; first sp=> /=.
+if=> //.
+while (={i, m, xs} /\ ERO.RO.m{1} = HybridIROEager.mp{2}).
+wp; call RO_sample_HybridIROEager_fill_in; auto.
+while (={i, n, xs, bs} /\ ERO.RO.m{1} = HybridIROEager.mp{2}).
+wp; call RO_get_HybridIROEager_fill_in; auto.
+auto.
+qed.
+
+local lemma HIRO_RO_HybridIROEager_f :
+  equiv[HIRO(ERO.RO).f ~ HybridIROEager.f :
+        ={xs, n} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
+        ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
+proof.
+proc; wp; call HIRO_RO_HybridIROEager_g; auto.
+qed.
+
+local module RODist(RO : ERO.RO) = {
+  proc distinguish() : bool = {
+    var b : bool;
+    b <@ D(HIRO(RO)).distinguish();
+    return b;
+  }
+}.
+
+local lemma Exper_HybridLazy_ERO_LRO &m :
+  Pr[HybridIROExper(HybridIROLazy, D).main() @ &m : res] =
+  Pr[EROExper(ERO.LRO, RODist).main() @ &m : res].
+proof.
+byequiv=> //; proc; inline*; wp.
+seq 1 1 : (={glob D} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}); first auto.
+call (_ : HybridIROLazy.mp{1} = ERO.RO.m{2}).
+conseq HybridIROLazy_HIRO_LRO_init.
+conseq HybridIROLazy_HIRO_LRO_g.
+conseq HybridIROLazy_HIRO_LRO_f.
+auto.
+qed.
+
+local lemma ERO_RO_Exper_HybridEager &m :
+  Pr[EROExper(ERO.RO, RODist).main() @ &m : res] =
+  Pr[HybridIROExper(HybridIROEager, D).main() @ &m : res].
+proof.
+byequiv=> //; proc; inline*; wp.
+seq 1 1 : (={glob D} /\ ERO.RO.m{1} = HybridIROEager.mp{2}); first auto.
+call (_ : ERO.RO.m{1} = HybridIROEager.mp{2}).
+conseq HIRO_RO_HybridIROEager_init.
+conseq HIRO_RO_HybridIROEager_g.
+conseq HIRO_RO_HybridIROEager_f.
+auto.
+qed.
+
+lemma HybridIROExper_Lazy_Eager &m :
+  Pr[HybridIROExper(HybridIROLazy, D).main() @ &m : res] =
+  Pr[HybridIROExper(HybridIROEager, D).main() @ &m : res].
+proof.
+by rewrite (Exper_HybridLazy_ERO_LRO &m)
+           (LRO_RO RODist &m)
+           (ERO_RO_Exper_HybridEager &m).
 qed.
 
 end section.
@@ -281,7 +474,7 @@ seq 0 1 :
    LazyInvar IRO.mp{1} HybridIROLazy.mp{2}); first auto.
 case (valid_block xs{1}).
 rcondt{1} 3; first auto. rcondt{2} 4; first auto.
-inline *. rcondt{1} 7; first auto.
+inline*. rcondt{1} 7; first auto.
 seq 6 3 : 
   (={i, n0} /\ bs{1} = bs0{2} /\
    LazyInvar IRO.mp{1} HybridIROLazy.mp{2} /\
@@ -313,7 +506,7 @@ lemma IRO_RaiseHybridIRO_HybridIROLazy_f :
         LazyInvar IRO.mp{1} HybridIROLazy.mp{2} ==>
         ={res} /\ LazyInvar IRO.mp{1} HybridIROLazy.mp{2}].
 proof.
-proc=> /=; inline *.
+proc=> /=; inline*.
 rcondt{1} 3; first auto.
 rcondt{2} 5; first auto; progress; apply valid_pad2blocks.
 seq 2 4 :
@@ -354,7 +547,7 @@ lemma HybridIROEager_f_g :
         ={xs, HybridIROEager.mp} /\ n{1} * r = n{2} ==>
         res{1} = bits2blocks res{2} /\ ={HybridIROEager.mp}].
 proof.
-proc=> /=; inline *.
+proc=> /=; inline*.
 seq 5 3 :
   (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\ m{2} = n{2}).
@@ -404,6 +597,8 @@ conseq
    size bs{2} = (n' + r - 1) %/ r /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 progress; apply/needed_blocks_suff.
+splitwhile{1} 1 : i < (n' %/ r) * r.
+splitwhile{2} 1 : i < n' %/ r.
 admit.   
 qed.
 
@@ -514,7 +709,7 @@ byequiv=> //; proc.
 seq 2 2 :
   (={glob Dist, glob BlockSim} /\ IRO.mp{1} = NewFMap.map0 /\
    HybridIROLazy.mp{2} = NewFMap.map0).
-inline *; wp; call (_ : true); auto.
+inline*; wp; call (_ : true); auto.
 call
   (_ :
   ={glob Dist, glob BlockSim} /\
@@ -532,13 +727,37 @@ auto.
 qed.
 
 local module HybridIRODist(HI : HYBRID_IRO) : HYBRID_IRO_DIST (HI) = {
-
   proc distinguish() : bool = {
     var b : bool;
-    b <@ Experiment(RaiseHybridIRO(HI), BlockSim(HI), Dist).main();
+    BlockSim(HI).init();
+    b <@ Dist(RaiseHybridIRO(HI), BlockSim(HI)).distinguish();
     return b;
   }
 }.
+
+local lemma Experiment_HybridIROExper_Lazy &m :
+  Pr[Experiment
+     (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+      Dist).main() @ &m : res] =
+  Pr[HybridIROExper(HybridIROLazy, HybridIRODist).main() @ &m : res].
+proof.
+byequiv=> //; proc; inline*.
+seq 2 2 : (={glob Dist, glob BlockSim, HybridIROLazy.mp}).
+swap{2} 1 1; wp; call (_ : true); auto.
+sim.
+qed.
+
+local lemma HybridIROExper_Experiment_Eager &m :
+  Pr[HybridIROExper(HybridIROEager, HybridIRODist).main() @ &m : res] =
+  Pr[Experiment
+     (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+      Dist).main() @ &m : res].
+proof.
+byequiv=> //; proc; inline*.
+seq 2 2 : (={glob Dist, glob BlockSim, HybridIROEager.mp}).
+swap{2} 1 1; wp; call (_ : true); auto.
+sim.
+qed.
 
 local lemma Experiment_Hybrid_Lazy_Eager &m :
   Pr[Experiment
@@ -548,20 +767,9 @@ local lemma Experiment_Hybrid_Lazy_Eager &m :
      (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
       Dist).main() @ &m : res].
 proof.
-have -> :
-  Pr[Experiment
-     (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
-      Dist).main() @ &m : res] =
-  Pr[HybridIRODist(HybridIROLazy).distinguish() @ &m : res].
-  byequiv=> //; proc; inline *; sim.
-rewrite (HybridIROLazyEager(HybridIRODist) &m).
-have -> :
-  Pr[HybridIRODist(HybridIROEager).distinguish() @ &m : res] =
-  Pr[Experiment
-     (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
-      Dist).main() @ &m : res].
-  byequiv=> //; proc; inline *; sim.
-done.
+by rewrite (Experiment_HybridIROExper_Lazy &m)
+           (HybridIROExper_Lazy_Eager HybridIRODist &m)
+           (HybridIROExper_Experiment_Eager &m).
 qed.
 
 local lemma Experiment_HybridEager_Ideal_BlockIRO &m :
@@ -575,7 +783,7 @@ byequiv=> //; proc.
 seq 2 2 :
   (={glob Dist, glob BlockSim} /\ HybridIROEager.mp{1} = NewFMap.map0 /\
    BlockSponge.BIRO.IRO.mp{2} = NewFMap.map0).
-inline *; wp; call (_ : true); auto.
+inline*; wp; call (_ : true); auto.
 call
   (_ :
   ={glob Dist, glob BlockSim} /\
