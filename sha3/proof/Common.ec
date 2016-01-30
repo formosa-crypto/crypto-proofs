@@ -94,6 +94,11 @@ clone export LazyRP as Perm with
 
 (*---------------------- Needed Blocks Computation ---------------------*)
 
+lemma needed_blocks0 : (0 + r - 1) %/ r = 0.
+proof.
+rewrite -divz_eq0 1:gt0_r; smt ml=0 w=(gt0_r).
+qed.
+
 lemma needed_blocks_non_pos (n : int) :
   n <= 0 => (n + r - 1) %/ r <= 0.
 proof.
@@ -130,7 +135,63 @@ lemma needed_blocks_prod_r (n : int) :
   (n * r + r - 1) %/ r = n.
 proof.
 rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r // divz_small //.
-smt ml=0 w=(gt0_n).
+smt ml=0 w=(gt0_r).
+qed.
+
+lemma needed_blocks_eq_div_r (n : int) :
+  r %| n <=> n %/ r = (n + r - 1) %/ r.
+proof.
+split=> [r_dvd_n | eq_div].
+have {2}<- := divzK r n _; first trivial.
+by rewrite needed_blocks_prod_r.
+rewrite dvdzE.
+rewrite {2}(@divz_eq n r) -!addrA @divzMDl 1:gtr_eqF 1:gt0_r //
+        -{1}(@addz0 (n %/ r)) in eq_div.
+have eq_div_simp : (n %% r + (r - 1)) %/ r = 0
+  by rewrite (@addzI (n %/ r) 0 ((n %% r + (r - 1)) %/ r)).
+have [_ n_mod_r_plus_r_min1_lt_r] : 0 <= n %% r + (r - 1) < r
+  by rewrite divz_eq0 1:gt0_r.
+have n_mod_r_plus_r_min1_lt_r_simp : n %% r <= 0
+  by rewrite -(@lez_add2r (r - 1)) /= -ltzS -addzA /=.
+by apply lez_anti; split=> // _; rewrite modz_ge0 1:gtr_eqF 1:gt0_r.
+qed.
+
+lemma needed_blocks_succ_eq_div_r (n : int) :
+  ! r %| n <=> n %/ r + 1 = (n + r - 1) %/ r.
+proof.
+split=> [not_r_dvd_n | succ_eq_div].
+have {2}-> := divz_eq n r.
+rewrite -!addrA divzMDl 1:gtr_eqF 1:gt0_r //; ring.
+rewrite dvdzE in not_r_dvd_n.
+have gt0_mod : 0 < n %% r
+  by rewrite ltz_def=> |>; rewrite modz_ge0 1:gtr_eqF 1:gt0_r.
+have [r_le_n_mod_r_plus_r_min1 n_mod_r_plus_r_min1_lt_r] :
+       r <= n %% r + (r - 1) < r + r.
+  split=> [| _].
+  by rewrite (@addrC r (-1)) addrA -{1}add0z lez_add2r -ltzS
+             -addrA addNz.
+  by rewrite (@addrC r (-1)) addrA ltz_add2r -(@ltz_add2r 1) -addrA /=
+     (@ltr_trans r) 1:ltz_pmod 1:gt0_r -{1}addz0 ler_lt_add 1:lezz ltr01.
+have [m [-> [ge0_m lt_mr]]] :
+  exists (m : int), n %% r + (r - 1) = r + m /\ 0 <= m < r.
+  exists (n %% r + (r - 1) - r).
+  split; first ring.
+  split=> [| _].
+  by rewrite -(@lez_add2r r) -addrA addNz.
+  by rewrite -(@ltz_add2r r) -addrA addNz.
+rewrite -{1}(@mul1z r) divzMDl 1:gtr_eqF 1:gt0_r //
+        opprD addrA /=.
+rewrite divz_small; [by rewrite ger0_norm 1:ge0_r | done].
+have not_eq_dvd : n %/ r <> (n + r - 1) %/ r by smt ml=0.
+by rewrite needed_blocks_eq_div_r.
+qed.
+
+lemma needed_blocks_rel_div_r (n : int) :
+  n %/ r = (n + r - 1) %/ r \/ n %/ r + 1 = (n + r - 1) %/ r.
+proof.
+case: (r %| n)=> [r_dvd_n | not_r_dvd_n].
+left; by apply/needed_blocks_eq_div_r.
+right; by apply/needed_blocks_succ_eq_div_r.
 qed.
 
 (* ------------------------- Padding/Unpadding ------------------------ *)
