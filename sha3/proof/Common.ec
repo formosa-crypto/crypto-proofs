@@ -44,9 +44,16 @@ clone export BitWord as Block with
 lemma dvdz_close (n : int) :
   r %| n => 0 < n < 2 * r => n = r.
 proof.
-move=> dvd_rn [gt0_n lt_n_2r].
-have [m] n_eq /# : exists m, m * r = n
-  by exists (n %/ r); apply dvdz_eq.
+move=> dvd_rn.
+have [m] <- : exists m, m * r = n
+  by exists (n %/ r); by rewrite divzK.
+move=> [gt0_m_tim_r m_tim_r_lt_2r].
+case: (m = 1)=> // /ltr_total [/ltz1 le0_m | gt1_m].
+rewrite pmulr_lgt0 1:gt0_r in gt0_m_tim_r.
+have // : 0 < 0 by rewrite (@ltr_le_trans m).
+rewrite ltr_pmul2r 1:gt0_r in m_tim_r_lt_2r.
+rewrite -lez_add1r /= in gt1_m.
+have // : 2 < 2 by rewrite (@ler_lt_trans m).
 qed.
 
 lemma chunk_nil' ['a] r : BitChunking.chunk r [<:'a>] = [].
