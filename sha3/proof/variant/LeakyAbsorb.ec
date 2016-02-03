@@ -1,7 +1,6 @@
 (* -------------------------------------------------------------------- *)
-require import Option Pair Int Real Distr List FSet NewFMap.
-require (*--*) LazyRP RndOrcl. 
-(*---*) import Dprod.
+require import Option Pair Int Real Distr List FSet NewFMap DProd.
+require (*--*) LazyRP RndOrcl.
 
 (* -------------------------------------------------------------------- *)
 
@@ -22,7 +21,7 @@ op (^) : block -> block -> block.
 (* -------------------------------------------------------------------- *)
 clone import LazyRP as Perm with
   type D <- block * capacity,
-  op   d <- bdist * cdist
+  op   d <- bdist `*` cdist
 
   rename [module] "P" as "Perm".
 

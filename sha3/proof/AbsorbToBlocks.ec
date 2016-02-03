@@ -1,6 +1,6 @@
 (* -------------------------------------------------------------------- *)
 require import Option Pair Int Real List FSet NewFMap.
-require (*--*) Absorb Block.
+require (*--*) AbsorbSponge BlockSponge.
 
 (* -------------------------------------------------------------------- *)
 require import Common.
@@ -8,7 +8,7 @@ require import Common.
 op cast: 'a NewDistr.distr -> 'a distr.
 
 (* -------------------------------------------------------------------- *)
-module LowerFun(F : Self.Block.DFUNCTIONALITY) : Absorb.DFUNCTIONALITY = {
+module LowerFun(F : Self.BlockSponge.DFUNCTIONALITY) : AbsorbSponge.DFUNCTIONALITY = {
   proc init() = {}
 
   proc f(xs : block list) : block = {
@@ -22,9 +22,9 @@ module LowerFun(F : Self.Block.DFUNCTIONALITY) : Absorb.DFUNCTIONALITY = {
   }
 }.
 
-module Sim (S : Absorb.SIMULATOR, F : Self.Block.DFUNCTIONALITY) = S(LowerFun(F)).
+module Sim (S : AbsorbSponge.SIMULATOR, F : Self.BlockSponge.DFUNCTIONALITY) = S(LowerFun(F)).
 
-module UpperFun (F : Absorb.DFUNCTIONALITY) = {
+module UpperFun (F : AbsorbSponge.DFUNCTIONALITY) = {
   proc init() = {}
 
   proc f(xs : block list, n : int) : block list = {
@@ -43,17 +43,17 @@ module UpperFun (F : Absorb.DFUNCTIONALITY) = {
   }
 }.
 
-module BlocksOfAbsorbBlockSponge (P : Self.Block.DPRIMITIVE) =
-  UpperFun(Absorb.BlockSponge(P)).
+module BlocksOfAbsorbBlockSponge (P : Self.BlockSponge.DPRIMITIVE) =
+  UpperFun(AbsorbSponge.BlockSponge(P)).
 
-module Dist (D : Self.Block.DISTINGUISHER, F : Absorb.DFUNCTIONALITY) = D(UpperFun(F)).
+module Dist (D : Self.BlockSponge.DISTINGUISHER, F : AbsorbSponge.DFUNCTIONALITY) = D(UpperFun(F)).
 
 section.
-  declare module AbsorbSim  : Absorb.SIMULATOR { Perm, Self.Block.BIRO.IRO', Absorb.Ideal.RO }.
-  declare module BlocksDist : Self.Block.DISTINGUISHER { Perm, Self.Block.BIRO.IRO', Absorb.Ideal.RO, AbsorbSim }.
+  declare module AbsorbSim  : AbsorbSponge.SIMULATOR { Perm, Self.BlockSponge.BIRO.IRO', AbsorbSponge.Ideal.RO }.
+  declare module BlocksDist : Self.BlockSponge.DISTINGUISHER { Perm, Self.BlockSponge.BIRO.IRO', AbsorbSponge.Ideal.RO, AbsorbSim }.
 
   local equiv ModularBlocks_Real:
-    UpperFun(Absorb.BlockSponge(Perm)).f ~ Self.Block.Sponge(Perm).f:
+    UpperFun(AbsorbSponge.BlockSponge(Perm)).f ~ Self.BlockSponge.Sponge(Perm).f:
          ={arg}
       /\ ={m,mi}(Perm,Perm)
       /\ (forall x, mem (dom Perm.m){1} x)
@@ -62,23 +62,23 @@ section.
           /\ (forall x, mem (dom Perm.m){1} x).
   proof.
   proc. sp; if=> //=.
-  inline Absorb.BlockSponge(Perm).f.
+  inline AbsorbSponge.BlockSponge(Perm).f.
   admit. (* Fun with loops *)
   qed.
 
   pred lower (ro : (block list,block) fmap) (iro : (block list * int,block) fmap) =
-    Self.Block.BIRO.prefix_closed iro /\
+    Self.BlockSponge.BIRO.prefix_closed iro /\
     forall x n, valid_block x => iro.[(x,n)] = ro.[extend x n].
 
   local equiv ModularAbsorb:
-    UpperFun(Absorb.Ideal.RO).f ~ Self.Block.BIRO.IRO'.f:
+    UpperFun(AbsorbSponge.Ideal.RO).f ~ Self.BlockSponge.BIRO.IRO'.f:
           ={arg}
-          /\ lower Absorb.Ideal.RO.m{1} Self.Block.BIRO.IRO'.mp{2}
+          /\ lower AbsorbSponge.Ideal.RO.m{1} Self.BlockSponge.BIRO.IRO'.mp{2}
       ==> ={res}
-          /\ lower Absorb.Ideal.RO.m{1} Self.Block.BIRO.IRO'.mp{2}.
+          /\ lower AbsorbSponge.Ideal.RO.m{1} Self.BlockSponge.BIRO.IRO'.mp{2}.
   proof.
   proc. sp; if=> //=.
-  inline Absorb.BlockSponge(Perm).f.
+  inline AbsorbSponge.BlockSponge(Perm).f.
   admit. (* Fun with loops *)
   qed.
 
@@ -91,14 +91,14 @@ section.
                n <= n'
             /\ mem (dom ro) (extend x n')).
 
-  module LowIRO' : Absorb.FUNCTIONALITY = {
-    proc init = Self.Block.BIRO.IRO'.init
+  module LowIRO' : AbsorbSponge.FUNCTIONALITY = {
+    proc init = Self.BlockSponge.BIRO.IRO'.init
     proc f(xs : block list) = {
       var b <- b0;
       var (ys, n) = strip xs;
 
       if (valid_block ys) {
-        b <@ Self.Block.BIRO.IRO'.f_lazy(ys, n);
+        b <@ Self.BlockSponge.BIRO.IRO'.f_lazy(ys, n);
       }
 
       return b;
@@ -106,7 +106,7 @@ section.
   }.
 
   pred holey_map (iro iro_lazy : (block list * int,block) fmap) =
-        Self.Block.BIRO.prefix_closed iro
+        Self.BlockSponge.BIRO.prefix_closed iro
      /\ (forall xn,
           mem (dom iro_lazy) xn =>
           iro_lazy.[xn] = iro.[xn])
@@ -120,13 +120,13 @@ section.
       whose index is not in the index of the right map, as they have
       not ben given to the adversary. **)
   local lemma LazifyIRO:
-    eager [Self.Block.BIRO.IRO'.resample_invisible(); , LowerFun(Self.Block.BIRO.IRO').f ~ LowIRO'.f, Self.Block.BIRO.IRO'.resample_invisible();:
-              ={arg, Self.Block.BIRO.IRO'.visible}
-           /\ holey_map Self.Block.BIRO.IRO'.mp{1} Self.Block.BIRO.IRO'.mp{2}
-           /\ Self.Block.BIRO.IRO'.visible{2} = dom (Self.Block.BIRO.IRO'.mp){2}
-           ==>     ={res, Self.Block.BIRO.IRO'.visible}
-               /\ holey_map Self.Block.BIRO.IRO'.mp{1} Self.Block.BIRO.IRO'.mp{2}
-               /\ Self.Block.BIRO.IRO'.visible{2} = dom (Self.Block.BIRO.IRO'.mp){2}].
+    eager [Self.BlockSponge.BIRO.IRO'.resample_invisible(); , LowerFun(Self.BlockSponge.BIRO.IRO').f ~ LowIRO'.f, Self.BlockSponge.BIRO.IRO'.resample_invisible();:
+              ={arg, Self.BlockSponge.BIRO.IRO'.visible}
+           /\ holey_map Self.BlockSponge.BIRO.IRO'.mp{1} Self.BlockSponge.BIRO.IRO'.mp{2}
+           /\ Self.BlockSponge.BIRO.IRO'.visible{2} = dom (Self.BlockSponge.BIRO.IRO'.mp){2}
+           ==>     ={res, Self.BlockSponge.BIRO.IRO'.visible}
+               /\ holey_map Self.BlockSponge.BIRO.IRO'.mp{1} Self.BlockSponge.BIRO.IRO'.mp{2}
+               /\ Self.BlockSponge.BIRO.IRO'.visible{2} = dom (Self.BlockSponge.BIRO.IRO'.mp){2}].
   proof.
 (*
     eager proc.
@@ -191,20 +191,20 @@ section.
         - on actual queries, the two maps agree;
         - blocks in the IRO that are just generated on the way
           to answering actual queries can be resampled. **)
-  (* Absorb.Ideal.RO.f ~ LowerFun(Blocks.BIRO.IRO).f:
+  (* AbsorbSponge.Ideal.RO.f ~ LowerFun(Blocks.BIRO.IRO).f:
              ={arg}
           /\ true
       ==> ={res}.
   *)
 
   lemma Intermediate &m:
-    `|Pr[Self.Block.RealIndif(Self.Block.Sponge,Perm,BlocksDist).main() @ &m :res]
-      - Pr[Self.Block.IdealIndif(Self.Block.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
-    = `|Pr[Self.Block.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
-        - Pr[Self.Block.IdealIndif(UpperFun(Absorb.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]|.
+    `|Pr[Self.BlockSponge.RealIndif(Self.BlockSponge.Sponge,Perm,BlocksDist).main() @ &m :res]
+      - Pr[Self.BlockSponge.IdealIndif(Self.BlockSponge.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
+    = `|Pr[Self.BlockSponge.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
+        - Pr[Self.BlockSponge.IdealIndif(UpperFun(AbsorbSponge.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]|.
   proof.
-  have ->: Pr[Self.Block.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
-           = Pr[Self.Block.RealIndif(Self.Block.Sponge,Perm,BlocksDist).main() @ &m :res].
+  have ->: Pr[Self.BlockSponge.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
+           = Pr[Self.BlockSponge.RealIndif(Self.BlockSponge.Sponge,Perm,BlocksDist).main() @ &m :res].
     byequiv=> //=; proc.
     call (_:   ={m,mi}(Perm,Perm)
             /\ (forall x, mem (dom Perm.m){1} x)).
@@ -219,14 +219,14 @@ section.
     (* Now the other initialization is dead code. *)
     call (_: true ==> true)=> //.
       by proc; auto.
-  have ->: Pr[Self.Block.IdealIndif(UpperFun(Absorb.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]
-           = Pr[Self.Block.IdealIndif(Self.Block.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res].
+  have ->: Pr[Self.BlockSponge.IdealIndif(UpperFun(AbsorbSponge.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]
+           = Pr[Self.BlockSponge.IdealIndif(Self.BlockSponge.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res].
     byequiv=> //=; proc.
-    call (_: ={glob AbsorbSim} /\ lower Absorb.Ideal.RO.m{1} Self.Block.BIRO.IRO'.mp{2}).
-      proc (lower Absorb.Ideal.RO.m{1} Self.Block.BIRO.IRO'.mp{2})=> //=.
+    call (_: ={glob AbsorbSim} /\ lower AbsorbSponge.Ideal.RO.m{1} Self.BlockSponge.BIRO.IRO'.mp{2}).
+      proc (lower AbsorbSponge.Ideal.RO.m{1} Self.BlockSponge.BIRO.IRO'.mp{2})=> //=.
         proc; sp; if=> //=. smt.
         call ModularAbsorb; auto; smt.
-      proc (lower Absorb.Ideal.RO.m{1} Self.Block.BIRO.IRO'.mp{2})=> //=.
+      proc (lower AbsorbSponge.Ideal.RO.m{1} Self.BlockSponge.BIRO.IRO'.mp{2})=> //=.
         proc; sp; if=> //=. smt.
         call ModularAbsorb; auto; smt.
       (* Re-Bug *)
@@ -238,16 +238,16 @@ section.
   qed.
 
   lemma Remainder &m:
-    `|Pr[Self.Block.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
-      - Pr[Self.Block.IdealIndif(UpperFun(Absorb.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
-    = `|Pr[Absorb.RealIndif(Absorb.BlockSponge,Perm,Dist(BlocksDist)).main() @ &m: res]
-        - Pr[Absorb.IdealIndif(Absorb.Ideal.RO,AbsorbSim,Dist(BlocksDist)).main() @ &m: res]|.
+    `|Pr[Self.BlockSponge.RealIndif(BlocksOfAbsorbBlockSponge,Perm,BlocksDist).main() @ &m: res]
+      - Pr[Self.BlockSponge.IdealIndif(UpperFun(AbsorbSponge.Ideal.RO),Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
+    = `|Pr[AbsorbSponge.RealIndif(AbsorbSponge.BlockSponge,Perm,Dist(BlocksDist)).main() @ &m: res]
+        - Pr[AbsorbSponge.IdealIndif(AbsorbSponge.Ideal.RO,AbsorbSim,Dist(BlocksDist)).main() @ &m: res]|.
   proof. admit. qed.
 
   lemma Conclusion &m:
-    `|Pr[Self.Block.RealIndif(Self.Block.Sponge,Perm,BlocksDist).main() @ &m: res]
-      - Pr[Self.Block.IdealIndif(Self.Block.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
-    = `|Pr[Absorb.RealIndif(Absorb.BlockSponge,Perm,Dist(BlocksDist)).main() @ &m: res]
-      - Pr[Absorb.IdealIndif(Absorb.Ideal.RO,AbsorbSim,Dist(BlocksDist)).main() @ &m: res]|.
+    `|Pr[Self.BlockSponge.RealIndif(Self.BlockSponge.Sponge,Perm,BlocksDist).main() @ &m: res]
+      - Pr[Self.BlockSponge.IdealIndif(Self.BlockSponge.BIRO.IRO',Sim(AbsorbSim),BlocksDist).main() @ &m: res]|
+    = `|Pr[AbsorbSponge.RealIndif(AbsorbSponge.BlockSponge,Perm,Dist(BlocksDist)).main() @ &m: res]
+      - Pr[AbsorbSponge.IdealIndif(AbsorbSponge.Ideal.RO,AbsorbSim,Dist(BlocksDist)).main() @ &m: res]|.
   proof. by rewrite (Intermediate &m) (Remainder &m). qed.
 end section.
