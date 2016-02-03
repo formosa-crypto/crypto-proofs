@@ -479,7 +479,9 @@ seq 6 3 :
   (={i, n0} /\ bs{1} = bs0{2} /\
    LazyInvar IRO.mp{1} HybridIROLazy.mp{2} /\
    pad2blocks x{1} = xs0{2}).
-auto; progress; have {2}<- /# := unpadBlocksK xs0{2}.
+auto; progress;
+  have {2}<- := unpadBlocksK xs0{2}; first
+  by rewrite (@not_none (unpad_blocks xs0{2})).
 wp.
 while
   (={i, n0} /\ bs{1} = bs0{2} /\
@@ -489,11 +491,12 @@ sp; auto.
 if.
 progress; smt ml=0.
 rnd; auto; progress;
-  [smt ml=0 w=(getP_eq) |
-   smt ml=0 w=(lazy_invar_upd_mem_dom_iff) |
-   smt ml=0 w=(lazy_invar_upd_mem_dom_iff) |
-   smt ml=0 w=(lazy_invar_upd2_vb) |
-   smt ml=0 w=(lazy_invar_upd_lu_eq)].
+  [by rewrite !getP_eq |
+   by rewrite -(@lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
+   by rewrite (@lazy_invar_upd_mem_dom_iff IRO.mp{1} HybridIROLazy.mp{2}) |
+   by rewrite (@lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
+               x{1} xs2 i{2} n2 mpL) |
+   by rewrite (@lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
 auto; progress; smt ml=0.
 auto.
 rcondf{1} 3; first auto. rcondf{2} 4; first auto.
@@ -519,12 +522,13 @@ while
 wp; sp.
 if.
 progress; smt ml=0.
-rnd; skip; progress;
-  [smt ml=0 w=(getP_eq) |
-   smt ml=0 w=(lazy_invar_upd_mem_dom_iff) |
-   smt ml=0 w=(lazy_invar_upd_mem_dom_iff) |
-   smt ml=0 w=(lazy_invar_upd2_vb) |
-   smt ml=0 w=(lazy_invar_upd_lu_eq)].
+rnd; auto; progress;
+  [by rewrite !getP_eq |
+   by rewrite -(@lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
+   by rewrite (@lazy_invar_upd_mem_dom_iff IRO.mp{1} HybridIROLazy.mp{2}) |
+   by rewrite (@lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
+               x{1} xs1 i{2} n1 mpL) |
+   by rewrite (@lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
 auto; progress; smt ml=0.
 auto.
 qed.
@@ -589,8 +593,10 @@ auto; progress.
 if=> //.
 case: (n1 < 0).
 rcondf{1} 1; first auto; progress; smt ml=0.
-rcondf{2} 1; first auto; progress; smt ml=0 w=(needed_blocks_non_pos).
-rcondf{1} 1; first auto; progress; smt ml=0 w=(needed_blocks_non_pos gt0_r).
+rcondf{2} 1; first auto; progress;
+  by rewrite -lezNgt needed_blocks_non_pos ltzW.
+rcondf{1} 1; first auto; progress;
+  by rewrite -lezNgt pmulr_lle0 1:gt0_r needed_blocks_non_pos ltzW.
 auto; progress;
   [by rewrite blocks2bits_nil | by smt ml=0 w=(needed_blocks0)].
 (* 0 <= n1 *)
