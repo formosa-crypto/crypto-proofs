@@ -69,13 +69,16 @@ qed.
 
 lemma b0 : b0 = bits2w(nseq r false).
 proof.
-admit. (* FIXME *)
+rewrite wordP=> i ge0_i_ltr; rewrite offunifE ge0_i_ltr /= getE ge0_i_ltr /=.
+rewrite ofwordK 1:Array.size_mkarray 1:size_nseq 1:/#.
+by rewrite Array.getE Array.ofarrayK nth_nseq.
 qed.
 
 lemma bits2w_inj_eq (cs ds : bool list) :
   size cs = r => size ds = r => bits2w cs = bits2w ds <=> cs = ds.
 proof.
-admit. (* FIXME *)
+rewrite -!Array.size_mkarray=> s_cs_r s_ds_r; split=> //=.
+by move=> @/bits2w /(mkword_pinj _ _ s_cs_r s_ds_r) /Array.mkarray_inj.
 qed.
 
 lemma last_drop_all_but_last (y : 'a, xs : 'a list) :
@@ -89,10 +92,6 @@ by have -> : zs = [] by rewrite -size_eq0.
 case (zs = [])=> // zs_non_nil. elim ih=> // ->.
 by rewrite (@last_nonempty y z).
 qed.
-
-lemma not_none ['a] (x : 'a option) :
-  x <> None => x = Some(oget x).
-proof. case: (x)=> //. qed.
 
 (*------------------------------ Primitive -----------------------------*)
 
