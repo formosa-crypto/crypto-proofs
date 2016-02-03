@@ -29,8 +29,8 @@ pred prefix_closed' (m : (from * int,to) fmap) =
     0 <= i < n =>
     mem (dom m) (x,i).
 
-lemma prefix_closed_equiv m: prefix_closed m <=> prefix_closed' m
-by [].
+lemma prefix_closed_equiv m: prefix_closed m <=> prefix_closed' m.
+proof. smt ml=0. qed.
 
 (* official version: *)
 
