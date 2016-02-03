@@ -652,11 +652,10 @@ section EXT.
    forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
      islossless P.f => islossless P.fi => islossless F.f => islossless D(F, P).distinguish.
 
-  (* TODO Francois : on peut pas avoir max_size au lieu de (max_size + 1)? *)
   lemma Real_G2 &m: 
      Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
      Pr[Eager(G2(DRestr(D))).main2() @ &m: res] +
-     ((max_size + 1) ^ 2)%r * mu dstate (pred1 witness) + 
+     (max_size ^ 2)%r * mu dstate (pred1 witness) + 
      max_size%r * ((2*max_size)%r / (2^c)%r) + 
      max_size%r * ((2*max_size)%r / (2^c)%r).
   proof.

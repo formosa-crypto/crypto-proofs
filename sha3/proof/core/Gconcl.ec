@@ -366,7 +366,7 @@ axiom D_ll :
 lemma Real_Ideal &m: 
   Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
   Pr[IdealIndif(IF,S,DRestr(D)).main() @ &m :res] +
-   ((max_size + 1) ^ 2)%r * mu dstate (pred1 witness) + 
+   (max_size ^ 2)%r * mu dstate (pred1 witness) + 
    max_size%r * ((2*max_size)%r / (2^c)%r) + 
    max_size%r * ((2*max_size)%r / (2^c)%r).
 proof.
