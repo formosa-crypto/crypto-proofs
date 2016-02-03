@@ -481,7 +481,7 @@ seq 6 3 :
    pad2blocks x{1} = xs0{2}).
 auto; progress;
   have {2}<- := unpadBlocksK xs0{2}; first
-  by rewrite (@not_none (unpad_blocks xs0{2})).
+  by rewrite (@some_oget (unpad_blocks xs0{2})).
 wp.
 while
   (={i, n0} /\ bs{1} = bs0{2} /\
