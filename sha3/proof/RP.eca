@@ -1,26 +1,64 @@
-type from, to.
+(*************************- Random Permutation -*************************)
+
+require import Option Real FSet NewFMap Distr.
+require import Dexcepted.
+
+type t.
+op dt : t distr.
 
 module type RP = {
-  proc init()      : unit
-  proc f (x : from): to
-  proc fi(x : to  ): from
+  proc init() : unit
+  proc f(x : t) : t
+  proc fi(x : t) : t
 }.
 
-module type RP_ = {
-  proc f (x : from): to
-  proc fi(x : to  ): from
+module type DRP = {
+  proc f(x : t) : t
+  proc fi(x : t) : t
 }.
 
-module type Distinguisher(G : RP_) = {
-  proc distinguish(): bool
+module P : RP, DRP = {
+  var m : (t, t) fmap
+  var mi : (t, t) fmap
+
+  proc init() = { m = map0; mi = map0; }
+
+  proc f(x) = {
+    var y;
+
+    if (! mem (dom m) x) {
+      y      <$ dt \ (mem (rng m));
+      m.[x]  <- y;
+      mi.[y] <- x;
+    }
+    return oget m.[x];
+  }
+
+  proc fi(x) = {
+    var y;
+
+    if (! mem (dom mi) x) {
+      y      <$ dt \ (mem (rng mi));
+      mi.[x] <- y;
+      m.[y]  <- x;
+    }
+    return oget mi.[x];
+  }
 }.
 
-module IND(G:RP, D:Distinguisher) = {
-  proc main(): bool = {
-    var b;
+lemma P_init_ll: islossless P.init.
+proof. by proc; auto. qed.
 
-         G.init();
-    b <@ D(G).distinguish();
-    return b;
-  }  
-}.
+lemma P_f_ll: is_lossless dt => support dt = predT => islossless P.f.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have h:= endo_dom_rng P.m{m} _; first by exists x{m}.
+apply/dexcepted_ll=> //; smt. (* needs help *)
+qed.
+
+lemma P_fi_ll: is_lossless dt => support dt = predT => islossless P.fi.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have h:= endo_dom_rng P.mi{m} _; first by exists x{m}.
+apply/dexcepted_ll=> //; smt. (* needs help *)
+qed.
