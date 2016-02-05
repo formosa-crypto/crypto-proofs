@@ -56,13 +56,11 @@ lemma mu_except ['a] (d : 'a distr, y : 'a, P : 'a -> bool) :
   is_lossless d => support d = predT => ! P y => mu d P < 1%r.
 proof.
 move=> d_ll supp_d_all notP_y.
-have splitP : mu d P + mu d (predC P) = 1%r
-  by rewrite -d_ll (mu_split d predT P) mu_not mu_and.
-have -> : mu d P = 1%r - mu d (predC P) by rewrite -splitP #ring.
+have -> : mu d P = 1%r - mu d (predC P)
+  by rewrite -d_ll (mu_split d predT P) mu_not mu_and #ring.
 rewrite ltr_subl_addl addrC -(ltr_add2l (-1%r)) addrA /=.
 rewrite (ltr_le_trans (mu d (pred1 y))) 1:witness_support.
-exists y; split=> //.
-by rewrite -/(support d y) supp_d_all.
+exists y; split=> //; by rewrite -/(support d y) supp_d_all.
 by rewrite mu_sub=> z @/pred1.
 qed.
 
