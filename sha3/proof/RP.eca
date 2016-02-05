@@ -1,7 +1,8 @@
 (*************************- Random Permutation -*************************)
 
 require import Option Real FSet NewFMap Distr.
-require import Dexcepted.
+require import Dexcepted StdOrder. import RealOrder.
+require import Ring StdRing. import RField.
 
 type t.
 op dt : t distr.
@@ -49,16 +50,32 @@ module P : RP, DRP = {
 lemma P_init_ll: islossless P.init.
 proof. by proc; auto. qed.
 
+(* maybe a useful standard lemma? *)
+
+lemma mu_except ['a] (d : 'a distr, y : 'a, P : 'a -> bool) :
+  is_lossless d => support d = predT => ! P y => mu d P < 1%r.
+proof.
+move=> d_ll supp_d_all notP_y.
+have splitP : mu d P + mu d (predC P) = 1%r
+  by rewrite -d_ll (mu_split d predT P) mu_not mu_and.
+have -> : mu d P = 1%r - mu d (predC P) by rewrite -splitP #ring.
+rewrite ltr_subl_addl addrC -(ltr_add2l (-1%r)) addrA /=.
+rewrite (ltr_le_trans (mu d (pred1 y))) 1:witness_support.
+exists y; split=> //.
+by rewrite -/(support d y) supp_d_all.
+by rewrite mu_sub=> z @/pred1.
+qed.
+
 lemma P_f_ll: is_lossless dt => support dt = predT => islossless P.f.
 proof.
 move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
-have h:= endo_dom_rng P.m{m} _; first by exists x{m}.
-apply/dexcepted_ll=> //; smt. (* needs help *)
+have [y not_mem_y_rng_m] := endo_dom_rng P.m{m} _; first by exists x{m}.
+by apply /dexcepted_ll /(mu_except dt y (mem (rng P.m{m}))).
 qed.
 
 lemma P_fi_ll: is_lossless dt => support dt = predT => islossless P.fi.
 proof.
 move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
-have h:= endo_dom_rng P.mi{m} _; first by exists x{m}.
-apply/dexcepted_ll=> //; smt. (* needs help *)
+have [y not_mem_y_rng_mi] := endo_dom_rng P.mi{m} _; first by exists x{m}.
+by apply /dexcepted_ll /(mu_except dt y (mem (rng P.mi{m}))).
 qed.
