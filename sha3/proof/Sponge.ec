@@ -26,7 +26,7 @@ clone import IRO as BIRO with
 
 (*------------------------- Sponge Construction ------------------------*)
 
-module Sponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
+module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
   proc init() : unit = {}
 
   proc f(bs : bool list, n : int) : bool list = {
@@ -798,7 +798,7 @@ by conseq IRO_RaiseHybridIRO_HybridIROLazy_f.
 auto.
 qed.
 
-local module HybridIRODist(HI : HYBRID_IRO) : HYBRID_IRO_DIST (HI) = {
+local module (HybridIRODist : HYBRID_IRO_DIST) (HI : HYBRID_IRO) = {
   proc distinguish() : bool = {
     var b : bool;
     BlockSim(HI).init();

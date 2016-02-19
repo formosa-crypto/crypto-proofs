@@ -26,7 +26,7 @@ clone import IRO as BIRO with
 
 (*------------------------- Sponge Construction ------------------------*)
 
-module Sponge (P : DPRIMITIVE) : FUNCTIONALITY, CONSTRUCTION(P) = {
+module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
   proc init() = {}
 
   proc f(xs : block list, n : int) : block list = {
