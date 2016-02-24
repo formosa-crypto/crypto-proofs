@@ -21,7 +21,7 @@ clone import LazyRO as RO2
        type to   <- Ind1.f_out,
        op d      <- RO1.d.
 
-module ConstrPad (FC:Ind1.CONSTRUCTION, P:Ind1.PRIMITIVE) = {
+module ConstrPad (FC:Ind1.CONSTRUCTION, P:Ind1.DPRIMITIVE) = {
   module C = FC(P)
 
   proc init = C.init
@@ -33,10 +33,8 @@ module ConstrPad (FC:Ind1.CONSTRUCTION, P:Ind1.PRIMITIVE) = {
   }
 }.
 
-module DistPad(FD: Ind2.DISTINGUISHER, F:Ind1.FUNCTIONALITY, P:Ind1.PRIMITIVE) = {
+module DistPad(FD: Ind2.DISTINGUISHER, F:Ind1.DFUNCTIONALITY, P:Ind1.DPRIMITIVE) = {
   module Fpad = {
-    proc init = F.init
-
     proc f(x:Ind2.f_in) : f_out = {
       var r;
       r = F.f(pad x);
@@ -47,9 +45,8 @@ module DistPad(FD: Ind2.DISTINGUISHER, F:Ind1.FUNCTIONALITY, P:Ind1.PRIMITIVE) =
   proc distinguish = FD(Fpad,P).distinguish
 }.
 
-module SimPadinv(S:Ind1.SIMULATOR, F2:Ind2.FUNCTIONALITY) = {
+module SimPadinv(S:Ind1.SIMULATOR, F2:Ind2.DFUNCTIONALITY) = {
   module F1 = {
-    proc init = F2.init
     proc f(x:Ind1.f_in):Ind1.f_out = {
       var r;
       r = F2.f(padinv x);

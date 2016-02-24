@@ -74,7 +74,7 @@ section.
   lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
   proof. by case l=> // ?? /=; ring. qed.
 
-  local module D'(P' : PRPt.Oracles): PRPt.Distinguisher(P') = {
+  local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
     proc distinguish = DRestr(D,SqueezelessSponge(P'),P').distinguish
   }.
 
