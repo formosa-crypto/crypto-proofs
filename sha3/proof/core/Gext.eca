@@ -618,34 +618,28 @@ section EXT.
     + rewrite /felsum Bigreal.sumr_const count_predT size_range.
       apply ler_wpmul2r;1:by apply eps_ge0.
       by rewrite le_fromint;smt ml=0 w=max_ge0. 
-    + proc. 
-      case ((size G1.m <= max_size /\ size G1.mi <= max_size /\ ReSample.count < max_size));
-       [rcondt 2 | rcondf 2];1,3:by auto. 
-      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi)));skip=> &hr[#]?->/=???.
-        rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr})) cdistr (1%r/(2^c)%r))//.
-        + move=>x _;apply DWord.muxP.
-        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
-        rewrite imageU fcardU le_fromint. 
-        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
-        rewrite -!sizeE;smt w=fcard_ge0.
-      by hoare=>[??|];[apply eps_ge0|auto].
-    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
-    by move=> b1 c1;proc;auto=> &hr [^H 2->]. 
-    + proc. 
-      case ((size G1.m < max_size /\ size G1.mi < max_size /\ ReSample.count < max_size));
-       [rcondt 2 | rcondf 2]; 1,3:by auto. 
-      + wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi ) `|` fset1 x));skip=> &hr[#]?->/=???.
-        rewrite (Mu_mem.mu_mem 
+    + proc;rcondt 2;1:by auto.
+      wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi ) `|` fset1 x));skip=> /> &hr ?? -> /= ??.
+      rewrite (Mu_mem.mu_mem 
                    (image snd (dom G1.m{hr} `|` dom G1.mi{hr}) `|` fset1 x{hr})
                    cdistr (1%r/(2^c)%r))//.
-        + move=>x _;apply DWord.muxP.
-        apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
-        rewrite imageU !fcardU le_fromint fcard1. 
-        move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
-        rewrite -!sizeE;smt w=fcard_ge0.
-      by hoare=>[??|];[apply eps_ge0|auto].
+      + by move=>x _;apply DWord.muxP.
+      apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+      rewrite imageU !fcardU le_fromint fcard1. 
+      move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
+      by rewrite -!sizeE;smt w=fcard_ge0.
     + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
-    by move=> b1 c1;proc;auto=> &hr [^H 2->].
+    + by move=> b1 c1;proc;auto=> /#.
+    + proc;rcondt 2;1:by auto.
+      wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi)));skip=> /> &hr ??-> /= ??.
+      rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr})) cdistr (1%r/(2^c)%r))//.
+      + by move=>x _;apply DWord.muxP.
+      apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+      rewrite imageU fcardU le_fromint. 
+      move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
+      by rewrite -!sizeE;smt w=fcard_ge0.
+    + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
+    move=> b1 c1;proc;auto=> /#.
   qed.
 
   axiom D_ll:
