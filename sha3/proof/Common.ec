@@ -106,7 +106,7 @@ clone export RP as Perm with
 
 lemma needed_blocks0 : (0 + r - 1) %/ r = 0.
 proof.
-rewrite -divz_eq0 1:gt0_r; smt ml=0 w=(gt0_r).
+rewrite -divz_eq0 1:gt0_r; smt(gt0_r).
 qed.
 
 lemma needed_blocks_non_pos (n : int) :
@@ -115,7 +115,7 @@ proof.
 move=> le0_n.
 rewrite (lez_trans ((r - 1) %/ r)) 1:leq_div2r 1:/# 1:ge0_r.
 have -> // : (r - 1) %/ r = 0
-  by rewrite -divz_eq0 1:gt0_r; smt ml=0 w=(gt0_r).
+  by rewrite -divz_eq0 1:gt0_r; smt(gt0_r).
 qed.
 
 lemma needed_blocks_suff (n : int) :
@@ -145,7 +145,7 @@ lemma needed_blocks_prod_r (n : int) :
   (n * r + r - 1) %/ r = n.
 proof.
 rewrite -addzA divzMDl 1:gtr_eqF 1:gt0_r // divz_small //.
-smt ml=0 w=(gt0_r).
+smt(gt0_r).
 qed.
 
 lemma needed_blocks_eq_div_r (n : int) :
@@ -192,7 +192,7 @@ have [m [-> [ge0_m lt_mr]]] :
 rewrite -{1}(@mul1z r) divzMDl 1:gtr_eqF 1:gt0_r //
         opprD addrA /=.
 rewrite divz_small; [by rewrite ger0_norm 1:ge0_r | done].
-have not_eq_dvd : n %/ r <> (n + r - 1) %/ r by smt ml=0.
+have not_eq_dvd : n %/ r <> (n + r - 1) %/ r by smt().
 by rewrite needed_blocks_eq_div_r.
 qed.
 
@@ -637,7 +637,7 @@ rewrite -(@cat_take_drop (size s %/ r * r) s) -!catA -/tke -/drp
 case: (n = r - 1)=> [n_eq_r_min1 | n_neq_r_min1].
 have sz_drp_plus1_dvd_r : r %| (size drp + 1).
   rewrite dvdzE -(@addz0 (size drp + 1)) -{1}(@modzz r).
-  have {1}-> : r = n + 1 by smt ml=0.
+  have {1}-> : r = n + 1 by smt().
   rewrite modzDmr.
   have -> : size drp + 1 + (n + 1) = size drp + n + 2 by ring.
   by rewrite -dvdzE.
@@ -655,11 +655,11 @@ rewrite xs_eq (@catA drp [true]) bits2blocks_cat 1:size_cat //
         1:size_cat 1:size_nseq /= 1:max_ler 1:ge0_n /#.
 rewrite tolistK 1:size_cat //= cats1 last_rcons.
 rewrite n_eq_r_min1 tolistK 1:size_cat //= size_nseq max_ler /#.
-have lt_n_r_min1 : n < r - 1 by smt ml=0.
+have lt_n_r_min1 : n < r - 1 by smt().
 move: xs_eq.
 have sz_drp_plus_n_plus_2_eq_r : size drp + n + 2 = r.
   rewrite (@dvdz_close (size drp + n + 2)) // sz_drp.
-  have n_plus2_rng : 2 <= n + 2 <= r by smt ml=0.
+  have n_plus2_rng : 2 <= n + 2 <= r by smt().
   rewrite -addrA; split=> [| _].
   rewrite ltr_paddl 1:modz_ge0 1:gtr_eqF 1:gt0_r // /#.
   have ->: 2 * r = r + r by ring.
@@ -680,7 +680,7 @@ by rewrite tolistK 1:!size_cat /= 1:size_nseq 1:max_ler 1:ge0_n
            1:-sz_drp_plus_n_plus_2_eq_r 1:#ring -!catA cat1s.
 have sz_w2b_x_eq_r : size(w2bits x) = r by apply size_tolist.
 rewrite w2b_x_eq !size_cat /= size_nseq max_ler // in sz_w2b_x_eq_r.
-have lt_nr : n < r by smt ml=0 w=(size_ge0).
+have lt_nr : n < r by smt(size_ge0).
 apply (@ValidBlock xs (blocks2bits ys ++ s) n)=> //.
 by rewrite xs_eq blocks2bits_cat blocks2bits_sing w2b_x_eq -!catA.
 move: xs_eq. have -> : [y; z] = [y] ++ [z] by trivial. move=> xs_eq.
@@ -694,7 +694,7 @@ have w2bits_y_eq : w2bits y = take (r - 1) (w2bits y) ++ [true].
   by rewrite -drop_w2b_y_last size_tolist.
 apply (@ValidBlock xs (blocks2bits ys ++ (take (r - 1) (w2bits y)))
        (r - 1)).
-smt ml=0 w=(ge2_r).
+smt(ge2_r).
 rewrite xs_eq 2!blocks2bits_cat 2!blocks2bits_sing -!catA; congr.
 by rewrite {1}w2bits_y_eq -catA w2b_z_eq.
 qed.

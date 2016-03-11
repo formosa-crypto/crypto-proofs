@@ -273,10 +273,10 @@ proof.
 proc; inline ERO.LRO.sample; sp=> /=.
 if=> //.
 while{2} (true) (m{2} - i{2}).
-progress; auto; progress; smt ml=0.
+progress; auto; progress; smt().
 while (={xs, n, i, bs} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}).
 wp; call HybridIROLazy_fill_in_LRO_get; auto.
-auto; progress; smt ml=0.
+auto; progress; smt().
 qed.
 
 local lemma HybridIROLazy_HIRO_LRO_f :
@@ -421,7 +421,7 @@ move=> LI; split=> [mem_upd_mp1 | mem_upd_mp2].
 rewrite domP in_fsetU1; rewrite domP in_fsetU1 in mem_upd_mp1.
 case: ((cs, m) = (bs, n))=> [cs_m_eq_bs_n | cs_m_neq_bs_n].
 right; by elim cs_m_eq_bs_n=> ->->.
-left; smt ml=0.
+left; smt().
 rewrite domP in_fsetU1; rewrite domP in_fsetU1 in mem_upd_mp2.
 case: ((cs, m) = (bs, n))=> [// | cs_m_neq_bs_n].
 elim mem_upd_mp2=> [/# | [p2b_cs_p2b_bs eq_mn]].
@@ -453,14 +453,14 @@ lemma lazy_invar_upd_lu_eq
 proof.
 move=> LI mem_upd_mp1.
 case: ((cs, m) = (bs, n))=> [[->->] | cs_m_neq_bs_n].
-smt ml=0 w=(getP_eq).
+smt(getP_eq).
 rewrite domP in_fsetU1 in mem_upd_mp1.
 elim mem_upd_mp1=> [mem_mp1 | [->->]].
 case: ((pad2blocks bs, n) = (pad2blocks cs, m))=>
   [[p2b_bs_p2b_cs eq_mn] | p2b_bs_n_neq_p2b_cs_m].
-smt ml=0 w=(pad2blocks_inj).
-smt ml=0 w=(getP).
-smt ml=0 w=(getP).
+smt(pad2blocks_inj).
+smt(getP).
+smt(getP).
 qed.
 
 lemma LowerFun_IRO_HybridIROLazy_f :
@@ -489,7 +489,7 @@ while
    pad2blocks x{1} = xs0{2}).
 sp; auto.
 if.
-progress; smt ml=0.
+progress; smt().
 rnd; auto; progress;
   [by rewrite !getP_eq |
    by rewrite -(@lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
@@ -497,7 +497,7 @@ rnd; auto; progress;
    by rewrite (@lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
                x{1} xs2 i{2} n2 mpL) |
    by rewrite (@lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
-auto; progress; smt ml=0.
+auto; progress; smt().
 auto.
 rcondf{1} 3; first auto. rcondf{2} 4; first auto.
 auto; progress; by rewrite bits2blocks_nil.
@@ -521,7 +521,7 @@ while
    LazyInvar IRO.mp{1} HybridIROLazy.mp{2}).
 wp; sp.
 if.
-progress; smt ml=0.
+progress; smt().
 rnd; auto; progress;
   [by rewrite !getP_eq |
    by rewrite -(@lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
@@ -529,7 +529,7 @@ rnd; auto; progress;
    by rewrite (@lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
                x{1} xs1 i{2} n1 mpL) |
    by rewrite (@lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
-auto; progress; smt ml=0.
+auto; progress; smt().
 auto.
 qed.
 
@@ -592,13 +592,13 @@ seq 3 2 :
 auto; progress.
 if=> //.
 case: (n1 < 0).
-rcondf{1} 1; first auto; progress; smt ml=0.
+rcondf{1} 1; first auto; progress; smt().
 rcondf{2} 1; first auto; progress;
   by rewrite -lezNgt needed_blocks_non_pos ltzW.
 rcondf{1} 1; first auto; progress;
   by rewrite -lezNgt pmulr_lle0 1:gt0_r needed_blocks_non_pos ltzW.
 auto; progress;
-  [by rewrite blocks2bits_nil | by smt ml=0 w=(needed_blocks0)].
+  [by rewrite blocks2bits_nil | by smt(needed_blocks0)].
 (* 0 <= n1 *)
 conseq
   (_ :
@@ -609,9 +609,9 @@ conseq
    bs{1} = take n1 (blocks2bits bs{2}) /\
    size bs{2} = (n1 + r - 1) %/ r /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
-progress; [smt ml=0 | apply/needed_blocks_suff].
+progress; [smt() | apply/needed_blocks_suff].
 move=> |> &1 &2 ? ? ? mp1 mp2 bs ? ? ?;
-  smt ml=0 w=(size_eq0 needed_blocks0 take0).
+  smt(size_eq0 needed_blocks0 take0).
 splitwhile{1} 1 : i < (n1 %/ r) * r.
 splitwhile{2} 1 : i < n1 %/ r.
 seq 1 1 :
@@ -630,9 +630,9 @@ conseq
    _).
 progress; by apply/needed_blocks_rel_div_r.
 case: (i{2} = n{2}).
-rcondf{2} 1; first auto; progress; smt ml=0.
-rcondf{1} 1; first auto; progress; smt ml=0.
-rcondf{1} 1; first auto; progress; smt ml=0.
+rcondf{2} 1; first auto; progress; smt().
+rcondf{1} 1; first auto; progress; smt().
+rcondf{1} 1; first auto; progress; smt().
 auto=> |> &1 &2 ? ? sz_eq ? ? need_blks_eq.
 split.
 have -> : n{1} = size (blocks2bits bs{2})
@@ -640,9 +640,9 @@ have -> : n{1} = size (blocks2bits bs{2})
 by rewrite take_size.
 by rewrite sz_eq need_blks_eq.
 (* i{2} <> n{2}, so i{2} + 1 = n{2} *)
-rcondt{2} 1; first auto; progress; smt ml=0.
+rcondt{2} 1; first auto; progress; smt().
 rcondf{2} 4; first auto; call (_ : true).
-if=> //. auto; progress; smt ml=0.
+if=> //. auto; progress; smt().
 wp; exists* i{1}; elim*=> i1; exists* bs{2}; elim*=> bs2.
 conseq
   (_ :
@@ -652,15 +652,15 @@ conseq
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    bs{1} = blocks2bits bs2 ++ take (n1 - i1) (w2bits b{2}) /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
-progress; smt ml=0.
+progress; smt().
 move=> |> &1 &2 ? ? sz_eq ? ? ? mp1 mp2 b ?.
 split.
 rewrite -cats1 blocks2bits_cat blocks2bits_sing take_cat.
 have -> /= : !(n{1} < size(blocks2bits bs{2})).
   rewrite size_blocks2bits sz_eq.
-  by smt ml=0 w=(needed_blocks_correct).
-by rewrite size_blocks2bits sz_eq; congr; congr; smt ml=0.
-by rewrite size_rcons; smt ml=0.
+  by smt(needed_blocks_correct).
+by rewrite size_blocks2bits sz_eq; congr; congr; smt().
+by rewrite size_rcons; smt().
 admit.   
 qed.
 
@@ -692,8 +692,8 @@ move=> |> &1 &2 ? n1_eq ? res1 res2 ? ? ? vb_imp not_vb_imp.
 case (valid_block xs{1})=> [vb_xs1 | not_vb_xs1].
 have [le0_n1_imp gt0_n1_imp] := vb_imp vb_xs1.
 case: (n{1} <= 0)=> [le0_n1 | not_le0_n1].
-smt ml=0.
-have gt0_n1 : 0 < n{1} by smt ml=0.
+smt().
+have gt0_n1 : 0 < n{1} by smt().
 have [-> sz_res2] := gt0_n1_imp gt0_n1.
 have -> : n{1} = size(blocks2bits res2)
    by rewrite size_blocks2bits sz_res2 n1_eq
@@ -765,8 +765,8 @@ auto=> |> &1 &2 ? res1 res2 mp1 mp2 ? vb_imp not_vb_imp.
 case: (valid_block (pad2blocks bs{2}))=> [vb | not_vb].
 have [le0_n2_imp gt0_n2_imp] := vb_imp vb.
 case: (n{2} <= 0)=> [le0_n2 | not_le0_n2].
-smt ml=0.
-have gt0_n2 : 0 < n{2} by smt ml=0.
+smt().
+have gt0_n2 : 0 < n{2} by smt().
 by have [-> _] := gt0_n2_imp gt0_n2.
 have [-> ->] := not_vb_imp not_vb; by rewrite blocks2bits_nil.
 qed.
