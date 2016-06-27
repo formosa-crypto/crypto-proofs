@@ -61,7 +61,7 @@ section.
   realize uD_uf_fu.
   split.
     case=> [x y]; rewrite support_dprod /=.
-    by rewrite Block.DWord.supportP Capacity.DWord.supportP.
+    by rewrite Block.DWord.support_bdistr Capacity.DWord.support_cdistr.
   apply/dprod_uf.
     by rewrite Block.DWord.bdistr_uf.
   by rewrite Capacity.DWord.cdistr_uf.

@@ -226,8 +226,8 @@ proof.
           [rcondt{1} 4;2:rcondt{2} 4| rcondf{1} 4;2:rcondf{2} 4];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 7;1:by auto=>/>. 
-    wp;rnd;auto;rnd{1};auto;progress[-split]. 
-    rewrite Block.DWord.supportP DWord.cdistr_ll /==> ?_?->.
+    wp;rnd;auto;rnd{1};auto;progress[-split].
+    rewrite Block.DWord.support_bdistr DWord.cdistr_ll /==> ?_?->.
     by rewrite !getP /= oget_some.
     
   + proc;sp;if=>//.

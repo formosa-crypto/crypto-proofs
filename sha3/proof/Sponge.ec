@@ -42,7 +42,7 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
     }
     (* squeezing *)
     while (i < (n + r - 1) %/ r) {
-      z        <- z ++ w2bits sa;
+      z        <- z ++ ofblock sa;
       (sa, sc) <@ P.f(sa, sc);
       i        <- i + 1;
     }
@@ -541,7 +541,7 @@ pred EagerInvar
    0 <= i /\
    (forall (j : int), 0 <= j < i => mem (dom mp1) (xs, j)) /\
    (forall (j : int), i * r <= j < (i + 1) * r =>
-    mp2.[(xs, j)] = Some(nth false (w2bits(oget mp1.[(xs, i)])) j))) /\
+    mp2.[(xs, j)] = Some(nth false (ofblock (oget mp1.[(xs, i)])) j))) /\
   (forall (xs : block list, j : int),
    mem (dom mp2) (xs, j) =>
    0 <= j /\ mem (dom mp1) (xs, j %/ r)).
@@ -650,7 +650,7 @@ conseq
    i{1} = i{2} * r /\ n{1} <= m{1} /\ m{1} - i{1} = r /\ 
    bs{1} = blocks2bits bs2 /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
-   bs{1} = blocks2bits bs2 ++ take (n1 - i1) (w2bits b{2}) /\
+   bs{1} = blocks2bits bs2 ++ take (n1 - i1) (ofblock b{2}) /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
 progress; smt().
 move=> |> &1 &2 ? ? sz_eq ? ? ? mp1 mp2 b ?.

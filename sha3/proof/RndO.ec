@@ -330,9 +330,9 @@ proof.
 qed.
 
 equiv I_f_eqex x1 mx1 mx2: RRO.I.f ~ RRO.I.f :
-    ={x} /\ x1 <> x{1} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x1) /\
+    ={x} /\ x1 <> x{1} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x1) /\
     FRO.m{1}.[x1] = mx1 /\ FRO.m{2}.[x1] = mx2 ==>
-    eq_except FRO.m{1} FRO.m{2} (fset1 x1) /\
+    eq_except FRO.m{1} FRO.m{2} (pred1 x1) /\
     FRO.m{1}.[x1] = mx1 /\ FRO.m{2}.[x1] = mx2.
 proof.
   by proc;auto=>?&mr[#]->Hneq Heq/= Heq1 Heq2?->/=;rewrite !getP Hneq eq_except_set.
@@ -365,7 +365,7 @@ proof.
       (={x,FRO.m} /\ mem (dom FRO.m{1}) x{1} /\ (oget FRO.m{1}.[x{1}]).`2 = Unknown ==>
        ={x,FRO.m})
       (={x,FRO.m} /\ mem (dom FRO.m{1}) x{1} /\ (oget FRO.m{1}.[x{1}]).`2 = Unknown==>
-       ={x} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+       ={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
        FRO.m{1}.[x{2}] = Some (result{2},Unknown) /\
        FRO.m{2}.[x{2}] = Some (result{2},Known)).
     + by move=>?&mr[#]-> -> ??;exists FRO.m{mr}, x{mr}=>/#.
@@ -377,7 +377,7 @@ proof.
       skip=> &1 &2 [[->> ->>]] [Hdom Hm];split=>//=.
       by apply /perm_eq_sym/perm_to_rem/dom_restr;rewrite /in_dom_with Hdom Hm.
     inline Iter(RRO.I).iter_1s RRO.I.f RRO.resample.
-    seq 5 3 : (={x} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+    seq 5 3 : (={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
                (l =elems(dom (restr Unknown FRO.m) `\` fset1 x)){1} /\
                FRO.m{1}.[x{2}] = Some (result{2}, Unknown) /\
                FRO.m{2}.[x{2}] = Some (result{2}, Known)).
@@ -385,7 +385,7 @@ proof.
       by rewrite !getP /=oget_some !restr_set/= dom_set set2_eq_except fsetDK.
     exists*x{1}, FRO.m{1}.[x{2}], FRO.m{2}.[x{2}];elim*=>x1 mx1 mx2.
     call (iter_inv RRO.I (fun z=>x1<>z) 
-           (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
+           (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
            (I_f_eqex x1 mx1 mx2))=>/=;auto=>?&mr[#]4->^H->->^H1->^H2->/=;split.
     + congr;rewrite fsetP=>z;rewrite !inE !dom_restr /in_dom_with !in_dom; smt.
     by move=>x;rewrite -memE in_fsetD1 eq_sym.     
@@ -409,7 +409,7 @@ proof.
       (={x,y,FRO.m} /\ mem (dom FRO.m{1}) x{1} /\ (oget FRO.m{1}.[x{1}]).`2 = Unknown ==>
        ={x,y,FRO.m})
       (={x,y,FRO.m} /\ mem (dom FRO.m{1}) x{1} /\ (oget FRO.m{1}.[x{1}]).`2 = Unknown==>
-       ={x,y} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+       ={x,y} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
        FRO.m{2}.[x{2}] = Some (y{2},Known)).
     + by move=>?&mr[#]2->???;exists FRO.m{mr}, y{mr}, x{mr}=>/#.
     + move=>?&m&mr[#]<*>[#]2->Hex Hm2.
@@ -417,18 +417,18 @@ proof.
     + symmetry;call (iter1_perm RRO.I iter_perm2);auto=>?&mr[#]3-> Hdom Hm;split=>//=.
       by apply /perm_eq_sym/perm_to_rem/dom_restr;rewrite /in_dom_with Hdom.
     inline{1}Iter(RRO.I).iter_1s. 
-    seq 3 1: (={x,y} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+    seq 3 1: (={x,y} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
               l{1} = (elems (dom (restr Unknown FRO.m))){2} /\ !mem l{1} x{1} /\
               (FRO.m.[x]=Some(y, Known)){2}).
     + inline *;auto=>?&mr[#]3->/=Hmem Hget;rewrite sampleto_ll=>?_.
       by rewrite set2_eq_except getP_eq restr_set /= dom_rem -memE !inE negb_and.
     exists* x{1},y{1},(FRO.m.[x]{1});elim*=>x1 y1 mx1;pose mx2:=Some(y1,Known).
     call (iter_inv RRO.I (fun z=>x1<>z) 
-           (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
+           (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
            (I_f_eqex x1 mx1 mx2))=>/=;auto=>?&mr[#]-><-2!->->>2!->Hmem->/#.
   exists* x{1},y{1},(FRO.m.[x]{1});elim*=>x1 y1 mx1;pose mx2:=Some(y1,Known).
   call (iter_inv RRO.I (fun z=>x1<>z) 
-         (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
+         (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=mx2) 
          (I_f_eqex x1 mx1 mx2))=>/=;auto=>?&mr[#]-><-2!->->>->/= Hidm.
   rewrite restr_set getP_eq/mx2 eq_except_sym set_eq_except/=;split;[split|].
   + by congr;apply fsetP=>z;rewrite !(dom_rem,inE,dom_restr) /#.
@@ -452,30 +452,30 @@ proof.
     + symmetry;call (iter1_perm RRO.I iter_perm2);skip=>?&mr[#]2!->?/=;split=>//.
       by apply /perm_eq_sym/perm_to_rem/dom_restr. 
     inline{1}Iter(RRO.I).iter_1s.
-    seq 3 1: (={x} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+    seq 3 1: (={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
               l{1} = (elems (dom (restr Unknown FRO.m))){2} /\ !mem l{1} x{1} /\
               (FRO.m.[x]=None){2}).
     + inline *;auto=>??[#]2->Hidm/=;rewrite sampleto_ll=>?_.
-      rewrite eq_except_rem 1:!inE 2:set_eq_except // remP -memE in_fsetD1 negb_and /=.
+      rewrite eq_except_rem 2:set_eq_except // remP -memE in_fsetD1 negb_and /=.
       by rewrite restr_rem Hidm /= dom_rem.
     exists* x{1},(FRO.m.[x]{1});elim*=>x1 mx1.
     call (iter_inv RRO.I (fun z=>x1<>z) 
-         (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=None) _).
+         (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=None) _).
     + by conseq (I_f_eqex x1 mx1 None).
     auto=>?&mr[#]3->^Hex 2!->Hmem ^Hx->/=;split=>[/#|_ mL mR[#]/eq_exceptP Hex'?Heq].
     apply fmapP=>z;rewrite remP;case (z=x{mr})=>[->/=|Hneq];1:by rewrite Heq.
-    by apply Hex';rewrite inE.    
+    by apply Hex'.
   inline RRO.resample;wp.
   exists *x{1},(FRO.m.[x]{1});elim*=>x1 mx1.
   call (iter_inv RRO.I (fun z=>x1<>z) 
-         (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=None) _).
+         (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= mx1 /\ o2.[x1]=None) _).
   + by conseq (I_f_eqex x1 mx1 None).
   auto=>?&mr[#]4->Hin/=.
-  rewrite restr_rem Hin/= remP eq_except_rem 1:inE // 1:eq_except_refl /=;split.
+  rewrite restr_rem Hin/= remP eq_except_rem // 1:eq_except_refl /=;split.
   + by move=>z;rewrite -memE dom_restr /#.
   move=>_ mL mR[#] /eq_exceptP Hex'?Heq.
   apply fmapP=>z;rewrite remP;case (z=x{mr})=>[->/=|Hneq];1:by rewrite Heq.
-  by apply Hex';rewrite inE.
+  by apply Hex'.
 qed.
 
 lemma eager_in_dom:
@@ -520,7 +520,7 @@ proof.
       by apply /perm_eq_sym/perm_to_rem;rewrite restr_set/=dom_set !inE. 
     + by move=>?&mr[#]2->?;exists FRO.m{mr}, x{mr}.
     inline Iter(RRO.I).iter_1s RRO.I.f RRO.resample;wp;swap{1}-1.
-    seq 1 7 : (={x} /\ eq_except FRO.m{1} FRO.m{2} (fset1 x{1}) /\
+    seq 1 7 : (={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
                l{2} = (elems (dom (restr Unknown FRO.m))){1} /\
                (FRO.m.[x]){2} = Some(c{1},Unknown) /\ (FRO.m.[x]){1} = None).
     + wp;rnd;auto=>?&mr[#]2->;rewrite in_dom sampleto_ll/==>Heq?_?->.
@@ -528,7 +528,7 @@ proof.
       congr;apply fsetP=>z;rewrite in_fsetD1 dom_restr /in_dom_with !in_dom /#.
     exists*x{1},c{1};elim*=>x1 c1;pose mx2:=Some(c1,Unknown).
     call (iter_inv RRO.I (fun z=>x1<>z) 
-         (fun o1 o2 => eq_except o1 o2 (fset1 x1) /\ o1.[x1]= None /\ o2.[x1]=mx2) _).
+         (fun o1 o2 => eq_except o1 o2 (pred1 x1) /\ o1.[x1]= None /\ o2.[x1]=mx2) _).
     + by conseq (I_f_eqex x1 None mx2).
     auto=>?&mr[#]2<-->^Hex 3!->^Hx1-> @/mx2/=;split=>[z|_ mL mR[#]].
     + rewrite -memE dom_restr /in_dom_with in_dom /#. 

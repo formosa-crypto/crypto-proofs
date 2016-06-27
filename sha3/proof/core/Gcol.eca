@@ -297,7 +297,7 @@ section PROOF.
       wp.
       rnd (mem (image fst (rng FRO.m)));skip;progress;2:smt ml=0.
       rewrite (Mu_mem.mu_mem (image fst (rng FRO.m{hr})) cdistr (1%r/(2^c)%r))//.
-      + move=>x _;apply DWord.muxP.
+      + move=>x _; apply DWord.cdistr1E.
       apply ler_wpmul2r;2:by rewrite le_fromint.
       by apply divr_ge0=>//;apply /c_ge0r. 
     + move=>ci;proc;rcondt 2;auto=>/#.

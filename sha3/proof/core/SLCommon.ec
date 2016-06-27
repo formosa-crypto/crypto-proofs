@@ -26,7 +26,7 @@ op max_size : { int | 0 <= max_size } as max_ge0.
 (** Ideal Functionality **)
 clone export Tuple as TupleBl with
   type t <- block,
-  op Support.enum <- Block.words
+  op Support.enum <- Block.blocks
   proof Support.enum_spec by exact Block.enum_spec. 
 
 op bl_enum = flatten (mkseq (fun i => wordn i) (max_size + 1)). 

@@ -28,7 +28,8 @@ clone BitWord as Capacity with
     op n    <- c
   proof gt0_n by apply/gt0_c
 
-  rename "dword" as "cdistr"
+  rename "word"  as "cap"
+         "dword" as "cdistr"
          "zerow" as "c0".
 
 clone export BitWord as Block with
@@ -36,7 +37,8 @@ clone export BitWord as Block with
     op n    <- r
   proof gt0_n by apply/gt0_r
 
-  rename "dword" as "bdistr"
+  rename "word"  as "block"
+         "dword" as "bdistr"
          "zerow" as "b0".
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
@@ -67,19 +69,16 @@ by rewrite /bits2blocks /chunk sz_xs_eq_r divzz ltr0_neq0 1:gt0_r b2i1
            mkseq1 /= drop0 -sz_xs_eq_r take_size.
 qed.
 
-lemma b0 : b0 = bits2w(nseq r false).
+lemma b0 : b0 = mkblock (nseq r false).
 proof.
-rewrite wordP=> i ge0_i_ltr; rewrite offunifE ge0_i_ltr /= getE ge0_i_ltr /=.
-rewrite ofwordK 1:Array.size_mkarray 1:size_nseq 1:/#.
-by rewrite Array.getE Array.ofarrayK nth_nseq.
+rewrite blockP=> i ge0_i_ltr; rewrite offunifE ge0_i_ltr /= getE ge0_i_ltr /=.
+rewrite ofblockK 1:size_nseq 1:/#.
+by rewrite nth_nseq.
 qed.
 
 lemma bits2w_inj_eq (cs ds : bool list) :
-  size cs = r => size ds = r => bits2w cs = bits2w ds <=> cs = ds.
-proof.
-rewrite -!Array.size_mkarray=> s_cs_r s_ds_r; split=> //=.
-by move=> @/bits2w /(mkword_pinj _ _ s_cs_r s_ds_r) /Array.mkarray_inj.
-qed.
+  size cs = r => size ds = r => mkblock cs = mkblock ds <=> cs = ds.
+proof. by move=> s_cs_r s_ds_r; split=> //=; exact/mkblock_pinj. qed.
 
 lemma last_drop_all_but_last (y : 'a, xs : 'a list) :
   xs = [] \/ drop (size xs - 1) xs = [last y xs].
@@ -234,14 +233,14 @@ proof. by rewrite last_cat last_mkpad. qed.
 lemma size_mkpad n : size (mkpad n) = num0 n + 2.
 proof.
 rewrite /mkpad /= size_rcons size_nseq max_ler.
-by rewrite modz_ge0 gtr_eqF ?gt0_r. by ring.
+by rewrite /num0 modz_ge0 gtr_eqF ?gt0_r. by ring.
 qed.
 
 lemma size_pad_equiv (m : int) :
   0 <= m => m + num0 m + 2 = (m + 1) %/ r * r + r.
 proof.
 move=> ge0_m.
-by rewrite modNz 1:/# 1:gt0_r -(@addrA _ 2) /= modzE #ring.
+by rewrite /num0 modNz 1:/# 1:gt0_r -(@addrA _ 2) /= modzE #ring.
 qed.
 
 lemma size_padE (s : bool list) :
@@ -259,16 +258,16 @@ lemma dvd_r_num0 (m : int) : r %| (m + num0 m + 2).
 proof. by rewrite /num0 /(%|) addrAC modzDmr subrr mod0z. qed.
 
 lemma num0_ge0 (m : int) : 0 <= num0 m.
-proof. by rewrite modz_ge0 ?gtr_eqF ?gt0_r. qed.
+proof. by rewrite /num0 modz_ge0 ?gtr_eqF ?gt0_r. qed.
 
 lemma num0_ltr (m : int) : num0 m < r.
-proof. by rewrite ltz_pmod gt0_r. qed.
+proof. by rewrite /num0 ltz_pmod gt0_r. qed.
 
 lemma index_true_behead_mkpad n :
   index true (behead (mkpad n)) = num0 n.
 proof.
 rewrite /mkpad -cats1 index_cat mem_nseq size_nseq.
-by rewrite max_ler // modz_ge0 gtr_eqF ?gt0_r.
+by rewrite max_ler // /num0 modz_ge0 gtr_eqF ?gt0_r.
 qed.
 
 lemma padE (s : bool list, n : int) :
@@ -376,12 +375,12 @@ proof. by apply/BitChunking.flattenK/gt0_r. qed.
 
 (*--------------- Converting Between Block Lists and Bits --------------*)
 
-op blocks2bits (xs:block list) : bool list = flatten (map w2bits xs).
+op blocks2bits (xs:block list) : bool list = flatten (map ofblock xs).
 
 lemma blocks2bits_nil : blocks2bits [] = [].
 proof. by rewrite /blocks2bits /= flatten_nil. qed.
 
-lemma blocks2bits_sing (x : block) : blocks2bits [x] = w2bits x.
+lemma blocks2bits_sing (x : block) : blocks2bits [x] = ofblock x.
 proof. by rewrite /blocks2bits /flatten /= cats0. qed.
 
 lemma blocks2bits_cat (xs ys : block list) :
@@ -393,19 +392,19 @@ lemma size_blocks2bits (xs : block list) :
 proof.
 elim: xs=> [| x xs ih]; first by rewrite blocks2bits_nil.
 rewrite -cat1s blocks2bits_cat blocks2bits_sing size_cat //.
-rewrite size_cat size_tolist ih /= #ring.
+rewrite size_cat size_block ih /= #ring.
 qed.
 
 lemma size_blocks2bits_dvd_r (xs : block list) : r %| size(blocks2bits xs).
 proof. by rewrite size_blocks2bits dvdz_mulr dvdzz. qed.
 
-op bits2blocks (xs : bool list) : block list = map bits2w (chunk xs).
+op bits2blocks (xs : bool list) : block list = map mkblock (chunk xs).
 
 lemma bits2blocks_nil : bits2blocks [] = [].
 proof. by rewrite /bits2blocks chunk_nil. qed.
 
 lemma bits2blocks_sing (xs : bool list) :
-  size xs = r => bits2blocks xs = [bits2w xs].
+  size xs = r => bits2blocks xs = [mkblock xs].
 proof. by move=> sz_xs_eq_r; rewrite /bits2blocks chunk_sing. qed.
 
 lemma bits2blocks_cat (xs ys : bool list) : r %| size xs => r %| size ys =>
@@ -418,9 +417,9 @@ qed.
 lemma blocks2bitsK : cancel blocks2bits bits2blocks.
 proof.
 move=> xs; rewrite /blocks2bits /bits2blocks flattenK.
-  by move=> b /mapP [x [_ ->]];rewrite size_tolist.
+  by move=> b /mapP [x [_ ->]];rewrite size_block.
 rewrite -map_comp -{2}(@map_id xs) /(\o) /=.
-by apply eq_map=> @/idfun x /=; apply oflistK.
+by apply eq_map=> @/idfun x /=; exact/mkblockK.
 qed.
 
 lemma bits2blocksK (bs : bool list) :
@@ -430,9 +429,9 @@ move=> dvd_r_bs; rewrite /blocks2bits /bits2blocks -map_comp.
 have map_tolistK :
   forall (xss : bool list list),
   (forall (xs : bool list), mem xss xs => size xs = r) =>
-  map (w2bits \o bits2w) xss = xss.
+  map (ofblock \o mkblock) xss = xss.
 + elim=> [// | xs yss ih eqr_sz /=]; split.
-    by apply tolistK; rewrite eqr_sz.
+    by apply ofblockK; rewrite eqr_sz.
   by apply/ih => zs mem_zss_zs; rewrite eqr_sz //=; right.
 by rewrite map_tolistK; [apply in_chunk_size | exact chunkK].
 qed.
@@ -575,7 +574,7 @@ rewrite drop_xs last_xs_eq_b0 b0 in xs_take_drop.
 have last_b2b_xs_true : last true (blocks2bits xs) = true
    by rewrite b2b_xs_eq cats1 last_rcons.
 have last_b2b_xs_false : last true (blocks2bits xs) = false
-    by rewrite xs_take_drop blocks2bits_cat blocks2bits_sing tolistK
+    by rewrite xs_take_drop blocks2bits_cat blocks2bits_sing ofblockK
                1:size_nseq 1:max_ler 1:ge0_r // last_cat
                last_nseq 1:gt0_r.
 by rewrite last_b2b_xs_true in last_b2b_xs_false.
@@ -585,11 +584,11 @@ inductive valid_block_struct_spec (xs : block list) =
   ValidBlockStruct1 (ys : block list, x : block, s : bool list, n : int) of
       (xs = ys ++ [x])
     & (0 <= n)
-    & (w2bits x = s ++ [true] ++ nseq n false ++ [true])
+    & (ofblock x = s ++ [true] ++ nseq n false ++ [true])
 | ValidBlockStruct2 (ys : block list, y z : block) of
      (xs = ys ++ [y; z])
-   & (last false (w2bits y))
-   & (w2bits z = nseq (r - 1) false ++ [true]).
+   & (last false (ofblock y))
+   & (ofblock z = nseq (r - 1) false ++ [true]).
 
 lemma nosmt valid_block_structP (xs : block list) :
   valid_block xs <=> valid_block_struct_spec xs.
@@ -647,14 +646,14 @@ have sz_drp_plus1_eq_r : size drp + 1 = r.
   have -> : 2 * r = r + r by ring.
   rewrite ltr_add // 1:sz_drp 1:ltz_pmod 1:gt0_r ltzE ge2_r.
 apply (@ValidBlockStruct2 xs (bits2blocks tke)
-      (bits2w (drp ++ [true])) (bits2w (nseq n false ++ [true]))).
+      (mkblock (drp ++ [true])) (mkblock (nseq n false ++ [true]))).
 rewrite xs_eq (@catA drp [true]) bits2blocks_cat 1:size_cat //
         1:size_cat 1:size_nseq 1:max_ler 1:ge0_n /= 1:/#
         (@bits2blocks_sing (drp ++ [true])) 1:size_cat //
         (@bits2blocks_sing (nseq n false ++ [true]))
         1:size_cat 1:size_nseq /= 1:max_ler 1:ge0_n /#.
-rewrite tolistK 1:size_cat //= cats1 last_rcons.
-rewrite n_eq_r_min1 tolistK 1:size_cat //= size_nseq max_ler /#.
+rewrite ofblockK 1:size_cat //= cats1 last_rcons.
+rewrite n_eq_r_min1 ofblockK 1:size_cat //= size_nseq max_ler /#.
 have lt_n_r_min1 : n < r - 1 by smt().
 move: xs_eq.
 have sz_drp_plus_n_plus_2_eq_r : size drp + n + 2 = r.
@@ -674,25 +673,25 @@ rewrite (@bits2blocks_sing
 +   have -> : size s %% r + (1 + (n + 1)) = size s %%r + n + 2 by ring.
 +   by rewrite -sz_drp.
 apply (@ValidBlockStruct1 xs (bits2blocks tke)
-       (bits2w(drp ++ ([true] ++ (nseq n false ++ [true]))))
+       (mkblock (drp ++ ([true] ++ (nseq n false ++ [true]))))
        drp n)=> //.
-by rewrite tolistK 1:!size_cat /= 1:size_nseq 1:max_ler 1:ge0_n
+by rewrite ofblockK 1:!size_cat /= 1:size_nseq 1:max_ler 1:ge0_n
            1:-sz_drp_plus_n_plus_2_eq_r 1:#ring -!catA cat1s.
-have sz_w2b_x_eq_r : size(w2bits x) = r by apply size_tolist.
+have sz_w2b_x_eq_r : size (ofblock x) = r by apply size_block.
 rewrite w2b_x_eq !size_cat /= size_nseq max_ler // in sz_w2b_x_eq_r.
 have lt_nr : n < r by smt(size_ge0).
 apply (@ValidBlock xs (blocks2bits ys ++ s) n)=> //.
 by rewrite xs_eq blocks2bits_cat blocks2bits_sing w2b_x_eq -!catA.
 move: xs_eq. have -> : [y; z] = [y] ++ [z] by trivial. move=> xs_eq.
-have w2bits_y_eq : w2bits y = take (r - 1) (w2bits y) ++ [true].
-  rewrite -{1}(@cat_take_drop (r - 1) (w2bits y)); congr.
-  elim (last_drop_all_but_last false (w2bits y))=>
+have w2bits_y_eq : ofblock y = take (r - 1) (ofblock y) ++ [true].
+  rewrite -{1}(@cat_take_drop (r - 1) (ofblock y)); congr.
+  elim (last_drop_all_but_last false (ofblock y))=>
     [w2b_y_nil | drop_w2b_y_last].
-    have not_lst_w2b_y : ! last false (w2bits y) by rewrite w2b_y_nil.
+    have not_lst_w2b_y : ! last false (ofblock y) by rewrite w2b_y_nil.
     by rewrite w2b_y_nil.
   rewrite lst in drop_w2b_y_last.
-  by rewrite -drop_w2b_y_last size_tolist.
-apply (@ValidBlock xs (blocks2bits ys ++ (take (r - 1) (w2bits y)))
+  by rewrite -drop_w2b_y_last size_block.
+apply (@ValidBlock xs (blocks2bits ys ++ (take (r - 1) (ofblock y)))
        (r - 1)).
 smt(ge2_r).
 rewrite xs_eq 2!blocks2bits_cat 2!blocks2bits_sing -!catA; congr.
