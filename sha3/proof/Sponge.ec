@@ -668,21 +668,49 @@ transitivity{1}
       i <- i + 1;
     }
   }
-  (={bs, m, i, HybridIROEager.mp} /\ n1 = n{1} /\ i1 = i{1} /\
-   i1 <= n1 /\ n1 <= m{1} /\ size bs{1} = i1 ==>
+  (={bs, m, i, xs, HybridIROEager.mp} /\ n1 = n{1} /\ i1 <= n1 /\
+   i{1} <= n1 /\ size bs{1} = i{1} /\ n1 <= m{1} ==>
    ={HybridIROEager.mp} /\ i1 <= n1 /\ bs{1} = take n1 bs{2})
-  (n1 = n{1} /\ 0 <= n1 /\ i1 = i{1} /\ i1 <= n1 /\ bs2 = bs{2} /\
-   xs{1} = x{2} /\ i{1} = i{2} * r /\ n1 <= m{1} /\ m{1} - i{1} = r /\
-   bs{1} = blocks2bits bs2 /\ size(blocks2bits bs2) = i1 /\
+  (i1 = i{1} /\ xs{1} = x{2} /\ i{1} = i{2} * r /\ n1 = n{1} /\
+   n1 <= m{1} /\ bs{1} = blocks2bits bs2 /\ size(blocks2bits bs2) = i1 /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    bs{1} = blocks2bits bs2 ++ ofblock b{2} /\ size(blocks2bits bs2) = i1 /\
-   n1 - i1 <= size(ofblock b{2}) /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
-progress; exists HybridIROEager.mp{1}, (blocks2bits bs{2});
-  smt(size_blocks2bits).
+progress;
+  exists HybridIROEager.mp{1}, (blocks2bits bs{2}), n{1}, m{1},
+         (size bs{2} * r), x{2};
+  smt().
 progress; smt(take_cat).
-splitwhile{2} 1 : i < n.
-admit.
+splitwhile{2} 1 : i < n1.
+seq 1 1 :
+  (={HybridIROEager.mp, xs, bs, i, m} /\ i{1} = n1 /\ n1 <= m{1} /\
+   i1 <= n1 /\ size bs{1} = n1).
+while
+  (={HybridIROEager.mp, xs, bs, i, m} /\ n{1} = n1 /\ n1 <= m{1} /\
+   i{1} <= n1 /\ size bs{1} = i{1}).
+wp.
+call (_ : ={HybridIROEager.mp}).
+if => //; rnd; auto.
+skip; smt(size_rcons).
+skip; smt().
+while
+  (={HybridIROEager.mp, xs, i, m} /\ n1 <= m{1} /\
+   n1 <= i{1} <= m{1} /\ n1 <= size bs{2} /\
+   bs{1} = take n1 bs{2}).
+wp.
+call (_ : ={HybridIROEager.mp}).
+if => //; rnd; auto.
+skip; progress;
+  [smt() | smt() | smt(size_rcons) |
+   rewrite -cats1 take_cat;
+   smt(size_rcons take_oversize cats1 cats0)].
+skip; smt(take_size).
+conseq
+  (_ :
+  xs{1} = x{2} /\ i{1} = i{2} * r /\ bs{1} = blocks2bits bs2 /\
+  EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+  bs{1} = blocks2bits bs2 ++ ofblock b{2} /\
+  EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}) => //.
 admit.
 qed.
 
