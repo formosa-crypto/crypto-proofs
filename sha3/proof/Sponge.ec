@@ -669,10 +669,11 @@ transitivity{1}
     }
   }
   (={bs, m, i, xs, HybridIROEager.mp} /\ n1 = n{1} /\ i1 <= n1 /\
-   i{1} <= n1 /\ size bs{1} = i{1} /\ n1 <= m{1} ==>
+   i{1} <= n1 /\ n1 <= m{1} /\ size bs{1} = i{1} ==>
    ={HybridIROEager.mp} /\ i1 <= n1 /\ bs{1} = take n1 bs{2})
   (i1 = i{1} /\ xs{1} = x{2} /\ i{1} = i{2} * r /\ n1 = n{1} /\
-   n1 <= m{1} /\ bs{1} = blocks2bits bs2 /\ size(blocks2bits bs2) = i1 /\
+   n1 <= m{1} /\ m{1} - i{1} = r /\
+   bs{1} = blocks2bits bs2 /\ size(blocks2bits bs2) = i1 /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    bs{1} = blocks2bits bs2 ++ ofblock b{2} /\ size(blocks2bits bs2) = i1 /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
@@ -707,7 +708,8 @@ skip; progress;
 skip; smt(take_size).
 conseq
   (_ :
-  xs{1} = x{2} /\ i{1} = i{2} * r /\ bs{1} = blocks2bits bs2 /\
+  xs{1} = x{2} /\ i{1} = i{2} * r /\ m{1} - i{1} = r /\
+  bs{1} = blocks2bits bs2 /\
   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
   bs{1} = blocks2bits bs2 ++ ofblock b{2} /\
   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}) => //.
