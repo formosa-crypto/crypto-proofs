@@ -647,12 +647,12 @@ wp; exists* i{1}; elim*=> i1; exists* bs{2}; elim*=> bs2.
 conseq
   (_ :
    n1 = n{1} /\ 0 <= n1 /\ i1 = i{1} /\ bs2 = bs{2} /\ xs{1} = x{2} /\ 
-   i{1} = i{2} * r /\ n{1} <= m{1} /\ m{1} - i{1} = r /\ 
-   bs{1} = blocks2bits bs2 /\
+   i{1} = i{2} * r /\ n{1} <= m{1} /\ m{1} - i{1} = r /\ i{1} <= n{1} /\
+   bs{1} = blocks2bits bs2 /\ size bs{1} = i1 /\ size bs{2} = i{2} /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    bs{1} = blocks2bits bs2 ++ take (n1 - i1) (ofblock b{2}) /\
    EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
-progress; smt().
+progress; smt(lez_floor size_blocks2bits).
 move=> |> &1 &2 ? ? sz_eq ? ? ? mp1 mp2 b ?.
 split.
 rewrite -cats1 blocks2bits_cat blocks2bits_sing take_cat.
@@ -661,7 +661,29 @@ have -> /= : !(n{1} < size(blocks2bits bs{2})).
   by smt(needed_blocks_correct).
 by rewrite size_blocks2bits sz_eq; congr; congr; smt().
 by rewrite size_rcons; smt().
-admit.   
+transitivity{1}
+  { while (i < m) {
+      b <@ HybridIROEager.fill_in(xs, i);
+      bs <- rcons bs b;
+      i <- i + 1;
+    }
+  }
+  (={bs, m, i, HybridIROEager.mp} /\ n1 = n{1} /\ i1 = i{1} /\
+   i1 <= n1 /\ n1 <= m{1} /\ size bs{1} = i1 ==>
+   ={HybridIROEager.mp} /\ i1 <= n1 /\ bs{1} = take n1 bs{2})
+  (n1 = n{1} /\ 0 <= n1 /\ i1 = i{1} /\ i1 <= n1 /\ bs2 = bs{2} /\
+   xs{1} = x{2} /\ i{1} = i{2} * r /\ n1 <= m{1} /\ m{1} - i{1} = r /\
+   bs{1} = blocks2bits bs2 /\ size(blocks2bits bs2) = i1 /\
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   bs{1} = blocks2bits bs2 ++ ofblock b{2} /\ size(blocks2bits bs2) = i1 /\
+   n1 - i1 <= size(ofblock b{2}) /\
+   EagerInvar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
+progress; exists HybridIROEager.mp{1}, (blocks2bits bs{2});
+  smt(size_blocks2bits).
+progress; smt(take_cat).
+splitwhile{2} 1 : i < n.
+admit.
+admit.
 qed.
 
 lemma HybridIROEager_BlockIRO_f :
