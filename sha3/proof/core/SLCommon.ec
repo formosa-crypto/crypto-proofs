@@ -114,18 +114,49 @@ op step_hpath (mh:hsmap) (sah:hstate option) (b:block) =
 op build_hpath (mh:hsmap) (bs:block list) = 
    foldl (step_hpath mh) (Some (b0,0)) bs.
 
+(*
+inductive build_hpath_spec mh p v h =
+  | Empty of (p = [])
+           & (v = b0)
+           & (h = 0)
+  | Extend p' b v' h' of (p = rcons p' b)
+                       & (build_hpath mh p' = Some (v',h'))
+                       & (mh.[(v' +^ b,h')] = Some (v,h)).
+
+lemma build_hpathP mh p v h:
+  build_hpath mh p = Some (v,h) <=> build_hpath_spec mh p v h.
+proof.
+elim/last_ind: p v h=> @/build_hpath //= [v h|p b ih v h].
++ by rewrite anda_and; split=> [!~#] <*>; [exact/Empty|move=> [] /#].
+rewrite -{1}cats1 foldl_cat {1}/step_hpath /=.
+case: {-1}(foldl _ _ _) (eq_refl (foldl (step_hpath mh) (Some (b0,0)) p))=> //=.
++ apply/NewLogic.implybN; case=> [/#|p' b0 v' h'].
+  move=> ^/rconssI <<- {p'} /rconsIs ->> {b}.
+  by rewrite /build_hpath=> ->.
+move=> [v' h']; rewrite oget_some /= -/(build_hpath _ _)=> build. 
+split.
++ by move=> mh__; apply/(Extend mh (rcons p b) v h p b v' h' _ build mh__).
+case=> [/#|] p' b' v'' h'' ^/rconssI <<- {p'} /rconsIs <<- {b'}.
+by rewrite build /= => [#] <*>.
+qed.
+*)
+
 lemma build_hpathP mh p v h: 
-  build_hpath mh p = Some (v, h) =>
+  build_hpath mh p = Some (v, h) <=>
   (p = [] /\ v=b0 /\ h=0) \/ 
   exists p' b v' h',  
     p = rcons p' b /\ build_hpath mh p' = Some(v',h') /\ mh.[(v'+^b, h')] = Some(v,h).
-proof.
-  elim/last_ind:p=>@/build_hpath //= p' b _. 
-  rewrite -cats1 foldl_cat /= => H;right;exists p',b. 
-  move:H;rewrite {1}/step_hpath;case (foldl _ _ _)=> //= -[v' h'].
-  by rewrite oget_some /==>Heq; exists v',h';rewrite -cats1.
+proof. (* this is not an induction, but only a case analysis *)
+elim/last_ind: p v h => //= [v h|p b _ v h].
++ by rewrite /build_hpath /= anda_and; split=> [!~#] <*>; [left|move=> [] /#].
+rewrite -{1}cats1 foldl_cat /= -/(build_hpath _ _) /=.
+have -> /=: rcons p b <> [] by smt (). (* inelegant -- need lemma in List.ec *)
+case: {-1}(build_hpath _ _) (eq_refl (build_hpath mh p))=> //=.
++ by rewrite /step_hpath //= NewLogic.implybN=> -[] p' b0 b' h' [#] /rconssI <*> ->.
+move=> [v' h'] build_path; split=> [step_path|[] p' b' v'' h''].
++ by exists p, b, v', h'.
+by move=> [#] ^/rconssI <<- /rconsIs <<-; rewrite build_path=> ->.
 qed.
-
 
 (* -------------------------------------------------------------------------- *)
 
