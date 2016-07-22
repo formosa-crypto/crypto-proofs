@@ -572,6 +572,11 @@ qed.
 
 (* modules needed for applying transitivity tactic *)
 
+pred EagerBitsOfBlockDom
+          (xs : block list, i : int, mp : (block list * int, bool) fmap) =
+  (forall (j : int), i <= j < i + r => mem (dom mp) (xs, j)) \/
+  (forall (j : int), i <= j < i + r => ! mem (dom mp) (xs, j)).
+
 module HybridIROEagerTrans = {
   (* from HybridIROEager; need copy for transitivity
      to work *)
@@ -606,7 +611,46 @@ module HybridIROEagerTrans = {
     }
     return (bs, i);
   }
+
+  proc next_block_split(i, m : int, xs, bs) = {
+    var b, j, cs;
+
+    (* assuming EagerBitsOfBlockDom xs i HybridIROEager.mp *)
+
+    if (mem (dom HybridIROEager.mp) (xs, i)) {
+      while (i < m) {
+        b <- oget HybridIROEager.mp.[(xs, i)];
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+    } else {
+      j <- i;
+      while (i < m) {
+        b <$ dbool;
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+      cs <- bs;
+      while (j < m) {
+        HybridIROEager.mp.[(xs, j)] <- head true cs;
+        cs <- behead cs;
+        j <- j + 1;
+      }
+    }
+    return (bs, i);
+  }
 }.
+
+lemma HybridIROEagerTrans_next_block_split :
+  equiv
+  [HybridIROEagerTrans.next_block ~ HybridIROEagerTrans.next_block_split :
+   ={i, m, xs, HybridIROEager.mp} /\
+   EagerBitsOfBlockDom xs{1} i{1} HybridIROEager.mp{1} ==>
+   ={res, HybridIROEager.mp}].
+proof.
+proc=> /=.
+admit.
+qed.
 
 module BlockSpongeTrans = {
   (* from BlockSponge.BIRO.IRO; need copy for transitivity
