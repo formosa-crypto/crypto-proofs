@@ -1,4 +1,5 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
+(* checks with both Alt-Ergo and Z3 *)
 
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
