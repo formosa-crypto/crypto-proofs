@@ -588,12 +588,10 @@ pred EagerInvar
   (forall (xs : block list, i : int),
    mem (dom mp1) (xs, i) =>
    0 <= i /\
-   (forall (j : int), 0 <= j < i => mem (dom mp1) (xs, j)) /\
    (forall (j : int), i * r <= j < (i + 1) * r =>
     mp2.[(xs, j)] = Some(nth false (ofblock (oget mp1.[(xs, i)])) j))) /\
   (forall (xs : block list, j : int),
-   mem (dom mp2) (xs, j) =>
-   0 <= j /\ mem (dom mp1) (xs, j %/ r)).
+   mem (dom mp2) (xs, j) => mem (dom mp1) (xs, j %/ r)).
 
 pred BlockBitsAllInDom
      (xs : block list, i : int, mp : (block list * int, bool) fmap) =
@@ -606,6 +604,25 @@ pred BlockBitsAllOutDom
 pred BlockBitsDomAllInOrOut
      (xs : block list, i : int, mp : (block list * int, bool) fmap) =
   BlockBitsAllInDom xs i mp \/ BlockBitsAllOutDom xs i mp.
+
+lemma eager_inv_mem_mp1_ge0
+      (mp1 : (block list * int, block) fmap,
+       mp2 : (block list * int, bool) fmap,
+       xs : block list, i : int) :
+  EagerInvar mp1 mp2 => mem (dom mp1) (xs, i) => 0 <= i.
+proof. move=> [ei1 ei2] mem_mp1_i; smt(). qed.
+
+lemma eager_inv_mem_mp2_ge0
+      (mp1 : (block list * int, block) fmap,
+       mp2 : (block list * int, bool) fmap,
+       xs : block list, j : int) :
+  EagerInvar mp1 mp2 => mem (dom mp2) (xs, j) => 0 <= j.
+proof.
+move=> [ei1 ei2] mem_mp2_j.
+have mem_mp1_j_div_r : mem (dom mp1) (xs, j %/ r) by smt().
+have ge0_j_div_r : 0 <= j %/ r by smt().
+smt(divz_ge0 gt0_r).
+qed.
 
 lemma eager_invar0 : EagerInvar map0 map0.
 proof. split; smt(dom0 in_fset0). qed.
@@ -620,14 +637,14 @@ proof.
 move=> ge0_i r_dvd_i [ei1 ei2].
 case (mem (dom mp1) (xs, i %/ r))=> [mem_mp1 | not_mem_mp1].
 have ei1_xs_i_div_r := ei1 xs (i %/ r).
-have [_ [_ mp2_eq_block_bits]] := ei1_xs_i_div_r mem_mp1.
+have [_ mp2_eq_block_bits] := ei1_xs_i_div_r mem_mp1.
 left=> j j_rng.
 have mp2_eq_block_bits_j := mp2_eq_block_bits j _.
   by rewrite divzK // mulzDl /= divzK.
 rewrite in_dom /#.
 right=> j j_rng.
 case (mem (dom mp2) (xs, j))=> // mem_mp2 /=.
-have [_ mem_mp1] := ei2 xs j mem_mp2.
+have mem_mp1 := ei2 xs j mem_mp2.
 have [k] [k_ran j_eq_i_plus_k] : exists k, 0 <= k < r /\ j = i + k
   by exists (j - i); smt().
 have /# : (i + k) %/r = i %/ r
@@ -642,7 +659,7 @@ lemma eager_inv_mem_dom2
    BlockBitsAllInDom xs (i * r) mp2.
 proof.
 move=> [ei1 _] mem j j_ran.
-have [ge0_i [_ eq_mp2_block_i]] := ei1 xs i mem.
+have [ge0_i eq_mp2_block_i] := ei1 xs i mem.
 rewrite in_dom.
 have /# := eq_mp2_block_i j _; smt().
 qed.
@@ -656,7 +673,7 @@ lemma eager_inv_not_mem_dom2
 proof.
 move=> [_ ei2] ge0_i not_mem_mp2_i j j_ran.
 case (mem (dom mp1) (xs, j))=> // mem_mp1_j.
-have [ge0_j mem_mp2_j_div_r] := ei2 xs j mem_mp1_j.
+have mem_mp2_j_div_r := ei2 xs j mem_mp1_j.
 have /# : j %/ r = i.
 have [k] [k_ran ->] : exists k, 0 <= k < r /\ j = i * r + k
   by exists (j - i * r); smt().
@@ -766,6 +783,48 @@ module HybridIROEagerTrans = {
   }
 }.
 
+pred eager_eq_except
+     (xs : block list, i j : int,
+      mp1 mp2 : (block list * int, bool) fmap) =
+  forall (ys : block list, k : int),
+  ys <> xs \/ k < i \/ j <= k => mp1.[(ys, k)] = mp2.[(ys, k)].
+
+lemma eager_eq_except_upd1_eq_in
+      (xs : block list, i j k : int, y : bool,
+       mp1 mp2 : (block list * int, bool) fmap) :
+  eager_eq_except xs i j mp1 mp2 => i <= k => k < j =>
+  eager_eq_except xs i j mp1.[(xs, k) <- y] mp2.
+proof.
+move=> eee le_ik lt_kj ys l disj.
+have ne : (xs, k) <> (ys, l) by smt().
+smt(getP).
+qed.
+
+lemma eager_eq_except_upd2_eq_in
+      (xs : block list, i j k : int, y : bool,
+       mp1 mp2 : (block list * int, bool) fmap) :
+  eager_eq_except xs i j mp1 mp2 => i <= k => k < j =>
+  eager_eq_except xs i j mp1 mp2.[(xs, k) <- y].
+proof.
+move=> eee le_ik lt_kj ys l disj.
+have ne : (xs, k) <> (ys, l) by smt().
+smt(getP).
+qed.
+
+lemma eager_eq_except_maps_eq
+      (xs : block list, i j : int, y : bool,
+       mp1 mp2 : (block list * int, bool) fmap) :
+  i <= j => eager_eq_except xs i j mp1 mp2 =>
+  (forall (k : int),
+   i <= k < j => mp1.[(xs, k)] = mp2.[(xs, k)]) =>
+  mp1 = mp2.
+proof.
+move=> lt_ij eee ran_k.
+apply fmapP=> p.
+have [ys k] -> /# : exists ys k, p = (ys, k)
+  by exists p.`1, p.`2; smt().
+qed.
+
 lemma HybridIROEagerTrans_next_block_split :
   equiv
   [HybridIROEagerTrans.next_block ~ HybridIROEagerTrans.next_block_split :
@@ -775,9 +834,6 @@ lemma HybridIROEagerTrans_next_block_split :
    ={res, HybridIROEager.mp}].
 proof.
 proc=> /=.
-(*
-ROUGH WORK -- will rework tomorrow (invariants were faulty)
-
 case (mem (dom HybridIROEager.mp{2}) (xs{2}, i{2})).
 rcondt{2} 1; first auto.
 conseq
@@ -802,31 +858,75 @@ sp; exists* i{1}; elim*=> i''.
 conseq
   (_ :
    ={i, m, xs, bs, HybridIROEager.mp} /\ i'' = i{1} /\
-   i'' = i'{2} /\ i'' + r = m{1} /\
+   i'' = i'{2} /\ i'' + r = m{1} /\ size bs{1} = i'' /\
    (forall (j : int),
     i{1} <= j < m{1} =>
     ! mem (dom HybridIROEager.mp{1}) (xs{1}, j)) ==>
    _).
 progress; smt(gt0_r).
 seq 1 1 :
-  (={i, m, xs, bs, HybridIROEager.mp} /\ i'{2} = i'' /\ i{1} = i'' + r /\
-   size bs{1} = r /\
+  (={i, m, xs, bs} /\ i'{2} = i'' /\ i{1} = i'' + r /\
+   size bs{1} = i'' + r /\ m{1} = i'' + r /\
    (forall (j : int),
-    i'' <= j < i{1} =>
-    HybridIROEager.mp{1}.[(xs{1}, j)] = Some(nth true bs{1} (j - i'')))).
+    i'' <= j < i'' + r =>
+    HybridIROEager.mp{1}.[(xs{1}, j)] = Some(nth true bs{1} j)) /\
+   (forall (j : int),
+    i'' <= j < i'' + 1 =>
+    ! mem (dom HybridIROEager.mp{2}) (xs{1}, j)) /\
+   eager_eq_except xs{1} i'' i{1} HybridIROEager.mp{1} HybridIROEager.mp{2}).
 while
-  (={i, m, xs, bs} /\ i'' = i'{2} /\ i'' + r = m{1} /\ i'' <= i{1} /\
-   i{1} <= m{1} /\ size bs{1} = i{1} - i'' /\
+  (={i, m, xs, bs} /\ i'{2} = i'' /\ m{1} = i'' + r /\
+   i'' <= i{1} <= i'' + r /\ size bs{1} = i{1} /\
    (forall (j : int),
     i'' <= j < i{1} =>
-    HybridIROEager.mp{1}.[(xs{1}, j)] = Some(nth true bs{1} (j - i''))) /\
+    HybridIROEager.mp{1}.[(xs{1}, j)] = Some(nth true bs{1} j)) /\
    (forall (j : int),
-    i{1} <= j < m{1} =>
-    ! mem (dom HybridIROEager.mp{1}) (xs{1}, j))).
+    i{1} <= j < i'' + r =>
+    ! mem (dom HybridIROEager.mp{1}) (xs{1}, j)) /\
+   (forall (j : int),
+    i'' <= j < i'' + r =>
+    ! mem (dom HybridIROEager.mp{2}) (xs{1}, j)) /\
+   eager_eq_except xs{1} i'' (i'' + r) HybridIROEager.mp{1} HybridIROEager.mp{2}).
 inline*; rcondt{1} 3; first auto; smt().
-sp; wp; rnd; skip.
-*)
-admit.
+sp; wp; rnd; skip; progress.
+by rewrite getP_eq oget_some.
+smt(). smt(). smt(getP_eq size_rcons).
+rewrite nth_rcons /=.
+case (j = size bs{2})=> [-> /= | ne_j_size_bs].
+by rewrite getP_eq oget_some.
+have -> /= : j < size bs{2} by smt().
+rewrite getP ne_j_size_bs /= /#.
+rewrite domP in_fsetU1 /#.
+by apply eager_eq_except_upd1_eq_in.
+skip; progress; smt(gt0_r).
+sp; elim*=> i_R.
+conseq
+  (_ :
+   ={xs, bs, m} /\ i{2} = i'' /\ i{1} = i'' + r /\ m{1} = i'' + r /\
+   size bs{1} = i'' + r /\
+   (forall (j : int),
+    i'' <= j < i'' + r =>
+    HybridIROEager.mp{1}.[(xs{1}, j)] = Some (nth true bs{1} j)) /\
+   eager_eq_except xs{1} i'' (i'' + r)
+                   HybridIROEager.mp{1} HybridIROEager.mp{2} ==>
+   _)=> //.
+while{2}
+  (={xs, bs, m} /\ i'' <= i{2} <= i'' + r /\ i{1} = i'' + r /\
+   m{1} = i'' + r /\ size bs{1} = i'' + r /\
+   (forall (j : int),
+    i'' <= j < i{2} =>
+    HybridIROEager.mp{1}.[(xs{1}, j)] = HybridIROEager.mp{2}.[(xs{1}, j)]) /\
+   (forall (j : int),
+    i{2} <= j < i'' + r =>
+    HybridIROEager.mp{1}.[(xs{1}, j)] = Some (nth true bs{1} j)) /\
+   eager_eq_except xs{1} i'' (i'' + r)
+                   HybridIROEager.mp{1} HybridIROEager.mp{2})
+  (m{2} - i{2}).
+progress; auto; progress;
+  [smt() | smt(gt0_r) | smt(getP) | smt() |
+   by apply eager_eq_except_upd2_eq_in | smt()].
+skip; progress;
+  [smt(gt0_r) | smt() | smt() | smt() | smt(eager_eq_except_maps_eq)].
 qed.
 
 module BlockSpongeTrans = {
@@ -893,8 +993,7 @@ trivial.
 smt(size_blocks2bits).
 trivial.
 apply HybridIROEagerTrans_next_block_split.
-proc=> /=.
-inline*.
+proc=> /=; inline*.
 admit.
 qed.
 
