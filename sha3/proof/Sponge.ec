@@ -1037,6 +1037,38 @@ module BlockSpongeTrans = {
   }
 }.
 
+module BlockGen = {
+  proc loop() : block = {
+    var b : bool; var j : int; var cs : bool list;
+    j <- 0; cs <- [];
+    while (j < r) {
+      b <$ {0,1};
+      cs <- rcons cs b;
+      j <- j + 1;
+    }
+    return mkblock cs;
+  }
+
+  proc direct() : block = {
+    var w : block;
+    w <$ bdistr;
+    return w;
+  }
+}.
+
+lemma BlockGen_loop_direct :
+  equiv[BlockGen.loop ~ BlockGen.direct : true ==> ={res}].
+proof.
+bypr res{1} res{2}=> // &1 &2 w.
+have -> : Pr[BlockGen.direct() @ &2 : w = res] = 1%r / (2 ^ r)%r.
+  byphoare=> //.
+  proc; rnd; skip; progress; rewrite DWord.bdistrE.
+  have -> : (fun x => w = x) = (Pred.pred1 w)
+    by apply ExtEq.fun_ext=> x; by rewrite (eq_sym w x).
+  by rewrite count_uniq_mem 1:enum_uniq enumP b2i1.
+admit.
+qed.
+
 lemma HybridIROEager_next (i2 : int) :
   equiv
   [HybridIROEagerTrans.next_block ~ BlockSpongeTrans.next_block :
@@ -1166,7 +1198,23 @@ seq 3 1 :
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
 conseq (_ : true ==> cs{1} = ofblock w{2}).
 progress; [by rewrite size_block | by rewrite mkblockK].
-admit.
+transitivity{2}
+  { w <@ BlockGen.loop(); }
+  (true ==> cs{1} = ofblock w{2})
+  (true ==> ={w})=> //.
+inline BlockGen.loop; sp; wp.
+while (={j, cs} /\ 0 <= j{1} <= r /\ size cs{1} = j{1}).
+wp; rnd; skip; progress; smt(size_ge0 size_rcons).
+skip; progress.
+smt(gt0_r).
+have sz_cs_R_eq_r : size cs_R = r by smt().
+by rewrite ofblockK.
+transitivity{2}
+  { w <@ BlockGen.direct(); }
+  (true ==> ={w})
+  (true ==> ={w})=> //.
+call BlockGen_loop_direct; auto.
+inline BlockGen.direct; sim.
 wp; simplify; sp; elim*=> bs_l.
 exists* HybridIROEager.mp{1}; elim*=> mp1.
 exists* i{1}; elim*=> i1.
