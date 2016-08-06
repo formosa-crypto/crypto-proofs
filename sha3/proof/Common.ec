@@ -29,8 +29,8 @@ clone BitWord as Capacity with
     op n    <- c
   proof gt0_n by apply/gt0_c
 
-  rename "word"  as "cap"
-         "dword" as "cdistr"
+  rename "dword" as "cdistr"
+         "word"  as "cap"
          "zerow" as "c0".
 
 clone export BitWord as Block with
@@ -38,8 +38,8 @@ clone export BitWord as Block with
     op n    <- r
   proof gt0_n by apply/gt0_r
 
-  rename "word"  as "block"
-         "dword" as "bdistr"
+  rename "dword" as "bdistr"
+         "word"  as "block"
          "zerow" as "b0".
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
