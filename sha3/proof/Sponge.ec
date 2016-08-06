@@ -2,8 +2,10 @@
 (* checks with both Alt-Ergo and Z3 *)
 
 require import Fun Pair Int IntDiv Real List Option FSet NewFMap DBool.
-import IntExtra.
-require import Common StdOrder. import IntOrder.
+import Pred IntExtra.
+require import DList StdBigop.
+require import StdOrder. import IntOrder.
+require import Common.
 require (*--*) IRO BlockSponge RndO.
 
 (*------------------------- Indifferentiability ------------------------*)
@@ -1056,6 +1058,42 @@ module BlockGen = {
   }
 }.
 
+(* use Program abstract theory of DList *)
+
+clone Program as Prog with
+  type t = bool,
+  op d = {0,1}
+proof *.
+(* nothing to be proved *)
+
+lemma PrLoopSnoc_sample &m (bs : bool list) :
+  Pr[Prog.LoopSnoc.sample(r) @ &m : bs = res] =
+  mu (dlist {0,1} r) (pred1 bs).
+proof.
+have -> :
+  Pr[Prog.LoopSnoc.sample(r) @ &m: bs = res] =
+  Pr[Prog.Sample.sample(r) @ &m: bs = res].
+  byequiv=> //.
+  symmetry.
+  conseq (_ : ={n} ==> ={res})=> //.
+  apply Prog.Sample_LoopSnoc_eq.
+apply (Prog.pr_Sample r &m bs).
+qed.
+
+lemma iter_mul_one_half_pos (n : int) :
+  0 < n => iter n (( * ) (1%r / 2%r)) 1%r = inv(2 ^ n)%r.
+proof.
+move=> gt0_n.
+have -> /# // :
+  forall (n : int),
+  0 <= n => 0 < n => iter n (( * ) (1%r / 2%r)) 1%r = inv (2 ^ n)%r.
+elim=> [// | i ge0_i IH _].
+case (i = 0)=> [-> /= | ne_i0].
+rewrite iter1 pow1 /#.
+by rewrite iterS // IH 1:/# powS // RealExtra.fromintM
+           StdRing.RField.invfM.
+qed.
+
 lemma BlockGen_loop_direct :
   equiv[BlockGen.loop ~ BlockGen.direct : true ==> ={res}].
 proof.
@@ -1063,10 +1101,37 @@ bypr res{1} res{2}=> // &1 &2 w.
 have -> : Pr[BlockGen.direct() @ &2 : w = res] = 1%r / (2 ^ r)%r.
   byphoare=> //.
   proc; rnd; skip; progress; rewrite DWord.bdistrE.
-  have -> : (fun x => w = x) = (Pred.pred1 w)
+  have -> : (fun x => w = x) = (pred1 w)
     by apply ExtEq.fun_ext=> x; by rewrite (eq_sym w x).
   by rewrite count_uniq_mem 1:enum_uniq enumP b2i1.
-admit.
+have -> :
+  Pr[BlockGen.loop() @ &1 : w = res] =
+  Pr[Prog.LoopSnoc.sample(r) @ &1 : ofblock w = res].
+  byequiv=> //.
+  proc.
+  seq 2 2 :
+    (r = n{2} /\ j{1} = i{2} /\ j{1} = 0 /\
+     cs{1} = l{2} /\ cs{1} = []);
+    first auto.
+  while
+    (r = n{2} /\ j{1} = i{2} /\ cs{1} = l{2} /\ j{1} <= r /\
+     size cs{1} = j{1}).
+  wp; rnd; skip.
+  progress; smt(cats1 gt0_r size_rcons).
+  skip=> &m1 &m2 [r_eq [j_eq [j_init [cs_eq cs_init]]]].
+  split; first smt(gt0_r).
+  move=> j_L cs_L l_R i_r not_j_L_lt_r not_i_r_lt_n.
+  move=> [_ [j_L_eq [cs_L_eq [j_L_le_r sz_cs_L_eq_j_L]]]].
+  have sz_cs_L_eq_r : size cs_L = r by smt().
+  progress; [by rewrite ofblockK | by rewrite cs_L_eq mkblockK].
+rewrite (PrLoopSnoc_sample &1 (ofblock w)).
+rewrite mux_dlist 1:ge0_r size_block /=.
+have -> :
+  (fun (x : bool) => mu {0,1} (pred1 x)) =
+  (fun (x : bool) => 1%r / 2%r).
+  apply ExtEq.fun_ext=> x; by rewrite dboolb.
+by rewrite Bigreal.BRM.big_const count_predT size_block
+           iter_mul_one_half_pos 1:gt0_r.
 qed.
 
 lemma HybridIROEager_next (i2 : int) :
