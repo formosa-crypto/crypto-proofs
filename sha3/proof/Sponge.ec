@@ -1,8 +1,15 @@
 (*------------------------- Sponge Construction ------------------------*)
-(* checks with both Alt-Ergo and Z3 *)
+
+(* checks with both Alt-Ergo and Z3; all smt applications are
+   restricted to specific lemmas *)
+
+(*
+prover ["Z3"].
+prover ["Alt-Ergo"].
+*)
 
 require import Fun Pair Int IntDiv Real List Option FSet NewFMap DBool.
-import Pred IntExtra.
+(*---*) import Pred IntExtra.
 require import DList StdBigop.
 require import StdOrder. import IntOrder.
 require import Common.
@@ -747,7 +754,7 @@ module HybridIROEagerTrans = {
     return bs;
   }
 
-  proc next_block(i, m : int, xs, bs) = {
+  proc next_block(xs, i, m : int, bs) = {
     var b;
 
     while (i < m) {
@@ -758,7 +765,7 @@ module HybridIROEagerTrans = {
     return (bs, i);
   }
 
-  proc next_block_split(i, m : int, xs, bs) = {
+  proc next_block_split(xs, i, m : int, bs) = {
     var b, j, cs;
 
     (* assuming block_bits_dom_all_in_or_out xs i HybridIROEager.mp
@@ -1179,7 +1186,7 @@ transitivity
    size res{2}.`1 = i2 + 1 /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 move=> |> &1 &2 ge0_i2 -> i1_eq_i2_tim_r m_min_i1_eq_r -> sz_bs_eq_i2 ei.
-exists HybridIROEager.mp{1}, (i{1}, m{1}, x{2}, blocks2bits bs{2})=> |>.
+exists HybridIROEager.mp{1}, (x{2}, i{1}, m{1}, blocks2bits bs{2})=> |>.
 split; first smt().
 split; first smt(size_blocks2bits).
 apply
@@ -1379,8 +1386,108 @@ lemma HybridIROEagerTrans_BlockSpongeTrans_loop (n' : int) :
    size res{2}.`2 = n' /\ res{1}.`2 = blocks2bits res{2}.`2 /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}].
 proof.
+case (0 <= n'); last first=> [not_ge0_n' | ge0_n'].
+proc=> /=; exfalso.
 proc=> /=.
-admit.
+move: ge0_n'; elim n'=> [| n' ge0_n' IH].
+sp. rcondf{1} 1; auto. rcondf{2} 1; auto.
+splitwhile{1} 3 : (i < (n - 1) * r).
+splitwhile{2} 3 : (i < n - 1).
+seq 3 3 :
+  (={xs, n} /\ n{1} = n' + 1 /\ i{1} = n' * r /\ i{2} = n' /\
+   size bs{2} = n' /\ bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
+conseq
+  (_ :
+   ={xs, n} /\ n' + 1 = n{1} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   i{1} = n' * r /\ i{2} = n' /\ size bs{2} = n' /\
+   bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
+transitivity{1}
+  { i <- 0; bs <- [];
+    while (i < n * r) {
+      b <@ HybridIROEager.fill_in(xs, i);
+      bs <- rcons bs b;
+      i <- i + 1;
+    }
+  }
+  (={xs, HybridIROEager.mp} /\ n{1} = n' + 1 /\ n{2} = n' ==>
+   ={bs, i, HybridIROEager.mp})
+  (={xs} /\ n{1} = n' /\ n{2} = n' + 1 /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   i{1} = n' * r /\ i{2} = n' /\ size bs{2} = n' /\
+   bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
+progress; exists HybridIROEager.mp{1}, n', xs{2}=> //.
+while (={xs, i, bs, HybridIROEager.mp} /\ n{1} = n' + 1 /\ n{2} = n').
+wp. call (_ : ={HybridIROEager.mp}). if=> //; rnd; auto.
+skip; progress; smt(ge0_r).
+auto; smt().
+transitivity{2}
+  { i <- 0; bs <- [];
+    while (i < n) {
+      b <@ BlockSponge.BIRO.IRO.fill_in(xs, i);
+      bs <- rcons bs b;
+      i <- i + 1;
+    }
+  }
+  (={xs, n} /\ n{1} = n' /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   i{1} = n' * r /\ i{2} = n' /\ size bs{2} = n' /\
+   bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})
+  (={xs,BlockSponge.BIRO.IRO.mp} /\ n{1} = n' /\ n{2} = n' + 1 ==>
+   ={i, bs, BlockSponge.BIRO.IRO.mp})=> //.
+progress; exists BlockSponge.BIRO.IRO.mp{2}, n{1}, xs{2}=> //.
+conseq IH=> //.
+while
+  (={xs, bs, i, BlockSponge.BIRO.IRO.mp} /\ n{1} = n' /\ n{2} = n' + 1).
+wp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; auto.
+auto; smt().
+auto; smt().
+unroll{2} 1.
+rcondt{2} 1; first auto; progress; smt().
+rcondf{2} 4. auto.
+call (_ : true). if=> //.
+skip; smt().
+transitivity{1}
+  { (bs, i) <@ HybridIROEagerTrans.next_block(xs, i, (n' + 1) * r, bs); }
+  (={xs, i, bs, HybridIROEager.mp} /\ n{1} = n' + 1 ==>
+   ={i, bs, HybridIROEager.mp})
+  (={xs} /\ i{1} = n' * r /\ i{2} = n' /\
+   size bs{2} = n' /\ bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+   i{1} = (n' + 1) * r /\ i{2} = n' + 1 /\ size bs{2} = n' + 1 /\
+   bs{1} = blocks2bits bs{2} /\
+   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
+progress;
+  exists HybridIROEager.mp{1}, (size bs{2} * r), (blocks2bits bs{2}), xs{2}=> //.
+inline HybridIROEagerTrans.next_block; sp; wp.
+while
+  (xs{1} = xs0{2} /\ i{1} = i0{2} /\ n{1} = n' + 1 /\
+   m{2} = (n' + 1) * r /\ bs{1} = bs0{2} /\
+   ={HybridIROEager.mp}).
+wp. call (_ : ={HybridIROEager.mp}).
+if=> //; rnd; auto.
+auto. auto.
+transitivity{2}
+  { (bs, i) <@ BlockSpongeTrans.next_block(xs, i, bs); }
+  (={xs} /\ i{1} = n' * r /\ i{2} = n' /\
+  size bs{2} = n' /\ bs{1} = blocks2bits bs{2} /\
+  eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
+  i{1} = (n' + 1) * r /\ i{2} = n' + 1 /\ size bs{2} = n' + 1 /\
+  bs{1} = blocks2bits bs{2} /\
+  eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})
+  (={xs, bs, i, BlockSponge.BIRO.IRO.mp} ==>
+   ={xs, bs, i, BlockSponge.BIRO.IRO.mp})=> //.
+progress; exists BlockSponge.BIRO.IRO.mp{2}, (size bs{2}), bs{2}, xs{2}=> //.
+call (HybridIROEagerTrans_BlockSpongeTrans_next_block n').
+skip; progress; smt().
+inline BlockSpongeTrans.next_block.
+wp; sp.
+call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; skip; smt().
+auto.
 qed.
 
 lemma HybridIROEager_g_BlockIRO_f (n1 : int) (x2 : block list) :
@@ -1483,7 +1590,7 @@ transitivity{1}
    i{1} = n1 %/ r * r /\ i{2} = n1 %/ r /\
    size bs{2} = i{2} /\ bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
-progress; exists HybridIROEager.mp{1}, [], n{1}, 0, x{2}; smt().
+progress; exists HybridIROEager.mp{1}, [], n{1}, 0, x{2}=> //.
 while (={i, bs, xs, HybridIROEager.mp} /\ n1 = n{1} /\ 0 <= n1).
 wp. call (_ : ={HybridIROEager.mp}). if=> //; auto.
 auto; progress; smt(leq_trunc_div ge0_r).
@@ -1504,8 +1611,7 @@ transitivity{2}
   (={i, x, bs, BlockSponge.BIRO.IRO.mp} /\ n{2} = (n1 + r - 1) %/ r ==>
    ={i, x, bs, BlockSponge.BIRO.IRO.mp})=> //.
 progress;
-  exists BlockSponge.BIRO.IRO.mp{2}, [], 0, x{2}, ((n{1} + r - 1) %/ r);
-  smt().
+  exists BlockSponge.BIRO.IRO.mp{2}, [], 0, x{2}, ((n{1} + r - 1) %/ r)=> //.
 conseq
   (_ :
    xs{1} = x{2} /\ 0 <= n1 /\
@@ -1515,7 +1621,7 @@ conseq
    size bs{2} = n1 %/ r /\ bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 transitivity{1}
-  { (i, bs) = HybridIROEagerTrans.loop(n1 %/ r, xs); }
+  { (i, bs) <@ HybridIROEagerTrans.loop(n1 %/ r, xs); }
   (={xs, HybridIROEager.mp} /\ n{2} = n1 %/ r /\ i{1} = 0 /\ bs{1} = [] ==>
    ={i, xs, bs, HybridIROEager.mp})
   (xs{1} = x{2} /\ 0 <= n1 /\ i{2} = 0 /\ bs{2} = [] /\
@@ -1523,8 +1629,8 @@ transitivity{1}
    i{1} = n1 %/ r * r /\ i{2} = n1 %/ r /\
    size bs{2} = n1 %/ r /\ bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
-progress; exists HybridIROEager.mp{1}, (n1 %/ r), x{2}; smt().
-smt().
+progress; exists HybridIROEager.mp{1}, (n1 %/ r), x{2}=> //.
+trivial.
 inline HybridIROEagerTrans.loop; sp; wp.
 while
   (={HybridIROEager.mp} /\ i{1} = i0{2} /\ bs{1} = bs0{2} /\
@@ -1532,16 +1638,15 @@ while
 wp. call (_ : ={HybridIROEager.mp}). if=> //; rnd; auto.
 auto. auto.
 transitivity{2}
-  { (i, bs) = BlockSpongeTrans.loop(n1 %/ r, x); }
+  { (i, bs) <@ BlockSpongeTrans.loop(n1 %/ r, x); }
   (xs{1} = x{2} /\ 0 <= n1 /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    i{1} = n1 %/ r * r /\ i{2} = n1 %/ r /\
    size bs{2} = n1 %/ r /\ bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})
   (={x, BlockSponge.BIRO.IRO.mp} /\ i{2} = 0 /\ bs{2} = [] ==>
-   ={i, x, bs, BlockSponge.BIRO.IRO.mp}).
-progress; exists BlockSponge.BIRO.IRO.mp{2}, x{2}; smt().
-smt().
+   ={i, x, bs, BlockSponge.BIRO.IRO.mp})=> //.
+progress; exists BlockSponge.BIRO.IRO.mp{2}, x{2}=> //.
 call (HybridIROEagerTrans_BlockSpongeTrans_loop (n1 %/ r)).
 skip; progress; smt(divz_ge0 gt0_r).
 inline BlockSpongeTrans.loop; sp; wp.
@@ -1642,7 +1747,7 @@ skip; progress;
    smt(size_rcons take_oversize cats1 cats0)].
 skip; smt(take_size).
 transitivity{1}
-  { (bs, i) <@ HybridIROEagerTrans.next_block(i, m, xs, bs);
+  { (bs, i) <@ HybridIROEagerTrans.next_block(xs, i, m, bs);
   }
   (={i, m, xs, bs, HybridIROEager.mp} ==>
    ={i, m, xs, bs, HybridIROEager.mp})
@@ -1896,7 +2001,7 @@ by rewrite (Ideal_IRO_Experiment_HybridLazy &m)
            (Experiment_HybridEager_Ideal_BlockIRO &m).
 qed.
 
-lemma Conclusion' &m :
+lemma conclu &m :
   `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] -
     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
   `|Pr[BlockSponge.RealIndif
@@ -1911,13 +2016,14 @@ end section.
 
 (*----------------------------- Conclusion -----------------------------*)
 
-lemma Conclusion (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
-                 (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
-                 &m :
+lemma conclusion
+      (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
+      (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
+      &m :
   `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] -
     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
   `|Pr[BlockSponge.RealIndif
        (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res] -
     Pr[BlockSponge.IdealIndif
        (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main() @ &m : res]|.
-proof. by apply/(Conclusion' BlockSim Dist &m). qed.
+proof. by apply/(conclu BlockSim Dist &m). qed.

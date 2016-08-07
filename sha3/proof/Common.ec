@@ -1,5 +1,12 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
-(* checks with both Alt-Ergo and Z3 *)
+
+(* checks with both Alt-Ergo and Z3; all smt applications are
+   restricted to specific lemmas *)
+
+(*
+prover ["Z3"].
+prover ["Alt-Ergo"].
+*)
 
 require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
