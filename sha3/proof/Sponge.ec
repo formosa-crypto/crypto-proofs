@@ -1145,10 +1145,11 @@ have -> :
      size cs{1} = j{1}).
   wp; rnd; skip.
   progress; smt(cats1 gt0_r size_rcons).
-  skip=> &m1 &m2 [r_eq [j_eq [j_init [cs_eq cs_init]]]].
+  skip=> &m1 &m2 [# r_eq j_eq j_init cs_eq cs_init].
   split; first smt(gt0_r).
-  move=> j_L cs_L l_R i_r not_j_L_lt_r not_i_r_lt_n.
-  move=> [_ [j_L_eq [cs_L_eq [j_L_le_r sz_cs_L_eq_j_L]]]].
+  move=>
+    j_L cs_L l_R i_r not_j_L_lt_r not_i_r_lt_n
+    [# _ j_L_eq cs_L_eq j_L_le_r sz_cs_L_eq_j_L].
   have sz_cs_L_eq_r : size cs_L = r by smt().
   progress; [by rewrite ofblockK | by rewrite cs_L_eq mkblockK].
 rewrite (PrLoopSnoc_sample &1 (ofblock w)).
@@ -1246,18 +1247,20 @@ have some_form_mp_hr_lookup_eq :
   by rewrite ei1_xs_i2 1:/#.
 by rewrite some_form_mp_hr_lookup_eq oget_some.
 smt().
-skip. (* getting anomaly from => |> *)
-move=> &1 &2 [-> [ge0_i2 [i1_eq_i2_tim_r H]]].
-elim H=> [m_min_i1_eq_r [->> [sz_bs2_eq_i2 H]]].
-elim H=> [sz_b2b_bs2_eq_i1 [->> [mem_dom_mp2_xs_i2 ei]]].
+skip.
+move=>
+  &1 &2
+  [# -> ge0_i2 i1_eq_i2_tim_r m_min_i1_eq_r ->> sz_bs2_eq_i2
+   sz_b2b_bs2_eq_i1 ->> mem_dom_mp2_xs_i2 ei].
 split. split.
 split=> [// | _]; rewrite i1_eq_i2_tim_r; smt(ge0_r).
 split=> //. split; first smt(). split=> //.
 split; first by rewrite /= take0 cats0. split=> //.
 move=> bs_L i_L.
 split=> [| not_lt_i_L_m]; first smt().
-move=> [i1_le_i_L_le_m [_ [sz_bs_L_eq_i_L [m1_min_i1_eq_r H]]]].
-elim H=> [bs_L_eq [_ [_ mem_mp2_xs_i2]]].
+move=>
+  [# i1_le_i_L_le_m _ _ sz_bs_L_eq_i_L m1_min_i1_eq_r
+   bs_L_eq mem_mp2_xs_i2 _].
 split.
 have i_L_eq_m : i_L = m{1} by smt().
 rewrite bs_L_eq -cats1 blocks2bits_cat; congr.
@@ -1348,8 +1351,10 @@ rewrite getP.
 have -> /= : (xs{hr}, j) <> (xs{hr}, i{hr}) by smt().
 rewrite mp_ran_eq /#.
 smt().
-skip=> &1 &2 [-> [ge0_i2 [eq_i_i1 [i1_eq_i2_tim_r [m_min_i1_eq_r H]]]]].
-elim H=> [bs1_eq [sz_bs2_eq_i2 [sz_bs1_eq_i1_add_r [-> ei]]]].
+skip=>
+  &1 &2
+  [# -> ge0_i2 eq_i_i1 i1_eq_i2_tim_r m_min_i1_eq_r
+   bs1_eq sz_bs2_eq_i2 sz_bs1_eq_i1_add_r -> ei].
 have ge0_i1 : 0 <= i1
   by rewrite i1_eq_i2_tim_r divr_ge0 // ge0_r.
 split.
@@ -1358,12 +1363,10 @@ split; first smt(ge0_r).
 split; first smt().
 split.
 split; smt(ge0_r).
-split; first smt().
-smt().
+split; smt().
 move=> mp_L i_L.
 split; first smt().
-move=> not_i_L_lt_m H.
-elim H=> [_ [_ [_ [[i1_le_i_L i_L_le_m] [ee mp_L_ran_eq]]]]].
+move=> not_i_L_lt_m [# _ _ _ i1_le_i_L i_L_le_m ee mp_L_ran_eq].
 split; first smt().
 split; first smt().
 apply (eager_invar_eq_except_upd1 BlockSponge.BIRO.IRO.mp{2}
