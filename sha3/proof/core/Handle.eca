@@ -826,20 +826,20 @@ section AUX.
       move=> [p0 v0] ^ pi_x2. have [] _ _ _ _ _ [] -> _ [hx2] [#] Hpath hs_hx2:= inv0.
       rcondt{2} 1. by move=> &m; auto=> &hr [#] !<<- _ _ ->> /= _; rewrite in_dom pi_x2.
       rcondf{2} 6.
-      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= + _ - _ + _ - _ /=.
+      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= _ _ _ _ /=.
         by rewrite in_rng; exists hx2.
       rcondf{2} 7.
-      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= + _ - _ + _ - _ /=.
+      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= _ _ _ _ /=.
         rewrite negb_and; left; rewrite (@huniq_hinvK_h hx2 hs0 x2) // 2:oget_some.
         + by case: inv0=> _ _ _ _ _ _ [].
         rewrite in_dom; case: {-1}(G1mh.[(x1,hx2)]) (eq_refl (G1mh.[(x1,hx2)]))=> [//=|[xa xc] G1mh_x1hx2].
         have [] [] _ /(_ _ _ _ _ G1mh_x1hx2) [xc0 xf0 yc0 yf0] + _ _ _ _ _ _:= inv0.
         by move=> [#]; rewrite hs_hx2=> [#] !<<- {xc0 xf0}; rewrite x1x2_notin_PFm.
       rcondt{2} 15.
-      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= + _ - _ + _ - _ /=.
+      + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= _ _ _ _ /=.
         by rewrite in_dom pi_x2.
       inline F.RO.get. rcondt{2} 4.
-      + auto=> &hr [#] !<<- _ _ !->> _ /= + _ - _; rewrite pi_x2 oget_some /=.
+      + auto=> &hr [#] !<<- _ _ !->> _ /= _ _; rewrite pi_x2 oget_some /=.
         rewrite in_dom; case: {-1}(ro0.[rcons p0 (v0 +^ x1)]) (eq_refl (ro0.[rcons p0 (v0 +^ x1)])).
         + done.
         move=> bo ^ro_pvx1 /=. have [] _ _ _ _ [] _ -> _ _:= inv0.
@@ -872,15 +872,15 @@ section AUX.
     move=> pi_x2; rcondt{2} 1; 1:by auto=> &hr [#] <*>; rewrite in_dom pi_x2.
     inline F.RO.get.
     rcondf{2} 4; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite pi_x2 oget_some /= in_dom Hro.
-    rcondf{2} 8; first by auto=> &hr [#] !<<- _ _ ->> _ /= + _ - _ + _ - _; rewrite in_rng; exists hx2.
+    rcondf{2} 8; first by auto=> &hr [#] !<<- _ _ ->> _ /= _ _ _ _; rewrite in_rng; exists hx2.
     rcondt{2} 9.
-    + auto=> &hr [#] !<<- _ _ ->> _ /= + _ - _ + _ - _.
+    + auto=> &hr [#] !<<- _ _ ->> _ /= _ _ _ _.
       rewrite (@huniq_hinvK_h hx2 hs0 x2) // 2:in_dom 2:G1mh_x1hx2 2:!oget_some /=.
       + by case: inv0=> _ _ _ _ _ _ [].
       by rewrite /in_dom_with in_dom hs_hy2.
     rcondt{2} 14; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite in_dom pi_x2.
     auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DWord.bdistr_ll Capacity.DWord.cdistr_ll /=.
-    move=> + _ - _ + _ - _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
+    move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by case: inv0=> _ _ _ _ _ _ [].
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //=.
