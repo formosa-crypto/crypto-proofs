@@ -1151,13 +1151,11 @@ have -> :
      size cs{1} = j{1}).
   wp; rnd; skip.
   progress; smt(cats1 gt0_r size_rcons).
-  skip=> &m1 &m2 [# r_eq j_eq j_init cs_eq cs_init].
+  skip=> &m1 &m2 [# <- <- -> <- ->].
   split; first smt(gt0_r).
-  move=>
-    cs_L j_L i_r l_R not_j_L_lt_r not_i_r_lt_n
-    [# _ j_L_eq cs_L_eq j_L_le_r sz_cs_L_eq_j_L].
-  have sz_cs_L_eq_r : size cs_L = r by smt().
-  progress; [by rewrite ofblockK | by rewrite cs_L_eq mkblockK].
+  move=> cs j i ds not_lt_jr not_lt_ir [# _ eq_ji -> le_jr sz_cs_eq_j].
+  have sz_ds_eq_r : size ds = r by smt().
+  progress; [by rewrite ofblockK | by rewrite mkblockK].
 rewrite (PrLoopSnoc_sample &1 (ofblock w)).
 rewrite mux_dlist 1:ge0_r size_block /=.
 have -> :
@@ -1253,20 +1251,17 @@ by rewrite some_form_mp_hr_lookup_eq oget_some.
 smt().
 skip=>
   &1 &2
-  [# -> ge0_i2 i1_eq_i2_tim_r m_min_i1_eq_r ->> sz_bs2_eq_i2
+  [# <- ge0_i2 i1_eq_i2_tim_r m_min_i1_eq_r <- sz_bs2_eq_i2
    sz_b2b_bs2_eq_i1 ->> mem_dom_mp2_xs_i2 ei].
 split. split. split=> [// | _]; rewrite i1_eq_i2_tim_r; smt(ge0_r).
 split=> //. split; first smt(). split=> //.
 split; first by rewrite /= take0 cats0. split=> //.
-move=> bs_L i_L.
-split=> [| not_lt_i_L_m]; first smt().
-move=>
-  [# i1_le_i_L_le_m _ _ sz_bs_L_eq_i_L m1_min_i1_eq_r
-   bs_L_eq mem_mp2_xs_i2 _].
+clear bs1; move=> bs1 i1'.
+split=> [| not_i1'_lt_m]; first smt().
+move=> [# i1_le_i1' i1'_le_m _ sz_bs1_eq_i1' _ bs1_eq mem_mp2_xs_i2 _].
 split.
-have i_L_eq_m : i_L = m{1} by smt().
-rewrite bs_L_eq -cats1 blocks2bits_cat
-        i_L_eq_m m1_min_i1_eq_r blocks2bits_sing.
+have i1'_eq_m : i1' = m{1} by smt().
+rewrite bs1_eq -cats1 blocks2bits_cat i1'_eq_m m_min_i1_eq_r blocks2bits_sing.
 pose blk := (oget BlockSponge.BIRO.IRO.mp{2}.[(xs{1}, i2)]).
 have -> : r = size (ofblock blk) by rewrite size_block.
 by rewrite take_size.
@@ -1351,9 +1346,8 @@ have -> /= : (xs{hr}, j) <> (xs{hr}, i{hr}) by smt().
 rewrite mp_ran_eq /#.
 smt().
 skip=>
-  &1 &2
-  [# -> ge0_i2 eq_i_i1 i1_eq_i2_tim_r m_min_i1_eq_r
-   bs1_eq sz_bs2_eq_i2 sz_bs1_eq_i1_add_r -> ei].
+  &1 &2 [# -> ge0_i2 -> i1_eq_i2_tim_r m_min_i1_eq_r
+  bs1_eq sz_bs2_eq_i2 sz_bs1_eq_i1_add_r -> ei].
 have ge0_i1 : 0 <= i1 by rewrite i1_eq_i2_tim_r divr_ge0 // ge0_r.
 split. split=> //. split; first smt(ge0_r).
 split; first smt(). split; smt(ge0_r).
@@ -1452,7 +1446,7 @@ transitivity{1}
    i{1} = (n' + 1) * r /\ i{2} = n' + 1 /\ size bs{2} = n' + 1 /\
    bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
-progress.
+progress;
   exists HybridIROEager.mp{1}, (blocks2bits bs{2}), (size bs{2} * r),
          xs{2}=> //.
 inline HybridIROEagerTrans.next_block; sp; wp.
@@ -1472,7 +1466,7 @@ transitivity{2}
   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})
   (={xs, bs, i, BlockSponge.BIRO.IRO.mp} ==>
    ={xs, bs, i, BlockSponge.BIRO.IRO.mp})=> //.
-progress. exists BlockSponge.BIRO.IRO.mp{2}, bs{2}, (size bs{2}), xs{2}=> //.
+progress; exists BlockSponge.BIRO.IRO.mp{2}, bs{2}, (size bs{2}), xs{2}=> //.
 call (HybridIROEagerTrans_BlockSpongeTrans_next_block n').
 skip; progress; smt().
 inline BlockSpongeTrans.next_block.
