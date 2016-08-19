@@ -190,7 +190,7 @@ section.
       + inline *;auto=> &ml&mr[#]10!-> Hi Hhand -> /=.
         rewrite -dom_restr rng_restr /=;progress; 3:by smt ml=0.
         + rewrite rng_set !inE rem_id 1:/#;move:H0=>[/Hi[->|[x' h][]H1 H2]|->]//.
-          right;right;exists x', h;rewrite getP. 
+          right;right;exists x' h;rewrite getP. 
           by cut ->//:(h<> G1.chandle{mr});move:(Hhand h);rewrite in_dom H2 /#.
         by move:H0;rewrite dom_set !inE /#.
       seq 1 1: (={x,y,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.paths,G1.chandle,FRO.m} /\
@@ -205,18 +205,18 @@ section.
         + rewrite /inv_ext1=>/H{H}[->//|[/in_rng[h]Hh|[[x1 x2] h [Hx Hh]]]].
           + case (h = (oget G1.mh{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
             + by left;rewrite Hh oget_some.
-            by right;exists x{2}, h;rewrite dom_set getP Hneq !inE.
+            by right;exists x{2} h;rewrite dom_set getP Hneq !inE.
           case (h = (oget G1.mh{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq]. 
           + rewrite Hh /bad_ext oget_some /= <@ Hx;rewrite !inE.
             by move=>[|]/(mem_image snd)->.
-          right;exists (x1,x2), h;rewrite !dom_set getP Hneq //=.
+          right;exists (x1,x2) h;rewrite !dom_set getP Hneq //=.
           by move:Hx;rewrite !inE Hh=>-[]->.
         by move:H6 H2;rewrite /in_dom_with dom_set !inE /#.
       inline *;auto;progress;last by move:H3;rewrite dom_set !inE /#.
       rewrite /inv_ext1=> /H [->//|[/in_rng[h]Hh|[x' h [Hx Hh]]]].
-      + right;exists x{2}, h;rewrite getP dom_set !inE /=. 
+      + right;exists x{2} h;rewrite getP dom_set !inE /=. 
         by move:(H0 h);rewrite in_dom Hh /#.
-      right;exists x', h;rewrite getP !dom_set !inE;split.
+      right;exists x' h;rewrite getP !dom_set !inE;split.
       + by move:Hx;rewrite !inE=>-[]->.
       by move:(H0 h);rewrite !in_dom Hh /#.
 
@@ -231,7 +231,7 @@ section.
       + inline *;auto=> &ml&mr[#]9!-> Hi Hhand -> /=.
         rewrite -dom_restr rng_restr /=;progress; 3:by smt ml=0.
         + rewrite rng_set !inE rem_id 1:/#;move:H4=>[/Hi[->|[x' h][]HH1 HH2]|->]//.
-          right;right;exists x', h;rewrite getP. 
+          right;right;exists x' h;rewrite getP. 
           by cut ->//:(h<> G1.chandle{mr});move:(Hhand h);rewrite in_dom HH2 /#.
         by move:H4;rewrite dom_set !inE /#.
       if=>//.
@@ -242,18 +242,18 @@ section.
         + rewrite /inv_ext1=>/H{H}[->//|[/in_rng[h]Hh|[[x1 x2] h [Hx Hh]]]].
           + case (h = (oget G1.mhi{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
             + by left;rewrite Hh oget_some.
-            by right;exists x{2}, h;rewrite !dom_set getP Hneq !inE.
+            by right;exists x{2} h;rewrite !dom_set getP Hneq !inE.
           case (h = (oget G1.mhi{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq]. 
           + rewrite Hh /bad_ext oget_some /= <@ Hx;rewrite !inE.
             by move=>[|]/(mem_image snd)->.
-          right;exists (x1,x2), h;rewrite !dom_set getP Hneq //=.
+          right;exists (x1,x2) h;rewrite !dom_set getP Hneq //=.
           by move:Hx;rewrite !inE Hh=>-[]->.
         by move:H6 H2;rewrite /in_dom_with dom_set !inE /#.
       inline *;auto;progress;last by move:H3;rewrite dom_set !inE /#.
       rewrite /inv_ext1=> /H [->//|[/in_rng[h]Hh|[x' h [Hx Hh]]]].
-      + right;exists x{2}, h;rewrite getP !dom_set !inE /=. 
+      + right;exists x{2} h;rewrite getP !dom_set !inE /=. 
         by move:(H0 h);rewrite in_dom Hh /#.
-      right;exists x', h;rewrite getP !dom_set !inE;split.
+      right;exists x' h;rewrite getP !dom_set !inE;split.
       + by move:Hx;rewrite !inE=>-[]->.
       by move:(H0 h);rewrite !in_dom Hh /#.
 
@@ -269,10 +269,10 @@ section.
       rcondt{2} 3;1:by auto=>/#.
       auto=> &m1&m2 [#] 10!-> Hinv Hhand Hi _ _ /= ?->?->/=;split=>/= _;split.
       + move:Hinv;rewrite /inv_ext1=> H/H{H}[->//|[x h]];rewrite inE=>-[Hmem Hh].       
-        by right;exists x,h;rewrite !inE Hmem getP;smt w=in_dom.
+        by right;exists x h;rewrite !inE Hmem getP;smt w=in_dom.
       + by move=>h;rewrite dom_set !inE /#.
       + move:Hinv;rewrite /inv_ext1=> H/H{H}[->//|[x h]];rewrite inE=>-[Hmem Hh].       
-        by right;exists x,h;rewrite !inE Hmem getP;smt w=in_dom.
+        by right;exists x h;rewrite !inE Hmem getP;smt w=in_dom.
       by move=>h;rewrite dom_set !inE /#. 
    
     (* **************** *)
@@ -529,7 +529,7 @@ section EXT.
       rewrite drop0=>-[H|[x h][#]];1:by rewrite Hext // H.
       rewrite getP;case (h=h1)=> [/=->Hin->_ | Hneq ???].
       + by right;apply (mem_image snd _ x).
-      by rewrite Hext 2://;right;exists x, h;rewrite Hneq.
+      by rewrite Hext 2://;right;exists x h;rewrite Hneq.
     wp; call (_: ={F.RO.m,FRO.m,G1.paths,G1.mh,G1.mhi,G1.m,G1.mi,G1.chandle,G1.bext, C.c} /\ 
                  inv_le G1.m{2} G1.mi{2} C.c{1} FRO.m{2}  ReSample.count{2}).
     + proc;sp;if=> //.
