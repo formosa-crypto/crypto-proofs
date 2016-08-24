@@ -583,6 +583,7 @@ qed.
 (* by exists c' v'; rewrite hpaths; exists h'. *)
 (* qed. *)
 
+(** Stuff about paths **)
 lemma build_hpath_prefix mh p b v h:
       build_hpath mh (rcons p b) = Some (v,h)
   <=> (exists v' h', build_hpath mh p = Some (v',h') /\ mh.[(v' +^ b,h')] = Some (v,h)).
@@ -592,26 +593,16 @@ rewrite build_hpathP; split=> [[/#|p' b' v' h' [#] + Hhpath Hmh]|[v' h'] [] Hhpa
 exact/(Extend _ _ _ _ _ Hhpath Hmh).
 qed.
 
-lemma foldl_step_hpath_None mh p: foldl (step_hpath mh) None p = None.
-proof. by elim: p. qed.
-
-(** This proof is not understood **)
-lemma build_hpath_up mh xa hx ya hy p b h:
-     build_hpath mh p = Some (b,h)
+lemma build_hpath_up mh xa hx ya hy p za hz:
+     build_hpath mh p = Some (za,hz)
   => mh.[(xa,hx)] = None
-  => build_hpath mh.[(xa,hx) <- (ya,hy)] p = Some (b,h).
+  => build_hpath mh.[(xa,hx) <- (ya,hy)] p = Some (za,hz).
 proof.
-move=> + mh_xahx - @/build_hpath.
-have: (exists p' v h, build_hpath mh p' = Some (v +^ b0,h)).
-+ by exists [] b0 0; rewrite build_hpathP Block.xorw0; exact/Empty.
-pose root:= b0; elim: p root 0=> //= b1 p ih bn hn.
-rewrite /(step_hpath _ (Some _)) /= oget_some /= /(step_hpath _ (Some _)) /= oget_some /= getP.
-case: {-1}(mh.[(bn +^ b1,hn)]) (eq_refl mh.[(bn +^ b1,hn)])=> [|[xc' hx'] mh_bnb1hn]; last first.
-+ have -> /= : (bn +^ b1,hn) <> (xa,hx).
-  + apply/contraT=> /(congr1 (fun ch=> mh.[ch]) (bn +^ b1,hn) (xa,hx)).
-    by rewrite mh_xahx mh_bnb1hn.
-  smt. (* figure out *)
-by rewrite foldl_step_hpath_None.
+move=> + mh_xahx; elim/last_ind: p za hz=> [za hz|p b ih za hz].
++ by rewrite /build_hpath.
+move=> /build_hpath_prefix [b' h'] [#] /ih Hpath Hmh.
+apply/build_hpathP/(@Extend _ _ _ _ p b b' h' _ Hpath _)=> //.
+by rewrite getP /#.
 qed.
 
 lemma build_hpath_down mh xa hx ya hy p v h:
@@ -625,6 +616,19 @@ move=> v h /build_hpathP [/#|p' b' + + ^/rconsIs <<- /rconssI <<-].
 move=> v' h' /ih; rewrite getP.
 case: ((v' +^ b,h') = (xa,hx))=> [/#|_ Hpath Hextend].
 exact/build_hpathP/(Extend _ _ _ _ _ Hpath Hextend).
+qed.
+
+lemma known_path_uniq hs mh pi xc hx p xa p' xa':
+     pi_spec hs mh pi
+  => hs.[hx] = Some (xc,Known)
+  => build_hpath mh p  = Some (xa, hx)
+  => build_hpath mh p' = Some (xa',hx)
+  => p = p' /\ xa = xa'.
+proof.
+move=> [] Ipi hs_hy path_p path_p'.
+have /iffRL /(_ _):= Ipi xc p xa; first by exists hx.
+have /iffRL /(_ _):= Ipi xc p' xa'; first by exists hx.
+by move=> ->.
 qed.
 
 lemma lemma1 hs ch Pm Pmi Gm Gmi mh mhi ro pi x1 x2 y1 y2:
@@ -853,40 +857,6 @@ split.
   have path_hy: build_hpath mh (rcons p (b +^ xa)) = Some (ya,hy).
   + apply/build_hpathP/(@Extend _ _ _ _ p (b +^ xa) b hx)=> //.
     by rewrite xorwA xorwK xorwC xorw0. *)
-  move=> xa' hx' ya' hy'; have /mh_of_INV [] H _ /H {H} [xc' fx' yc' fy'] [#] hs_hx' := HINV.
-  case: (hy' = hy)=> /= [<*>|].
-  + rewrite hs_hy=> /= [#] <*> /= [p' b'] [#] ro_pbxa'.
-    case: fx' hs_hx'=> hs_hx'.
-
-  case: (hx' = hy)=> /= [<*>|].
-  + rewrite hs_hy=> /= [#] <<*>; case: fy'=> //= hs_hy' ?.
-    exists yc Known yc' Unknown.
-    
-    
-  + 
-  case: ((ya',hy') = (ya,hy))=> [[#] <*>|yahy'_neq_yahy].
-  + have /mh_of_INV [] H _ /H {H} [xc' fx' yc0 fy0] [#] hs_hx':= HINV.
-    rewrite hs_hy=> /= [#] <<*> /= h.
-    exists xc' fx' yc Known=> /=.
-    split. admit.
-    + rewrite getP /=.
-  have /mh_of_INV [] H _ /H {H} [xc' fx' yc' fy'] [#] hs_hx' hs_hy' Hite:= HINV.
-  have xaxc'_neq_xaxc: ((xa',xc') <> (xa,xc)).
-  + move: xahx'_neq_xahx=> /=; case: (xa' = xa)=> [<*> /= hx'_neq_hx|/#].
-    rewrite -negP=> [#] <<*>; have /hs_of_INV [] Hhuniq _ _:= HINV.
-    by move: (Hhuniq _ _ _ _ hs_hx' hs_hx).
-  case: (hx' = hy); case: (hy' = hy)=> <*>.
-  + move: hs_hx' hs_hy'; rewrite hs_hy=> /= [#] <<*> [#] <<*>.
-    exists yc Known yc Known=> /=; rewrite !getP xaxc'_neq_xaxc /=.
-print mh_spec.
-  exists xc' fx' yc' fy'; rewrite !getP xaxc'_neq_xaxc /= Hite /=.
-  
-print mh_spec.
-
-have /mh_of_INV [] H _ /H {H}:= HINV.
-  move=> [xc' fx' yc' fy'] [#] hs_hx' hs_hy' Hite.
-  exists xc' fx' yc' fy'; case: fy' hs_hy' Hite=> //= hs_hy'.
-  + move=> [p' v'] [#] Hro Hpi.
 admitted.
 
 clone export ConcreteF as ConcreteF1.
@@ -1104,7 +1074,6 @@ section AUX.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //=.
-
     (* lemma 3 *) admit.
   (* Stopped here *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
