@@ -148,7 +148,7 @@ module G1(D:DISTINGUISHER) = {
     chandle  <- 1;
     b        <@ D(C,S).distinguish();
     return b;
-  }    
+  }
 }.
 
 (* -------------------------------------------------------------------------- *)
@@ -218,7 +218,7 @@ inductive inv_spec (m:('a,'b) fmap) mi =
 inductive INV_CF_G1 (hs : handles) ch (Pm Pmi Gm Gmi : smap)
                     (mh mhi : hsmap) (ro : (block list,block) fmap) pi =
   | HCF_G1 of (hs_spec hs ch)
-(*            & (inv_spec mh mhi) *)
+            & (inv_spec mh mhi)
             & (m_mh hs Pm mh)
             & (m_mh hs Pmi mhi)
             & (incl Gm Pm)
@@ -287,11 +287,11 @@ lemma hs_of_INV (m1 m2 mi1 mi2 : smap) (mh2 mhi2 : hsmap)
   hs_spec hs ch.
 proof. by case. qed.
 
-(* lemma inv_of_INV hs ch m1 mi1 m2 mi2 ro pi *)
-(*                      mh2 mhi2: *)
-(*   INV_CF_G1 hs ch m1 mi1 m2 mi2 mh2 mhi2 ro pi => *)
-(*   inv_spec mh2 mhi2. *)
-(* proof. by case. qed. *)
+lemma inv_of_INV hs ch m1 mi1 m2 mi2 ro pi
+                      mh2 mhi2:
+  INV_CF_G1 hs ch m1 mi1 m2 mi2 mh2 mhi2 ro pi =>
+  inv_spec mh2 mhi2.
+proof. by case. qed.
 
 (** Useful Lemmas **)
 lemma ch_gt0 hs ch : hs_spec hs ch => 0 < ch.
@@ -631,6 +631,7 @@ have /iffRL /(_ _):= Ipi xc p' xa'; first by exists hx.
 by move=> ->.
 qed.
 
+(** Path-specific lemmas **)
 lemma lemma1 hs ch Pm Pmi Gm Gmi mh mhi ro pi x1 x2 y1 y2:
      INV_CF_G1 hs ch Pm Pmi Gm Gmi mh mhi ro pi
   => x2 <> y2
@@ -650,11 +651,11 @@ move=> HINV x2_neq_y2 Pm_x Gm_x pi_x2 x2_notin_rng1_hs y2_notin_rng1_hs; split.
 + rewrite (@addzA ch 1 1); apply/hs_addh.
   + by move: HINV=> /hs_of_INV/hs_addh=> ->.
   by move=> f h; rewrite getP; case: (h = ch)=> [/#|_]; exact/y2_notin_rng1_hs.
-(* + apply/inv_addm; 1:by case: HINV. *)
-(*   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV. *)
-(*     by apply/(ch_notin_dom2_mh _ _ Hm_mh Hhs). *)
-(*   have ^ /mi_mhi_of_INV Hmi_mhi /hs_of_INV Hhs := HINV. *)
-(*   by apply/(Sch_notin_dom2_mh _ _ Hmi_mhi Hhs). *)
++ apply/inv_addm; 1:by case: HINV.
+  + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
+    by apply/(ch_notin_dom2_mh _ _ Hm_mh Hhs).
+  have ^ /mi_mhi_of_INV Hmi_mhi /hs_of_INV Hhs := HINV.
+  by apply/(Sch_notin_dom2_mh _ _ Hmi_mhi Hhs).
 + apply/(@m_mh_addh_addm hs.[ch <- (x2,Known)] Pm mh ch x1 x2 (ch + 1) y1 y2 Known).
   + by move: HINV=> ^/hs_of_INV Hhs /m_mh_of_INV; exact/(m_mh_addh Hhs).
   + by move: HINV => /hs_of_INV /hs_addh /(_ x2 Known _) // [].
@@ -730,11 +731,11 @@ proof.
 move=> HINV PFm_x1x2 G1m_x1x2 pi_x2 hs_hx y2_notin_rng1_hs.
 split.
 + by apply/hs_addh=> //=; case: HINV.
-(* + apply/inv_addm; 1:by case: HINV. *)
-(*   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV. *)
-(*     by apply/(notin_m_notin_mh _ _ _ _ Hm_mh PFm_x1x2 hs_hx). *)
-(*   have ^ /mi_mhi_of_INV Hmi_mhi /hs_of_INV Hhs := HINV. *)
-(*   by apply/(ch_notin_dom2_mh _ _ Hmi_mhi Hhs). *)
++ apply/inv_addm; 1:by case: HINV.
+  + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
+    by apply/(notin_m_notin_mh _ _ _ _ Hm_mh PFm_x1x2 hs_hx).
+  have ^ /mi_mhi_of_INV Hmi_mhi /hs_of_INV Hhs := HINV.
+  by apply/(ch_notin_dom2_mh _ _ Hmi_mhi Hhs).
 + have ^ /hs_of_INV ^ Hhs [] Hhuniq _ _ /m_mh_of_INV := HINV.
   move=> /m_mh_addh_addm /(_ hx x1 x2 ch y1 y2 Known Hhuniq hs_hx _) //.
   exact/ch_notin_dom_hs.
@@ -808,6 +809,7 @@ move=> HINV Pm_xaxc Gm_xaxc mh_xahx hs_hx hs_hy pi_xc.
 split.
 + have /hs_of_INV /hs_updh /(_ Unknown) H := HINV; apply/H=> {H} //.
   by rewrite -negP=> <*>; move: hs_hy; have /hs_of_INV [] _ -> := HINV.
++ admit.
 + split. (* Pull out *)
   + move=> xa' xc' ya' yc'; have /m_mh_of_INV [] H _ /H {H}:= HINV.
     move=> [hx' fx' hy' fy'] [#] hs_hx' hs_hy' mh_xahx'.
@@ -840,7 +842,8 @@ split.
   by exists xc' fx' yc' fy'; rewrite !getP Hhx' Hhy'.
 + move=> [za zc]; rewrite getP; case: ((za,zc) = (xa,xc))=> // _.
   by have /incl_of_INV H /H {H}:= HINV.
-+ (* inverse or pre-inverse - probably on mh/mhi *) admit.
++ case HINV.
++ (** inverse or pre-inverse - probably on mh/mhi *) admit.
 + split; last by have /mh_of_INV [] _:= HINV.
   have pi_yc: pi.[yc] = None.
   + have /#: forall p b, pi.[yc] <> Some (p,b).
