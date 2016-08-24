@@ -822,22 +822,47 @@ split.
   move=> [za zc]; rewrite getP; case: ((za,zc) = (ya,yc))=> // _.
   by have /incli_of_INV H /H {H}:= HINV.
 + split; last by have /mh_of_INV [] _:= HINV.
-(*  have pi_yc: pi.[yc] = None.
-  + have /#: forall p b, pi.[yc] <> Some (p,b).
-    move=> p0 b0; rewrite -negP.
-    have /pi_of_INV [] -> [h] [#] _ := HINV.
-    have /hs_of_INV [] Hhuniq _ _^hs_h - /Hhuniq /(_ _ _ hs_hy) := HINV.
-    by move: hs_h; case: (h = hy)=> [<*>|//=]; rewrite hs_hy.
-  have path_hx: build_hpath mh p = Some (b,hx).
-  + move: pi_xc; have /pi_of_INV [] -> [h] [#] Hpath := HINV.
-    by have /hs_of_INV [] Hhuniq _ _ ^hs_h - /Hhuniq /(_ _ _ hs_hx) /= <*>:= HINV.
-  have ro_pbxa: ro.[rcons p (b +^ xa)] = Some ya.
-  + have /mh_of_INV [] _ -> := HINV.
-    by exists b hx hy; rewrite xorwA xorwK xorwC xorw0.
-  have path_hy: build_hpath mh (rcons p (b +^ xa)) = Some (ya,hy).
+  move=> xa' hx' ya' hy'; case: ((xa',hx') = (xa,hx))=> [[#] <*>|].
+  + rewrite mh_xahx=> /= [#] <<*>; rewrite !getP /=.
+    case: (hx = hy)=> [<*>|_]; first by move: hs_hx; rewrite hs_hy.
+    by exists xc Known yc Known; rewrite getP.
+  move=> Hxahx' ^mh_xahx'; have /mh_of_INV [] H _ /H {H} := HINV.
+  move=> [xc' fx' yc' fy'] [#] hs_hx' hs_hy' Hite.
+  have Hxaxc': ((xa',xc') <> (xa,xc)).
+  + move: Hxahx'=> /=; case: (xa' = xa)=> [<*> /=|//=]; apply/contra=> <*>.
+    by move: hs_hx; have /hs_of_INV [] H _ _ /H {H} /(_ _ _ hs_hx' _):= HINV.
+  exists xc' (if hx' = hy then Known else fx') yc' (if hy' = hy then Known else fy').
+  rewrite !getP Hxaxc' /=; case: (hy' = hy)=> [<*> /=|].
+  + move: hs_hy' Hite; rewrite hs_hy=> /= [#] <<*> /=.
+    move=> [p' b'] [#] ro_pbxa' path_hx'.
+    case: (hx' = hy)=> [<*> /=|].
+    + move: hs_hx' ; rewrite hs_hy=> /= [#] <<*> /=.
+      admit. (** Really not sure, but looks surprising that we could have mh.[(.,hy)] = Some (.,hy) in a well-formed map. **)
+    admit.
+  case: (hx' = hy)=> [<*> /=|//=].
+  move: hs_hx'; rewrite hs_hy' hs_hy=> /= [#] <<*> /=.
+  by move: Hite=> /= [#]; case: fy' hs_hy'=> //= _ ->.
+split=> c p' b'; rewrite !getP; case: (yc = c)=> [<<*> /=|yc_neq_c].
++ admit. (* weird things going on here *)
+(* + split=> [[#] <<*>|].
+  + exists hy; rewrite getP /=.
+    apply/build_hpathP/(@Extend _ _ _ _ p (b +^ xa) b hx)=> //.
+    + move: pi_xc; have /pi_of_INV [] -> [h] [#] Hpath := HINV.
+      by have /hs_of_INV [] H _ _ /H {H} /(_ _ _ hs_hx _) // := HINV.
+    by rewrite xorwA xorwK xorwC xorw0.
+  move=> [h] [#] Hpath; rewrite getP; case: (h = hy)=> [<*> /=|]; last first.
+  + by move=> + hs_h; move: hs_h; have /hs_of_INV [] H _ _ /H {H} /(_ _ _ hs_hy _):= HINV.
+  move: pi_xc; have /pi_of_INV [] -> [ht] [#] path_p := HINV.
+  have /hs_of_INV [] H _ _ /H {H} /(_ _ _ hs_hx _) // <*> := HINV.
+  have: build_hpath mh (rcons p (b +^ xa)) = Some (ya,hy).
   + apply/build_hpathP/(@Extend _ _ _ _ p (b +^ xa) b hx)=> //.
-    by rewrite xorwA xorwK xorwC xorw0. *)
-  
+    by rewrite xorwA xorwK xorwC xorw0.
+    elim/last_ind: p' Hpath.
+    + rewrite /build_hpath /= => [#] <*>.
+      by move: hs_hy; have /hs_of_INV [] _ -> := HINV. *)
+rewrite (@eq_sym c) yc_neq_c /=; have /pi_of_INV [] -> := HINV.
+apply/exists_iff=> h /=; rewrite getP; case: (h = hy)=> [<*> /=|//=].
+by rewrite yc_neq_c hs_hy /=.
 admitted.
 
 clone export ConcreteF as ConcreteF1.
