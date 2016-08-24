@@ -74,7 +74,7 @@ module G1(D:DISTINGUISHER) = {
           m.[x]             <- y;
           mi.[y]            <- x;
         } else {
-          bcol              <- bcol \/ hinv FRO.m y.`2 <> None;          
+          bcol              <- bcol \/ hinv FRO.m y.`2 <> None;
           hy2               <- chandle;
           chandle           <- chandle + 1;
           FRO.m.[hy2]       <- (y.`2, Known);
@@ -87,7 +87,6 @@ module G1(D:DISTINGUISHER) = {
           (p,v) <- oget paths.[x.`2]; 
           paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
         }
-
       } else {   
         y <- oget m.[x];
       }
@@ -153,6 +152,16 @@ module G1(D:DISTINGUISHER) = {
 }.
 
 (* -------------------------------------------------------------------------- *)
+(** The state of CF contains only the map PF.m.
+    The state of G1 contains:
+    - the map hs that associates handles to flagged capacities;
+    - the map G1.m that represents the *public* view of map PF.m;
+    - the map G1.mh that represents PF.m with handle-based indirection;
+    - the map ro that represents the functionality;
+    - the map pi that returns *the* known path to a capacity if it exists.
+    The following invariants encode these facts, and some auxiliary
+    knowledge that can most likely be deduced but is useful in the proof.    **)
+
 (** RELATIONAL: Map, Handle-Map and Handles are compatible **)
 inductive m_mh (hs : handles) (m : smap) (mh : hsmap) =
   | INV_m_mh of (forall xa xc ya yc,
@@ -167,156 +176,6 @@ inductive m_mh (hs : handles) (m : smap) (mh : hsmap) =
                         hs.[hx]     = Some (xc,fx)
                      /\ hs.[hy]     = Some (yc,fy)
                      /\ m.[(xa,xc)] = Some (ya,yc)).
-
-(* (* Consequences of (xa,xc) \in (dom m) *) *)
-(* lemma eqm_handles_m_some (hs : handles) (m : smap) (mh : hsmap) *)
-(*                          xa xc ya yc: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = Some (ya,yc) *)
-(*   => exists hx fx hy fy, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ hs.[hy] = Some (yc,fy) *)
-(*        /\ mh.[(xa,hx)] = Some (ya,hy). *)
-(* proof. by move=> hs_huniq [] + _ m_xaxc - /(_ _ _ _ _ m_xaxc). qed. *)
-
-(* lemma eqm_handles_m_some_xy (hs : handles) (m : smap) (mh : hsmap) *)
-(*                             xa xc ya yc hx fx hy fy: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = Some (ya,yc) *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => hs.[hy] = Some (yc,fy) *)
-(*   => mh.[(xa,hx)] = Some (ya,hy). *)
-(* proof. *)
-(* move=> hs_huniq [] + _ m_xaxc hs_hx hs_hy - /(_ _ _ _ _ m_xaxc) [xh xf yh yf] [#]. *)
-(* by move=> /(hs_huniq _ _ _ _ hs_hx) /= <<*> /(hs_huniq _ _ _ _ hs_hy) /= <<*>. *)
-(* qed. *)
-
-(* lemma eqm_handles_m_some_x (hs : handles) (m : smap) (mh : hsmap) *)
-(*                            xa xc ya yc hx fx: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = Some (ya,yc) *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => exists hy fy, *)
-(*           hs.[hy] = Some (yc,fy) *)
-(*        /\ mh.[(xa,hx)] = Some (ya,hy). *)
-(* proof. *)
-(* move=> hs_huniq [] + _ m_xaxc hs_hx - /(_ _ _ _ _ m_xaxc) [xh xf yh yf] [#]. *)
-(* by move=> /(hs_huniq _ _ _ _ hs_hx) /= <<*> hs_hy mh_xaxc; exists yh yf. *)
-(* qed. *)
-
-(* lemma eqm_handles_m_some_y (hs : handles) (m : smap) (mh : hsmap) *)
-(*                            xa xc ya yc hy fy: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = Some (ya,yc) *)
-(*   => hs.[hy] = Some (yc,fy) *)
-(*   => exists hx fx, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ mh.[(xa,hx)] = Some (ya,hy). *)
-(* proof. *)
-(* move=> hs_huniq [] + _ m_xaxc hs_hy - /(_ _ _ _ _ m_xaxc) [xh xf yh yf] [#]. *)
-(* by move=> hs_hx /(hs_huniq _ _ _ _ hs_hy) /= <<*> mh_xaxc; exists xh xf. *)
-(* qed. *)
-
-(* (* Consequence of (xa,xc) \notin (dom m) *) *)
-(* lemma eqm_handles_m_none_in_mh (hs : handles) (m : smap) (mh : hsmap) *)
-(*                                xa xc ya yc hx: *)
-(*      eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = None *)
-(*   => mh.[(xa,hx)] = Some (ya,yc) *)
-(*   => (forall fx, hs.[hx] <> Some (xc,fx)). *)
-(* proof. by move=> [] _ Hmh m_xaxc /Hmh [xc0 fx yc0 fy] [#] -> /#. qed. *)
-
-(* lemma eqm_handles_m_none_in_hs (hs : handles) (m : smap) (mh : hsmap) *)
-(*                                xa xc hx fx: *)
-(*      eqm_handles hs m mh *)
-(*   => m.[(xa,xc)] = None *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => mh.[(xa,hx)] = None. *)
-(* proof. *)
-(* move=> [] _ Hmh m_xaxc. *)
-(* case: {-1}(mh.[(xa,hx)]) (eq_refl (mh.[(xa,hx)]))=> [//|]. (* TODO: contra *) *)
-(* by move=> [ya hy] /Hmh [xc0 fx0 yc fy] [#] /#. *)
-(* qed. *)
-
-(* (* Consequence of (xa,hx) \in (dom mh) *) *)
-(* lemma eqm_handles_mh_some (hs : handles) (m : smap) (mh : hsmap) *)
-(*                           xa hx ya hy: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => exists xc fx yc fy, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ hs.[hy] = Some (yc,fy) *)
-(*        /\ m.[(xa,xc)] = Some (ya,yc). *)
-(* proof. by move=> hs_huniq [] _ + mh_xaxc - /(_ _ _ _ _ mh_xaxc). qed. *)
-
-(* lemma eqm_handles_mh_some_xy (hs : handles) (m : smap) (mh : hsmap) *)
-(*                              xa hx ya hy xc fx yc fy: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => hs.[hy] = Some (yc,fy) *)
-(*   => m.[(xa,xc)] = Some (ya,yc). *)
-(* proof. *)
-(* move=> hs_huniq [] _ + mh_xaxc hs_hx hs_hy - /(_ _ _ _ _ mh_xaxc) [xc' xf' yc' yf'] [#]. *)
-(* by rewrite hs_hx hs_hy /= => [#] <<*> [#] <<*>. *)
-(* qed. *)
-
-(* lemma eqm_handles_mh_some_x (hs : handles) (m : smap) (mh : hsmap) *)
-(*                             xa hx ya hy xc fx: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => exists yc fy, *)
-(*           hs.[hy] = Some (yc,fy) *)
-(*        /\ m.[(xa,xc)] = Some (ya,yc). *)
-(* proof. *)
-(* move=> hs_huniq [] _ + mh_xaxc hs_hx - /(_ _ _ _ _ mh_xaxc) [xc' fx' yc fy] [#]. *)
-(* by rewrite hs_hx /= => [#] <<*> hs_hy m_xaxc; exists yc fy. *)
-(* qed. *)
-
-(* lemma eqm_handles_mh_some_y (hs : handles) (m : smap) (mh : hsmap) *)
-(*                              xa hx ya hy yc fy: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hy] = Some (yc,fy) *)
-(*   => exists xc fx, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ m.[(xa,xc)] = Some (ya,yc). *)
-(* proof. *)
-(* move=> hs_huniq [] _ + mh_xaxc hs_hy - /(_ _ _ _ _ mh_xaxc) [xc fx yc' fy'] [#] hs_hx. *)
-(* by rewrite hs_hy /= => [#] <<*> m_xaxc; exists xc fx. *)
-(* qed. *)
-
-(* (* Consequences of (xa,hx) \notin (dom mh) *) *)
-(* lemma eqm_handles_mh_none_in_m (hs : handles) (m : smap) (mh : hsmap) *)
-(*                                xa xc ya yc hx: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = None *)
-(*   => m.[(xa,xc)] = Some (ya,yc) *)
-(*   => (forall fx, hs.[hx] <> Some (xc,fx)). *)
-(* proof. by move=> hs_huniq [] Hm _ mh_xaxc /Hm [hx0 fx hy0 fy] [#] /#. qed. *)
-
-(* lemma eqm_handles_mh_none_in_hs (hs : handles) (m : smap) (mh : hsmap) *)
-(*                                 xa hx xc fx: *)
-(*      huniq hs *)
-(*   => eqm_handles hs m mh *)
-(*   => mh.[(xa,hx)] = None *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => m.[(xa,xc)] = None. *)
-(* proof. *)
-(* move=> hs_huniq [] Hm _ m_xaxc. *)
-(* case: {-1}(m.[(xa,xc)]) (eq_refl (m.[(xa,xc)]))=> [//|]. (* TODO: contra *) *)
-(* by move=> [ya hy] /Hm [xc0 fx0 yc fy] [#] /#. *)
-(* qed. *)
 
 (* WELL-FORMEDNESS<2>: Handles, Map, Handle-Map and RO are compatible *)
 inductive mh_spec (hs : handles) (Gm : smap) (mh : hsmap) (ro : (block list,block) fmap) =
@@ -337,99 +196,7 @@ inductive mh_spec (hs : handles) (Gm : smap) (mh : hsmap) (ro : (block list,bloc
                       build_hpath mh p = Some (v,hx)
                    /\ mh.[(v +^ bn,hx)] = Some (b,hy)).
 
-(* (* Consequences of (xa,hx) \in (dom mh) *) *)
-(* lemma mh_spec_mh_some (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                       xa hx ya hy: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => exists xc fx yc fy, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ hs.[hy] = Some (yc,fy) *)
-(*        /\ if   fy = Known *)
-(*           then    Gm.[(xa,xc)] = Some (ya,yc) *)
-(*                /\ fx = Known *)
-(*           else exists p v, *)
-(*                ro.[rcons p (v +^ xa)] = Some ya *)
-(*             /\ build_hpath mh p = Some (v,hx). *)
-(* proof. by move=> [] + _ mh_xaxc - /(_ _ _ _ _ mh_xaxc). qed. *)
-
-(* lemma mh_spec_mh_some_y (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                         xa hx ya hy yc fy: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hy] = Some (yc,fy) *)
-(*   => exists xc fx, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ if   fy = Known *)
-(*           then    Gm.[(xa,xc)] = Some (ya,yc) *)
-(*                /\ fx = Known *)
-(*           else exists p v, *)
-(*                ro.[rcons p (v +^ xa)] = Some ya *)
-(*             /\ build_hpath mh p = Some (v,hx). *)
-(* proof. *)
-(* move=> Hmh /(mh_spec_mh_some _ _ _ _ _ _ _ _ Hmh) [xc fx yc0 fy0] [#] -> ->. *)
-(* by move=> + [#] <<*> - H; exists xc fx. *)
-(* qed. *)
-
-(* lemma mh_spec_mh_some_yK (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                          xa hx ya hy yc: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hy] = Some (yc,Known) *)
-(*   => exists xc, *)
-(*           hs.[hx] = Some (xc,Known) *)
-(*        /\ Gm.[(xa,xc)] = Some (ya,yc). *)
-(* proof. *)
-(* move=> Hmh mh_xaxc /(mh_spec_mh_some_y _ _ _ _ _ _ _ _ _ _ Hmh mh_xaxc) [xc fx] [#] /=. *)
-(* by move=> hs_hx Gm_xaxc <*>; exists xc. *)
-(* qed. *)
-
-(* lemma mh_spec_mh_some_yU (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                          xa hx ya hy yc: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hy] = Some (yc,Unknown) *)
-(*   => exists xc fx p v, *)
-(*           hs.[hx] = Some (xc,fx) *)
-(*        /\ ro.[rcons p (v +^ xa)] = Some ya *)
-(*        /\ build_hpath mh p = Some (v,hx). *)
-(* proof. *)
-(* move=> Hmh mh_xaxc /(mh_spec_mh_some_y _ _ _ _ _ _ _ _ _ _ Hmh mh_xaxc) [xc fx] [#] /=. *)
-(* by move=> hs_hx [p v] H; exists xc fx p v. *)
-(* qed. *)
-
-(* lemma mh_spec_mh_some_x (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                         xa hx ya hy xc fx: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hx] = Some (xc,fx) *)
-(*   => exists yc fy, *)
-(*           hs.[hy] = Some (yc,fy) *)
-(*        /\ if   fy = Known *)
-(*           then    Gm.[(xa,xc)] = Some (ya,yc) *)
-(*                /\ fx = Known *)
-(*           else exists p v, *)
-(*                ro.[rcons p (v +^ xa)] = Some ya *)
-(*             /\ build_hpath mh p = Some (v,hx). *)
-(* proof. *)
-(* move=> Hmh /(mh_spec_mh_some _ _ _ _ _ _ _ _ Hmh) [xc0 fx0 yc fy] [#] -> ->. *)
-(* by move=> + [#] <<*> - H; exists yc fy. *)
-(* qed. *)
-
-(* lemma mh_spec_mh_some_xU (hs : handles) (Gm : smap) (mh : hsmap) ro *)
-(*                          xa hx ya hy xc: *)
-(*      mh_spec hs Gm mh ro *)
-(*   => mh.[(xa,hx)] = Some (ya,hy) *)
-(*   => hs.[hx] = Some (xc,Unknown) *)
-(*   => exists yc p v, *)
-(*           hs.[hy] = Some (yc,Unknown) *)
-(*        /\ ro.[rcons p (v +^ xa)] = Some ya *)
-(*        /\ build_hpath mh p = Some (v,hx). *)
-(* proof. *)
-(* move=> Hmh mh_xaxc /(mh_spec_mh_some_x _ _ _ _ _ _ _ _ _ _ Hmh mh_xaxc) [yc fy] [#] ->. *)
-(* by case: fy=> //= - [p v] H; exists yc p v. *)
-(* qed. *)
-
+(* WELL-FORMEDNESS<2>: Handles, Handle-Map and Paths are compatible *)
 inductive pi_spec (hs : handles) (mh : hsmap) (pi : (capacity,block list * block) fmap) =
   | INV_pi of (forall c p v,
                  pi.[c] = Some (p,v) <=>
@@ -437,14 +204,17 @@ inductive pi_spec (hs : handles) (mh : hsmap) (pi : (capacity,block list * block
                       build_hpath mh p = Some(v,h)
                    /\ hs.[h] = Some (c,Known)).
 
+(* WELL-FORMEDNESS<2>: Handles are well-formed *)
 inductive hs_spec hs ch =
   | INV_hs of (huniq hs)
             & (hs.[0] = Some (c0,Known))
             & (forall cf h, hs.[h] = Some cf => h < ch).
 
+(* Useless stuff *)
 inductive inv_spec (m:('a,'b) fmap) mi =
   | INV_inv of (forall x y, m.[x] = Some y <=> mi.[y] = Some x).
 
+(* Invariant: maybe we should split relational and non-relational parts? *)
 inductive INV_CF_G1 (hs : handles) ch (Pm Pmi Gm Gmi : smap)
                     (mh mhi : hsmap) (ro : (block list,block) fmap) pi =
   | HCF_G1 of (hs_spec hs ch)
@@ -627,6 +397,19 @@ move=> ^Hhs [] Hhuniq hs_0 dom_hs xc_notin_rng1_hs; split.
 + by rewrite getP (ch_neq0 _ Hhs).
 + move=> [c f] h; rewrite !getP; case: (h = ch)=> [<*> /#|_].
 by   move=> /dom_hs /#.
+qed.
+
+lemma hs_updh hs ch fx hx xc fx':
+     hs_spec hs ch
+  => 0 <> hx
+  => hs.[hx] = Some (xc,fx)
+  => hs_spec hs.[hx <- (xc,fx')] ch.
+proof.
+move=> ^Hhs [] Hhuniq hs_0 dom_hs hx_neq0 hs_hx; split.
++ by move=> h1 h2 [c1 f1] [c2 f2]; rewrite !getP /= /#.
++ by rewrite getP hx_neq0.
+move=> cf h; rewrite getP; case: (h = hx)=> [<*> _|_ /dom_hs //].
+by move: hs_hx=> /dom_hs.
 qed.
 
 lemma mh_addh hs ch Gm mh ro xc fx:
@@ -1003,6 +786,109 @@ split.
   by move=> [xc fx yc fy] [#] _; have /hs_of_INV [] _ _ H /H {H}:= HINV.
 qed.
 
+lemma lemma3 hs ch Pm Pmi Gm Gmi mh mhi ro pi xa xc hx ya yc hy p b:
+     INV_CF_G1 hs ch Pm Pmi Gm Gmi mh mhi ro pi
+  => Pm.[(xa,xc)] = Some (ya,yc)
+  => Gm.[(xa,xc)] = None
+  => mh.[(xa,hx)] = Some (ya,hy)
+  => hs.[hx] = Some (xc,Known)
+  => hs.[hy] = Some (yc,Unknown)
+  => pi.[xc] = Some (p,b)
+  => INV_CF_G1 hs.[hy <- (yc,Known)] ch
+               Pm Pmi
+               Gm.[(xa,xc) <- (ya,yc)] Gmi.[(ya,yc) <- (xa,xc)]
+               mh mhi
+               ro pi.[yc <- (rcons p (b +^ xa),ya)].
+proof.
+move=> HINV Pm_xaxc Gm_xaxc mh_xahx hs_hx hs_hy pi_xc.
+split.
++ have /hs_of_INV /hs_updh /(_ Unknown) H := HINV; apply/H=> {H} //.
+  by rewrite -negP=> <*>; move: hs_hy; have /hs_of_INV [] _ -> := HINV.
++ split. (* Pull out *)
+  + move=> xa' xc' ya' yc'; have /m_mh_of_INV [] H _ /H {H}:= HINV.
+    move=> [hx' fx' hy' fy'] [#] hs_hx' hs_hy' mh_xahx'.
+    case: (hx' = hy); case: (hy' = hy)=> //= <*> => [|hy'_neq_hy|hx'_neq_hy|Hhx' Hhy'].
+    + by exists hy Known hy Known; rewrite !getP /= /#.
+    + by exists hy Known hy' fy'; rewrite !getP hy'_neq_hy /#.
+    + by exists hx' fx' hy Known; rewrite !getP hx'_neq_hy /#.
+    by exists hx' fx' hy' fy'; rewrite !getP Hhx' Hhy'.
+  move=> xa' hx' ya' hy'; have /m_mh_of_INV [] _ H /H {H}:= HINV.
+  move=> [xc' fx' yc' fy'] [#] hs_hx' hs_hy' m_xaxc'.
+  case: (hx' = hy); case: (hy' = hy)=> //= <*> => [|hy'_neq_hy|hx'_neq_hy|Hhx' Hhy'].
+  + by exists yc Known yc Known; rewrite !getP /= /#.
+  + by exists yc Known yc' fy'; rewrite !getP hy'_neq_hy /#.
+  + by exists xc' fx' yc Known; rewrite !getP hx'_neq_hy /#.
+  by exists xc' fx' yc' fy'; rewrite !getP Hhx' Hhy'.
++ split. (* Pull out *)
+  + move=> xa' xc' ya' yc'; have /mi_mhi_of_INV [] H _ /H {H}:= HINV.
+    move=> [hx' fx' hy' fy'] [#] hs_hx' hs_hy' mh_xahx'.
+    case: (hx' = hy); case: (hy' = hy)=> //= <*> => [|hy'_neq_hy|hx'_neq_hy|Hhx' Hhy'].
+    + by exists hy Known hy Known; rewrite !getP /= /#.
+    + by exists hy Known hy' fy'; rewrite !getP hy'_neq_hy /#.
+    + by exists hx' fx' hy Known; rewrite !getP hx'_neq_hy /#.
+    by exists hx' fx' hy' fy'; rewrite !getP Hhx' Hhy'.
+  move=> xa' hx' ya' hy'; have /mi_mhi_of_INV [] _ H /H {H}:= HINV.
+  move=> [xc' fx' yc' fy'] [#] hs_hx' hs_hy' m_xaxc'.
+  case: (hx' = hy); case: (hy' = hy)=> //= <*> => [|hy'_neq_hy|hx'_neq_hy|Hhx' Hhy'].
+  + by exists yc Known yc Known; rewrite !getP /= /#.
+  + by exists yc Known yc' fy'; rewrite !getP hy'_neq_hy /#.
+  + by exists xc' fx' yc Known; rewrite !getP hx'_neq_hy /#.
+  by exists xc' fx' yc' fy'; rewrite !getP Hhx' Hhy'.
++ move=> [za zc]; rewrite getP; case: ((za,zc) = (xa,xc))=> // _.
+  by have /incl_of_INV H /H {H}:= HINV.
++ (* inverse or pre-inverse - probably on mh/mhi *) admit.
++ split; last by have /mh_of_INV [] _:= HINV.
+  have pi_yc: pi.[yc] = None.
+  + have /#: forall p b, pi.[yc] <> Some (p,b).
+    move=> p0 b0; rewrite -negP.
+    have /pi_of_INV [] -> [h] [#] _ := HINV.
+    have /hs_of_INV [] Hhuniq _ _^hs_h - /Hhuniq /(_ _ _ hs_hy) := HINV.
+    by move: hs_h; case: (h = hy)=> [<*>|//=]; rewrite hs_hy.
+(*  have path_hx: build_hpath mh p = Some (b,hx).
+  + move: pi_xc; have /pi_of_INV [] -> [h] [#] Hpath := HINV.
+    by have /hs_of_INV [] Hhuniq _ _ ^hs_h - /Hhuniq /(_ _ _ hs_hx) /= <*>:= HINV.
+  have ro_pbxa: ro.[rcons p (b +^ xa)] = Some ya.
+  + have /mh_of_INV [] _ -> := HINV.
+    by exists b hx hy; rewrite xorwA xorwK xorwC xorw0.
+  have path_hy: build_hpath mh (rcons p (b +^ xa)) = Some (ya,hy).
+  + apply/build_hpathP/(@Extend _ _ _ _ p (b +^ xa) b hx)=> //.
+    by rewrite xorwA xorwK xorwC xorw0. *)
+  move=> xa' hx' ya' hy'; have /mh_of_INV [] H _ /H {H} [xc' fx' yc' fy'] [#] hs_hx' := HINV.
+  case: (hy' = hy)=> /= [<*>|].
+  + rewrite hs_hy=> /= [#] <*> /= [p' b'] [#] ro_pbxa'.
+    case: fx' hs_hx'=> hs_hx'.
+
+  case: (hx' = hy)=> /= [<*>|].
+  + rewrite hs_hy=> /= [#] <<*>; case: fy'=> //= hs_hy' ?.
+    exists yc Known yc' Unknown.
+    
+    
+  + 
+  case: ((ya',hy') = (ya,hy))=> [[#] <*>|yahy'_neq_yahy].
+  + have /mh_of_INV [] H _ /H {H} [xc' fx' yc0 fy0] [#] hs_hx':= HINV.
+    rewrite hs_hy=> /= [#] <<*> /= h.
+    exists xc' fx' yc Known=> /=.
+    split. admit.
+    + rewrite getP /=.
+  have /mh_of_INV [] H _ /H {H} [xc' fx' yc' fy'] [#] hs_hx' hs_hy' Hite:= HINV.
+  have xaxc'_neq_xaxc: ((xa',xc') <> (xa,xc)).
+  + move: xahx'_neq_xahx=> /=; case: (xa' = xa)=> [<*> /= hx'_neq_hx|/#].
+    rewrite -negP=> [#] <<*>; have /hs_of_INV [] Hhuniq _ _:= HINV.
+    by move: (Hhuniq _ _ _ _ hs_hx' hs_hx).
+  case: (hx' = hy); case: (hy' = hy)=> <*>.
+  + move: hs_hx' hs_hy'; rewrite hs_hy=> /= [#] <<*> [#] <<*>.
+    exists yc Known yc Known=> /=; rewrite !getP xaxc'_neq_xaxc /=.
+print mh_spec.
+  exists xc' fx' yc' fy'; rewrite !getP xaxc'_neq_xaxc /= Hite /=.
+  
+print mh_spec.
+
+have /mh_of_INV [] H _ /H {H}:= HINV.
+  move=> [xc' fx' yc' fy'] [#] hs_hx' hs_hy' Hite.
+  exists xc' fx' yc' fy'; case: fy' hs_hy' Hite=> //= hs_hy'.
+  + move=> [p' v'] [#] Hro Hpi.
+admitted.
+
 clone export ConcreteF as ConcreteF1.
 
 section AUX.
@@ -1201,8 +1087,8 @@ section AUX.
       by auto=> ? ? [#] !<<- _ -> ->> _ /=; rewrite in_rng; exists hx2.
     have /mh_of_INV []/(_ _ _ _ _ G1mh_x1hx2) + _:= inv0.
     move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<- {xc0 xf0 yc0 yf0} /= [p0 v0] [#] Hro Hpath.
-    have /pi_of_INV [] /(_ x2 p0 v0) /iffRL Hpi:= inv0.
-    move: (Hpi _); first by exists hx2.
+    have /pi_of_INV [] /(_ x2 p0 v0) /iffRL /(_ _) := inv0.
+    + by exists hx2.
     move=> pi_x2; rcondt{2} 1; 1:by auto=> &hr [#] <*>; rewrite in_dom pi_x2.
     inline F.RO.get.
     rcondf{2} 4; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite pi_x2 oget_some /= in_dom Hro.
@@ -1218,6 +1104,7 @@ section AUX.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //=.
+
     (* lemma 3 *) admit.
   (* Stopped here *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
