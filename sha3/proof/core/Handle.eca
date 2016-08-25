@@ -1072,7 +1072,7 @@ section AUX.
     + by have /hs_of_INV []:= inv0.
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //= => _.
     exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
-  (* Stopped here *)
+  (* lossless PF.f *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
     smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
   (* lossless and do not reset bad G1.S.f *)
@@ -1085,16 +1085,26 @@ section AUX.
   (* equiv PF.P.fi G1.S.fi *)
   + admit.
   (* lossless PF.P.fi *)
-  + admit.
+  + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
+    smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
   (* lossless and do not reset bad G1.S.fi *)
-  + admit.
+  + move=> _; proc; if; 2:by auto.
+    by wp; do 2!rnd predT; auto => &hr [#]; smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
   (** proofs for G1.C.f *)
   (* equiv PF.C.f G1.C.f *)
   + admit.
   (* lossless PF.C.f *)
-  + admit.
+  + move=> &2 _; proc; inline *; while (true) (size p); auto.
+    + sp; if; 2:by auto; smt (size_behead).
+      by wp; do 2!rnd predT; auto; smt (size_behead Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
-  + admit.
+  + move=> _; proc; inline *; wp; rnd predT; auto.
+    while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
+    + if; 1:by auto=> /#.
+      wp; rnd predT; wp; rnd predT; auto.
+      smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    by auto; smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
   (* Init ok *)
   inline *; auto=> />; split=> [|/#].
   (do !split; last 3 smt (getP map0P build_hpath_map0)); last 5 by move=> ? ? ? ?; rewrite map0P.
