@@ -138,6 +138,14 @@ case=> [/#|] p' b' v'' h'' ^/rconssI <<- {p'} /rconsIs <<- {b'}.
 by rewrite build /= => [#] <*>.
 qed.
 
+lemma build_hpath_map0 p:
+   build_hpath map0 p
+   = if   p = [] then Some (b0,0) else None.
+proof.
+elim/last_ind: p=> //= p b _.
+by rewrite -{1}cats1 foldl_cat {1}/step_hpath /= map0P /= /#.
+qed.
+
 (* -------------------------------------------------------------------------- *)
 
 module C = {

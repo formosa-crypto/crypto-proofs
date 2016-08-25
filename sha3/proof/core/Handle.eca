@@ -1070,8 +1070,8 @@ section AUX.
     move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
-    rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //=.
-    (* lemma 3 *) admit.
+    rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //= => _.
+    exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
   (* Stopped here *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
     smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
@@ -1096,29 +1096,13 @@ section AUX.
   (* lossless and do not reset bad G1.C.f *)
   + admit.
   (* Init ok *)
-  admit.
-(*inline *. auto; progress=> //=.
-  + smt w=map0P.
-  + smt w=map0P.
-  + smt w=map0P.
-  + smt w=map0P.
-  + smt w=map0P.
-  + smt w=(map0P in_dom).
-  + smt w=map0P.
-  + rewrite /paths_spec=> c p v. rewrite !getP; case (c = c0)=> //=.
-      rewrite anda_and=> c_c0; split=> [[] <<- <<-|].
-      + by exists 0; rewrite /build_hpath /= getP /= c_c0.
-      move=> [h] @/build_hpath [] h0; rewrite getP; case (h = 0).
-      + by move=> /= ->> ->>; move: h0; smt.
-      smt w=map0P.
-    move=> c_c0; rewrite map0P /= negb_exists /= => h.
-    rewrite negb_and getP; case (h = 0)=> //=; [|by rewrite map0P].
-    by move=> _; right; rewrite eq_sym.
-  + smt w=(map0P getP).
+  inline *; auto=> />; split=> [|/#].
+  (do !split; last 3 smt (getP map0P build_hpath_map0)); last 5 by move=> ? ? ? ?; rewrite map0P.
+  + move=> h1 h2 ? ?; rewrite !getP !map0P.
+    by case: (h1 = 0); case: (h2 = 0)=> //=.
   + by rewrite getP.
-  + move: H; rewrite in_dom getP; case (h = 0)=> //=.
-    by rewrite map0P.
-  + by move: H1=> /H0 [#].*)
+  + by move=> ? h; rewrite getP map0P; case: (h = 0).
+  by move=> ? ?; rewrite !map0P.
 qed.
 
 end section AUX.
