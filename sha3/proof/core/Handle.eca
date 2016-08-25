@@ -858,6 +858,48 @@ qed.
 
 clone export ConcreteF as ConcreteF1.
 
+lemma m_mh_None hs0 PFm G1mh hx2 x2 k x1:
+  m_mh hs0 PFm G1mh =>
+  hs0.[hx2] = Some (x2, k) =>
+  PFm.[(x1, x2)] = None =>
+  G1mh.[(x1,hx2)] = None.
+proof.
+  move=> [] HP /(_ x1 hx2) + Hhx2;case (G1mh.[(x1, hx2)]) => //.
+  by move=> -[ya hy] /(_ ya hy) /= [] ????; rewrite Hhx2 => /= [#] <- _ _ ->.
+qed.
+
+lemma build_hpath_None (G1mh:hsmap) p:
+    foldl (step_hpath G1mh) None p = None.
+proof. by elim:p. qed.
+
+lemma build_hpath_up_None (G1mh:hsmap) bi1 bi2 bi p:
+  G1mh.[bi1] = None =>
+  build_hpath G1mh p = Some bi =>
+  build_hpath G1mh.[bi1 <- bi2] p = Some bi.
+proof.
+  rewrite /build_hpath;move=> Hbi1.
+  elim: p (Some (b0,0)) => //= b p Hrec obi.
+  rewrite {2 4}/step_hpath /=;case: obi => //= [ | bi'];1:by apply Hrec.
+  rewrite oget_some.
+  rewrite getP. case ((bi'.`1 +^ b, bi'.`2) = bi1) => [-> | _];2:by apply Hrec.
+  by rewrite Hbi1 build_hpath_None.
+qed.
+
+lemma build_hpath_down_None h ch mh xa ha ya a p:
+  h <> ch => ha <> ch =>
+  (forall ya, mh.[(ya,ch)] = None) =>
+  build_hpath mh.[(xa,ha) <- (ya,ch)] p = Some (a,h) => 
+  build_hpath mh p = Some (a,h).
+proof.
+  move=> Hh Hha Hmh;rewrite /build_hpath;move: (Some (b0, 0)).
+  elim: p => //= b p Hrec [ | bi] /=;rewrite {2 4}/step_hpath /= ?build_hpath_None //.
+  rewrite oget_some getP;case ((bi.`1 +^ b, bi.`2) = (xa, ha)) => _;2:by apply Hrec.
+  move=> {Hrec};case: p=> /= [[_ ->>]| b' p];1: by move:Hh.
+  by rewrite {2}/step_hpath /= oget_some /= getP_neq /= ?Hha // Hmh build_hpath_None.
+qed.
+
+(* we should do a lemma to have the equivalence *)
+
 section AUX.
 
   declare module D : DISTINGUISHER {PF, RO, G1}.
@@ -1036,7 +1078,94 @@ section AUX.
         have /m_mh_of_INV [] _ /(_ _ _ _ _ G1mh_x1hx2) := inv0.
         move=> [xc xf yc yf] [#]; rewrite hs_hx2=> [#] <*>.
         by rewrite PFm_x1x2.
-      auto. admit. (* this is the easy case *)
+      auto => &m1 &m2 [#] !<- _ _ -> /= _ y1L -> y2L -> /=.
+      rewrite !getP_eq pi_x2 !oget_some /=.
+      have /hs_of_INV [] Hu _ _:= inv0; have -> := huniq_hinvK_h _ _ _ Hu hs_hx2.
+      rewrite oget_some -!nor => /= -[] ? Hy2L [*].
+      case:inv0=> Hhs Hinv Hmmh Hmmhi Hincl Hincli Hmh Hpi; apply HCF_G1.
+      + by apply hs_addh => //;have /# := hinvP hs0 y2L.
+      + apply inv_addm=>//;first by move: hs_hx2 PFm_x1x2;apply: m_mh_None.
+        by apply (ch_notin_dom2_mh _ _ Hmmhi Hhs).
+      + by apply (m_mh_addh_addm _ Hmmh _ hs_hx2)=>//;apply ch_notin_dom_hs.
+      + apply (mi_mhi_addh_addmi _ Hmmhi _ hs_hx2);last by apply ch_notin_dom_hs.
+        by have := hinvP hs0 y2L;rewrite Hy2L /#.
+      + by apply incl_addm. + by apply incl_addm.
+      + split.
+        + move=> xa hx ya hy;rewrite getP;case ((xa, hx) = (x1, hx2))=> /=.
+          + move=> [] !-> [] !<-; exists x2 Known y2L Known.
+            by rewrite !getP_eq /= getP_neq // eq_sym; apply (dom_hs_neq_ch _ _ _ Hhs hs_hx2).
+          move=> Hdiff Hxa; case Hmh=> /(_ _ _ _ _ Hxa) [] xc fx yc fy [#] Hhx Hhy HG1 _.
+          exists xc fx yc fy;rewrite !getP_neq //.
+          + by rewrite eq_sym;apply (dom_hs_neq_ch _ _ _ Hhs Hhx).
+          + by rewrite eq_sym;apply (dom_hs_neq_ch _ _ _ Hhs Hhy).
+          + rewrite /= -negP=> -[] <<- <<-;apply Hdiff=> /=.
+            by apply (Hu hx (x2, fx) (x2, Known)).
+          rewrite Hhx Hhy=> /=;move: HG1.
+          case: fy Hhy=> Hhy //= [p v [Hro Hbu]].
+          exists p v;split.
+          + rewrite getP_neq // -negP => ^ /rconssI <<- /rconsIs.  
+            move: Hbu;rewrite Hpath /= => -[!<<-] /=.
+            by rewrite -negP=> /Block.WRing.addrI /#.
+          by apply build_hpath_up=> //; move: hs_hx2 PFm_x1x2;apply: m_mh_None.
+        move=> p bn b; rewrite getP.
+        case (rcons p bn = rcons p0 (v0 +^ x1)).
+        + move=> ^ /rconssI <<- /rconsIs ->> /=; split => [<<- | ].
+          + exists v0 hx2 ch0.
+            rewrite (build_hpath_up Hpath) /=;1:by move: hs_hx2 PFm_x1x2;apply: m_mh_None.
+            by rewrite xorwA xorwK Block.WRing.add0r getP_eq.
+          move=> [v hx hy] [];rewrite getP ;case ((v +^ (v0 +^ x1), hx) = (x1, hx2)) => //.
+          move=> Hdiff;have HG1 := m_mh_None _ _ _ _ _ _ _ Hmmh hs_hx2 PFm_x1x2.
+          have -> /= [->> <<-]:= build_hpath_up_None _ _ (y1L, ch0) _ _ HG1 Hpath.
+          by move:Hdiff;rewrite xorwA xorwK Block.WRing.add0r.
+        move=> Hdiff; case Hmh => _ ->.
+        apply exists_iff=> v /= ;apply exists_iff => hx /=;apply exists_iff => hy /=;split.
+        + move=> [Hp Hhx].
+          have HG1 := m_mh_None _ _ _ _ _ _ _ Hmmh hs_hx2 PFm_x1x2.
+          have -> /= := build_hpath_up_None _ _ (y1L, ch0) _ _ HG1 Hp.
+          by rewrite getP_neq //= -negP => -[->> <<-]; move: Hhx;rewrite HG1.
+        rewrite getP; case ((v +^ bn, hx) = (x1, hx2))=> /=.
+        + move=> [<<- ->>] [+ [!<<-]]. 
+          have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
+          move=> Hbui;have := build_hpath_down_None _ _ _ _ _ _ _ _ _ _ _ Hbui=> //.
+          + move=> ya;case Hmmh=> _ /(_ ya ch0);case (G1mh.[(ya, ch0)]) => //.
+            move=> [ya1 hy1] /(_ ya1 hy1) /=;rewrite -negP => -[xc fx yc fy [#] Hch].
+            by have := dom_hs_neq_ch _ _ _ _ _ Hhs Hch.
+          move=>{Hbui} Hbui; have :  pi0.[x2] = Some (p, v).
+          + by case: Hpi => ->;exists hx2.
+          by rewrite pi_x2 /= => -[!->>];move:Hdiff; rewrite xorwA xorwK Block.WRing.add0r.
+        move=> _ [+ ^ H ->] /=. apply build_hpath_down_None.
+        + case: Hmmh => _ /(_ _ _ _ _ H) [xc fx yc fy [#] Hch] _ _.
+          by apply (dom_hs_neq_ch _ _ _ Hhs Hch).
+        + by apply (dom_hs_neq_ch _ _ _ Hhs hs_hx2).
+        move=> ya; case Hmmh=> _ /(_ ya ch0); case (G1mh.[(ya, ch0)])=> //.
+        move=>[ya1 ha1] /(_ ya1 ha1) [xc fx yc fy [#] Hch].
+        by have := dom_hs_neq_ch _ _ _ _ _ Hhs Hch.
+      split=> c p v;rewrite getP. case (c = y2L) => [->> /= | ?].
+      + split.
+        + move=> [!<<-];exists ch0;rewrite getP_eq /= build_hpath_prefix. 
+          exists v0 hx2;rewrite  xorwA xorwK Block.WRing.add0r getP_eq /=.
+          have HG1 := m_mh_None _ _ _ _ _ _ _ Hmmh hs_hx2 PFm_x1x2.
+          by apply build_hpath_up_None.
+        have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
+        move=> [h []];rewrite getP;case (h=ch0)=> [->> /= | Hh].
+        + admit.
+        move=> Hbui;have := build_hpath_down_None _ _ _ _ _ _ _ _ _ _ _ Hbui=> //.
+        + move=> ya;case Hmmh=> _ /(_ ya ch0);case (G1mh.[(ya, ch0)]) => //.
+          move=> [ya1 hy1] /(_ ya1 hy1) /=;rewrite -negP => -[xc fx yc fy [#] Hch].
+          by have := dom_hs_neq_ch _ _ _ _ _ Hhs Hch.
+        by move=> _ Hhsh;have := hinvP hs0 y2L;rewrite Hy2L /= => /(_ h Known);rewrite Hhsh.
+      case Hpi=> ->;apply exists_iff=> /= h;rewrite getP;case (h = ch0) => [->> /= | Hdiff].
+      + split => [|/#].
+        by rewrite build_hpathP=> -[_ Hch]; have := dom_hs_neq_ch _ _ _ _ _ Hhs Hch.
+      split=> -[+ ->] /=.
+      + have HG1 := m_mh_None _ _ _ _ _ _ _ Hmmh hs_hx2 PFm_x1x2.
+        by apply build_hpath_up_None.
+      have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
+      apply build_hpath_down_None=> //.
+      move=> ya;case Hmmh=> _ /(_ ya ch0);case (G1mh.[(ya, ch0)]) => //.
+      move=> [ya1 hy1] /(_ ya1 hy1) /=;rewrite -negP => -[xc fx yc fy [#] Hch].
+      by have := dom_hs_neq_ch _ _ _ _ _ Hhs Hch.
+      (* this is the easy case *)
     move=> [xa xc] PFm_x1x2. rcondf{1} 1; 1:by auto=> &hr [#] !<<- _ _ ->>; rewrite in_dom PFm_x1x2.
     have /m_mh_of_INV [] + _ - /(_ _ _ _ _ PFm_x1x2) := inv0.
     move=> [hx2 fx2 hy2 fy2] [#] hs_hx2 hs_hy2 G1mh_x1hx2.
