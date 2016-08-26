@@ -991,7 +991,11 @@ split.
   + move=> p ya b; have /mh_of_INV [] _ -> _ := HINV.
     apply/exists_iff=> v /=; apply/exists_iff=> hx' /=; apply/exists_iff=> hy' /=.
     split=> [#].
-    + admit.
+    + move=> /(@build_hpath_up _ y1 ch x1 hx) /(_ _).
+      + apply/(@notin_hs_notin_dom2_mh hs PFm)/(ch_notin_dom_hs); by case: HINV.
+      move=> -> /=; rewrite getP /=; case: (hx' = ch)=> <*> //.
+      have /m_mh_of_INV [] _ H /H {H} [xc fx yc fy] [#] := HINV.
+      by have /hs_of_INV [] _ _ H /H {H} := HINV.
     have no_path_to_ch: forall p0 v0, build_hpath G1mh p0 <> Some (v0,ch).
     + move=> p0 v0; elim/last_ind: p0.
       + by have /hs_of_INV [] /# := HINV.
