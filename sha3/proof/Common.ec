@@ -578,7 +578,7 @@ have xs_non_nil : xs <> [].
 elim (last_drop_all_but_last b0 xs)=> // drop_xs.
 have xs_take_drop : xs = take (size xs - 1) xs ++ drop (size xs - 1) xs
   by rewrite cat_take_drop.
-rewrite drop_xs last_xs_eq_b0 b0 in xs_take_drop.
+rewrite drop_xs last_xs_eq_b0 b0P in xs_take_drop.
 have last_b2b_xs_true : last true (blocks2bits xs) = true
    by rewrite b2b_xs_eq cats1 last_rcons.
 have last_b2b_xs_false : last true (blocks2bits xs) = false
