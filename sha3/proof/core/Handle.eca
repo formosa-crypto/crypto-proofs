@@ -1478,7 +1478,7 @@ section AUX.
       rewrite !getP_eq pi_x2 !oget_some /=.
       have /hs_of_INV [] Hu _ _:= inv0; have -> := huniq_hinvK_h _ _ _ Hu hs_hx2.
       rewrite oget_some -!nor => /= -[] ? Hy2L [*].
-      case:inv0=> Hhs Hinv Hmmh Hmmhi Hincl Hincli Hmh Hpi.
+      case:inv0=> Hhs Hinv HinvG Hmmh Hmmhi Hincl Hincli Hmh Hpi.
       have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
       have mh_hx2: G1mh.[(x1,hx2)] = None.
       + case Hmmh => _ /(_ x1 hx2);case (G1mh.[(x1, hx2)]) => // -[ya hy] /(_ ya hy) /=.
@@ -1489,6 +1489,10 @@ section AUX.
         by move=> /(dom_hs_neq_ch _ _ _ _ _ Hhs) -> /(dom_hs_neq_ch _ _ _ _ _ Hhs).
       split.
       + by apply hs_addh => //;have /# := hinvP hs0 y2L.
+      + apply inv_addm=> //; case: {-1}(G1mi.[(y1L,y2L)]) (eq_refl G1mi.[(y1L,y2L)])=> //.
+        move=> [x1L x2L] ^G1mi_y; rewrite -Hincli 1:G1mi_y//.
+        case: Hmmhi Hy2L => H _ + /H {H} [hx fx hy fy] [#].
+        by case: (hinvP hs0 y2L)=> [_ ->|//].
       + by apply inv_addm=>//; apply (ch_notin_dom2_mh _ _ Hmmhi Hhs).
       + by apply (m_mh_addh_addm _ Hmmh _ hs_hx2)=>//;apply ch_notin_dom_hs.
       + apply (mi_mhi_addh_addmi _ Hmmhi _ hs_hx2);last by apply ch_notin_dom_hs.
@@ -1627,6 +1631,7 @@ section AUX.
     by case: (h1 = 0); case: (h2 = 0)=> //=.
   + by rewrite getP.
   + by move=> ? h; rewrite getP map0P; case: (h = 0).
+  + by move=> ? ?; rewrite !map0P.
   by move=> ? ?; rewrite !map0P.
 qed.
 
