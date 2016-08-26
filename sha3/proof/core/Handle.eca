@@ -222,6 +222,7 @@ inductive inv_spec (m:('a,'b) fmap) mi =
 inductive INV_CF_G1 (hs : handles) ch (Pm Pmi Gm Gmi : smap)
                     (mh mhi : hsmap) (ro : (block list,block) fmap) pi =
   | HCF_G1 of (hs_spec hs ch)
+            & (inv_spec Gm Gmi)
             & (inv_spec mh mhi)
             & (m_mh hs Pm mh)
             & (m_mh hs Pmi mhi)
@@ -295,6 +296,11 @@ lemma inv_of_INV hs ch m1 mi1 m2 mi2 ro pi
                       mh2 mhi2:
   INV_CF_G1 hs ch m1 mi1 m2 mi2 mh2 mhi2 ro pi =>
   inv_spec mh2 mhi2.
+proof. by case. qed.
+
+lemma invG_of_INV hs ch m1 mi1 mh2 mhi2 ro pi m2 mi2:
+  INV_CF_G1 hs ch m1 mi1 m2 mi2 mh2 mhi2 ro pi =>
+  inv_spec m2 mi2.
 proof. by case. qed.
 
 (** Useful Lemmas **)
@@ -449,6 +455,40 @@ rewrite /= anda_and=> /negb_and yahy0_neq_yahy /Hmh_m [yc0 fy0 xc0 fx0] [#] hs_h
 exists yc0 fy0 xc0 fx0; rewrite !getP; do !split=> [/#|/#|].
 move: yahy0_neq_yahy; case: (ya0 = ya)=> [<<*> //=|/#]; case: (yc0 = yc)=> [<*>> /=|//=].
 by move: hs_hy0; rewrite yc_notin_rng1_hs.
+qed.
+
+(** Inversion **)
+lemma inv_mh_inv_Pm hs Pm Pmi mh mhi:
+     m_mh hs Pm mh
+  => m_mh hs Pmi mhi
+  => inv_spec mh mhi
+  => inv_spec Pm Pmi.
+proof.
+move=> Hm_mh Hmi_mhi [] Hinv; split=>- [xa xc] [ya yc]; split.
++ have [] H _ /H {H} [hx fx hy fy] [#] hs_hx hs_hy /Hinv := Hm_mh.
+  have [] _ H /H {H} [? ? ? ?] [#] := Hmi_mhi.
+  by rewrite hs_hx hs_hy=> /= [#] <<*> [#] <<*>.
+have [] H _ /H {H} [hy fy hx fx] [#] hs_hy hs_hx /Hinv := Hmi_mhi.
+have [] _ H /H {H} [? ? ? ?] [#] := Hm_mh.
+by rewrite hs_hx hs_hy=> /= [#] <<*> [#] <<*>.
+qed.
+
+lemma inv_incl_none Pm Pmi Gm (x : 'a) Gmi (y : 'b):
+     inv_spec Pm Pmi
+  => inv_spec Gm Gmi
+  => incl Gm Pm
+  => incl Gmi Pmi
+  => Pm.[x] = Some y
+  => (Gm.[x] = None <=> Gmi.[y] = None).
+proof.
+move=> [] invP [] invG Gm_leq_Pm Gmi_leq_Pmi ^P_x; rewrite invP=> Pi_y.
+split=> [G_x | Gi_y].
++ case: {-1}(Gmi.[y]) (eq_refl Gmi.[y])=> [//|x'].
+  move=> ^Gmi_y; rewrite -Gmi_leq_Pmi 1:Gmi_y// Pi_y /= -negP=> <<*>.
+  by move: Gmi_y; rewrite -invG G_x.
+case: {-1}(Gm.[x]) (eq_refl Gm.[x])=> [//|y'].
+move=> ^Gm_y; rewrite -Gm_leq_Pm 1:Gm_y// P_x /= -negP=> <<*>.
+by move: Gm_y; rewrite invG Gi_y.
 qed.
 
 (** Preservation of hs_spec **)
@@ -641,6 +681,11 @@ move=> HINV x2_neq_y2 Pm_x Gm_x x2_notin_rng1_hs y2_notin_rng1_hs; split.
 + rewrite (@addzA ch 1 1); apply/hs_addh.
   + by move: HINV=> /hs_of_INV/hs_addh=> ->.
   by move=> f h; rewrite getP; case: (h = ch)=> [/#|_]; exact/y2_notin_rng1_hs.
++ apply/inv_addm=> //; 1:by case: HINV.
+  case: {-1}(Gmi.[(y1,y2)]) (eq_refl Gmi.[(y1,y2)])=> [//|[xa xc]].
+  + have /incli_of_INV @/incl + ^h - <- := HINV; 1: by rewrite h.
+    have /mi_mhi_of_INV [] H _ /H {H} [hx fx hy fy] [#] := HINV.
+    by rewrite y2_notin_rng1_hs.
 + apply/inv_addm; 1:by case: HINV.
   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
     by apply/(ch_notin_dom2_mh _ _ Hm_mh Hhs).
@@ -731,6 +776,11 @@ move=> HINV x2_neq_y2 Pm_x Gm_x xc_notin_rng1_hs yc_notin_rng1_hs; split.
 + rewrite (@addzA ch 1 1); apply/hs_addh.
   + by move: HINV=> /hs_of_INV/hs_addh=> ->.
   by move=> f h; rewrite getP; case: (h = ch)=> [/#|_]; exact/yc_notin_rng1_hs.
++ apply/inv_addm=> //; 1:by case: HINV.
+  case: {-1}(Gm.[(y1,y2)]) (eq_refl Gm.[(y1,y2)])=> [//|[xa xc]].
+  + have /incl_of_INV + ^h - <- := HINV; 1: by rewrite h.
+    have /m_mh_of_INV [] H _ /H {H} [hx fx hy fy] [#] := HINV.
+    by rewrite yc_notin_rng1_hs.
 + apply/inv_addm; 1:by case: HINV.
   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
     by apply/(Sch_notin_dom2_mh _ _ Hm_mh Hhs).
@@ -818,6 +868,11 @@ proof.
 move=> HINV PFm_x1x2 G1m_x1x2 pi_x2 hs_hx y2_notin_rng1_hs.
 split.
 + by apply/hs_addh=> //=; case: HINV.
++ apply/inv_addm=> //; 1:by case: HINV.
+  case: {-1}(G1mi.[(y1,y2)]) (eq_refl G1mi.[(y1,y2)])=> [//|[xa xc]].
+  + have /incli_of_INV @/incl + ^h - <- := HINV; 1: by rewrite h.
+    have /mi_mhi_of_INV [] H _ /H {H} [hx' fx' hy' fy'] [#] := HINV.
+    by rewrite y2_notin_rng1_hs.
 + apply/inv_addm; 1:by case: HINV.
   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
     by apply/(notin_m_notin_mh _ _ _ _ Hm_mh PFm_x1x2 hs_hx).
@@ -899,6 +954,11 @@ proof.
 move=> HINV PFmi_x1x2 G1mi_x1x2 hs_hx y2_notin_rng1_hs.
 split.
 + by apply/hs_addh=> //=; case: HINV.
++ apply/inv_addm=> //; 1:by case: HINV.
+  case: {-1}(G1m.[(y1,y2)]) (eq_refl G1m.[(y1,y2)])=> [//|[xa xc]].
+  + have /incl_of_INV + ^h - <- := HINV; 1: by rewrite h.
+    have /m_mh_of_INV [] H _ /H {H} [hx' fx' hy' fy'] [#] := HINV.
+    by rewrite y2_notin_rng1_hs.
 + apply/inv_addm; 1:by case: HINV.
   + have ^ /m_mh_of_INV Hm_mh /hs_of_INV Hhs := HINV.
     by apply/(ch_notin_dom2_mh _ _ Hm_mh Hhs).
@@ -993,6 +1053,13 @@ move=> HINV Pm_xaxc Gm_xaxc mh_xahx hs_hx hs_hy pi_xc.
 split.
 + have /hs_of_INV /hs_updh /(_ Unknown) H := HINV; apply/H=> {H} //.
   by rewrite -negP=> <*>; move: hs_hy; have /hs_of_INV [] _ -> := HINV.
++ apply/inv_addm=> //; 1:by case: HINV.
+  case: {-1}(Gmi.[(ya,yc)]) (eq_refl Gmi.[(ya,yc)])=> [//|[xa' xc']].
+  have /incli_of_INV + ^h - <- := HINV; 1:by rewrite h.
+  move: Pm_xaxc; have [] -> -> /= := inv_mh_inv_Pm hs Pm Pmi mh mhi _ _ _; first 3 by case: HINV.
+  rewrite anda_and -negP=> [#] <<*>.
+  move: h; have /invG_of_INV [] <- := HINV.
+  by rewrite Gm_xaxc.
 + by case: HINV.
 + by apply/(m_mh_updh Unknown)=> //; case: HINV.
 + by apply/(m_mh_updh Unknown)=> //; case: HINV.
@@ -1207,7 +1274,22 @@ case @[ambient]: {-1}(Pmi.[(xa,xc)]) (eq_refl Pmi.[(xa,xc)])=> [Pmi_xaxc|[ya yc]
   rewrite getP /= oget_some /=.
   by apply/lemma2'=> // f h; exact/y2_notin_rng1_hs.
 rcondf{1} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Pmi_xaxc.
-admit. (* more things *)
+case @[ambient]: {-1}(Gmi.[(xa,xc)]) (eq_refl Gmi.[(xa,xc)])=> [|[ya' yc'] ^] Gmi_xaxc.
++ rcondt{2} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Gmi_xaxc.
+  conseq (_: _ ==> G1.bext{2})=> //.
+  auto=> &1 &2 [#] !<<- _ -> ->> _ />.
+  rewrite !in_rng; have ->: exists hx, hs.[hx] = Some (xc,Unknown).
+  + move: Pmi_xaxc; have /mi_mhi_of_INV [] H _ /H {H} := inv0.
+    move=> [hx fx hy fy] [#] hs_hx hs_hy.
+    have ^/inv_of_INV [] <- /mh_of_INV [] H _ _ /H {H} := inv0.
+    move=> [? ? ? ?] [#]; rewrite hs_hx hs_hy=> /= [#] <<*> [#] <<*>.
+    case: fx hs_hx=> hs_hx /= => [_|[#]]; first by exists hx.
+    by have /invG_of_INV [] -> := inv0; rewrite Gmi_xaxc.
+  smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+have /incli_of_INV <- := inv0; 1:by rewrite Gmi_xaxc.
+rewrite Pmi_xaxc=> /= [#] <<*>.
+rcondf{2} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Gmi_xaxc.
+by auto=> &1 &2 /#.
 qed.
 
 section AUX.
