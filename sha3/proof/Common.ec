@@ -77,7 +77,7 @@ by rewrite /bits2blocks /chunk sz_xs_eq_r divzz ltr0_neq0 1:gt0_r b2i1
            mkseq1 /= drop0 -sz_xs_eq_r take_size.
 qed.
 
-lemma b0 : b0 = mkblock (nseq r false).
+lemma b0P : b0 = mkblock (nseq r false).
 proof.
 rewrite blockP=> i ge0_i_ltr; rewrite offunifE ge0_i_ltr /= getE ge0_i_ltr /=.
 rewrite ofblockK 1:size_nseq 1:/#.
