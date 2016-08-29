@@ -648,7 +648,7 @@ lemma path_split hs ch m mh xc hx p xa:
        /\ build_hpath mh pk = Some (ya,hy)
        /\ hs.[hy] = Some (yc,Known)
        /\ mh.[(ya +^ b,hy)] = Some (za,hz)
-       /\ hs.[hz] = Some (zc,Unknown). 
+       /\ hs.[hz] = Some (zc,Unknown).
 proof.
 move=> Ihs [] _ Imh_m.
 elim/last_ind: p hx xa xc=> [hx xa xc + /build_hpathP [_ <*>|/#]|].
