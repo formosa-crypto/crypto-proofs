@@ -1,0 +1,144 @@
+(* -------------------------------------------------------------------- *)
+require import Option Pair Int Real Distr List FSet NewFMap DProd.
+require import BlockSponge Gconcl.
+
+(*---*) import Common Perm.
+
+(* -------------------------------------------------------------------- *)
+section PROOF.
+  declare module D:DISTINGUISHER { Perm, Gconcl.IF, SLCommon.C, Gconcl.S, BIRO.IRO }.
+
+  module Wrap (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+    module WF = {
+      proc f(x : block list * int) = {
+        var r <- [];
+        var p, n;
+
+        (p,n) <- x;
+        if (valid_block p /\ 0 < n) {
+          r <@ F.f(x);
+        }
+        return r;
+      }
+    }
+
+    proc distinguish = D(WF,P).distinguish
+  }.
+
+  module LowerF (F:DFUNCTIONALITY) = {
+    proc f(m:block list) : block = {
+      var r <- [];
+      var p, n;
+
+      (p,n) <- strip m;
+      if (p <> []) {
+        r <- F.f(p,n);
+      }
+      return last b0 r;
+    }
+  }.
+
+  module RaiseF (F:SLCommon.DFUNCTIONALITY) = {
+    proc f(m:block list, n:int) : block list = {
+      var i, r, b;
+      r <- [];
+
+      if (m <> []) {
+        i <- 0;
+        b <- b0; 
+        while (i < n) {
+          b <- F.f(extend m i);
+          r <- rcons r b;
+          i <- i + 1;
+
+        }
+      }
+      return r;
+    }
+  }.
+
+  module LowerDist(D : DISTINGUISHER, F : SLCommon.DFUNCTIONALITY) =
+    D(RaiseF(F)).
+
+  module RaiseSim(S:SLCommon.SIMULATOR, F:DFUNCTIONALITY) =
+    S(LowerF(F)).
+
+  local equiv f_f: BIRO.IRO.f ~ RaiseF(Gconcl.IF).f:
+           ={n} /\ x{1} = m{2}
+        /\ 0 <= n{2}
+        /\ valid_block x{1}
+        /\ (forall p n, BIRO.IRO.mp{1}.[(p,n)] <> None => last b0 p <> b0)
+        /\ (forall p, SLCommon.F.RO.m{2}.[p] = BIRO.IRO.mp{1}.[strip p])
+    ==>    ={res}
+        /\ (forall p n, BIRO.IRO.mp{1}.[(p,n)] <> None => last b0 p <> b0)
+        /\ (forall p, SLCommon.F.RO.m{2}.[p] = BIRO.IRO.mp{1}.[strip p]).
+  proof.
+  proc. rcondt{2} 2; 1:by auto=> /#. rcondt{1} 3; 1:by auto=> /#.
+  inline *. wp.
+  while (   ={i,n} /\ x{1} = m{2} /\ bs{1} = r{2}
+         /\ 0 <= i{2} <= n{2}
+         /\ last b0 x{1} <> b0
+         /\ (forall p n, BIRO.IRO.mp{1}.[(p,n)] <> None => last b0 p <> b0)
+         /\ (forall p, SLCommon.F.RO.m{2}.[p] = BIRO.IRO.mp{1}.[strip p])).
+  + sp; if{1}.
+    + rcondt{2} 2.
+      + auto=> &hr [#] !->> i_ge0 i_lt_n wf hinv1 hinv2 _ _ + _ _.
+        by rewrite !in_dom /= hinv2 extendK.
+      auto=> &1 &2 /= [#] !->> i_ge0 _ wf inv1 inv2 i_lt_n _.
+      rewrite in_dom wf=> mp_xi r -> /=; split; first by rewrite !getP.
+      split=> [/#|]; split=> [p n|p].
+      + by rewrite getP; case: ((p,n) = (m,i){2})=> [[#] <*>|_ /inv1].
+      rewrite !getP; case: (strip p = (m,i){2})=> [strip_p|].
+      + by have := stripK p; rewrite strip_p=> /= ->.
+      case: (p = extend m{2} i{2})=> [<*>|_ _]; first by rewrite extendK.
+      exact/inv2.
+    rcondf{2} 2.
+    + auto=> &hr [#] !->> i_ge0 i_lt_n wf hinv1 hinv2 _ _ + _ _.
+      by rewrite !in_dom /= hinv2 extendK.
+    by auto=> &1 &2; smt (DWord.bdistr_ll extendK).
+  by auto; smt (valid_block_ends_not_b0).
+  qed.
+
+  lemma conclusion &m:
+      `| Pr[RealIndif(Sponge,Perm,Wrap(D)).main() @ &m : res]
+         - Pr[IdealIndif(BIRO.IRO,RaiseSim(Gconcl.S),Wrap(D)).main() @ &m : res] |
+    = `| Pr[SLCommon.RealIndif(SLCommon.SqueezelessSponge,SLCommon.PC(Perm),LowerDist(Wrap(D))).main() @ &m : res]
+         - Pr[SLCommon.IdealIndif(Gconcl.IF,Gconcl.S,LowerDist(Wrap(D))).main() @ &m : res] |.
+  proof.
+  do 3?congr.
+  + byequiv (_: ={glob D} ==> _)=> //; proc; inline *.
+    call (_: ={glob Perm}).
+    + by proc; inline *; wp; sim.
+    + by proc; inline *; wp; sim.
+    + proc; sp; if=> //.
+      call (_:        ={glob Perm, arg}
+                   /\ valid_block xs{1} /\ 0 < n{1}
+               ==> ={glob Perm, res}).
+      + proc. rcondt{1} 4; 1:by auto. rcondt{2} 2; 1:by auto; smt (valid_block_ends_not_b0).
+        rcondt{2} 4; 1:by auto.
+        inline{2} SLCommon.SqueezelessSponge(SLCommon.PC(Perm)).f.
+        seq  4  6: (   ={glob Perm, n, i, sa, sc}
+                    /\ (* some notion of path through Perm.m *) true).
+        + while (   ={glob Perm, sa, sc}
+                 /\ xs{1} = p{2}
+                 /\ (* some notion of path through Perm.m *) true).
+          + wp; call (_: ={glob Perm}).
+            + by inline *; wp; sim.
+            by auto=> /> /#.
+          by auto=> &1 &2 [#] !<<- vblock n_gt0 /=; rewrite /extend nseq0 cats0.
+        (* make sure that the notion of path guarantees that only the last call of each iteration adds something to the map, and that it is exactly the right call *)
+        admit.
+      by auto=> /#.
+    by auto.
+  byequiv (_: ={glob D} ==> _)=> //; proc; inline *.
+  call (_:    ={glob S}
+           /\ (forall p n, BIRO.IRO.mp{1}.[(p,n)] <> None => last b0 p <> b0)
+           /\ (forall p, SLCommon.F.RO.m{2}.[p] = BIRO.IRO.mp{1}.[strip p])
+           /\ (* relation between S.paths and presence in the RO map *) true).
+  + proc. if=> //=; last by auto. if=> //=; last by auto.
+    inline *. admit. (* something about valid queries *)
+  + admit. (* prove: S(LowerF(BIRO.IRO)).fi ~ S(IF).fi *)
+  + by proc; sp; if=> //; call (f_f); auto=> /#.
+  by auto=> />; split=> [?|] ?; rewrite !map0P.
+  qed.
+end section PROOF.

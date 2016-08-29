@@ -121,39 +121,3 @@ module IRO' : IRO = {
     return b;
   }
 }.
-
-(*
-another implementation, but probably not useful
-
-module IRO : IRO = {
-  var mp : (from, to list) fmap
-
-  proc init() = { mp = map0; }
-
-  proc choose(n) = {
-    var b, bs;
-
-    bs <- [];
-    while (0 < n) {
-      b  <$ dto;
-      bs <- rcons bs b;
-      n  <- n - 1;
-    }
-    return bs;
-  }
-
-  proc f(x, n) = {
-    var ys, zs, aout;
-
-    aout <- [];
-    if (valid x) {
-      ys     <- odflt [] mp.[x];
-      zs     <@ choose (max 0 (n - size ys));
-      mp.[x] <- ys ++ zs;
-      aout   <- take n (oget mp.[x]);
-    }
-
-    return aout;
-  }
-}.
-*)
