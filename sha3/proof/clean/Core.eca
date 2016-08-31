@@ -154,7 +154,7 @@ module FC (F : FUNCTIONALITY) : FUNCTIONALITY = {
   proc init = F.init
 
   proc f (p : block list) = {
-    var b <- witness;
+    var b <- b0;
 
     C.c <- C.c + size p;
     b   <@ F.f(p);
@@ -222,7 +222,7 @@ module ICore: FUNCTIONALITY = {
   }
 
   proc f(p : block list): block = {
-    var r <- witness;
+    var r <- b0;
 
     if (valid p) {
       if (!mem (dom m) p) {
