@@ -828,7 +828,7 @@ pred eager_eq_except
   ys <> xs \/ k < i \/ j <= k => mp1.[(ys, k)] = mp2.[(ys, k)].
 
 lemma eager_eq_except_mem_iff
-      (xs ys : block list, i j k: int,
+      (xs ys : block list, i j k : int,
        mp1 mp2 : (block list * int, bool) fmap) :
   eager_eq_except xs i j mp1 mp2 =>
   ys <> xs \/ k < i \/ j <= k =>
@@ -1084,8 +1084,8 @@ lemma PrLoopSnoc_sample &m (bs : bool list) :
   mu (dlist {0,1} r) (pred1 bs).
 proof.
 have -> :
-  Pr[Prog.LoopSnoc.sample(r) @ &m: bs = res] =
-  Pr[Prog.Sample.sample(r) @ &m: bs = res].
+  Pr[Prog.LoopSnoc.sample(r) @ &m : bs = res] =
+  Pr[Prog.Sample.sample(r) @ &m : bs = res].
   byequiv=> //.
   symmetry.
   conseq (_ : ={n} ==> ={res})=> //.
@@ -1676,7 +1676,8 @@ transitivity{1}
    bs{1} = blocks2bits bs{2} /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}).
 progress;
-  exists HybridIROEager.mp{1} (blocks2bits bs{2}) (size bs{2} * r) m{1} x{2}=> //.
+  exists HybridIROEager.mp{1} (blocks2bits bs{2})
+         (size bs{2} * r) m{1} x{2}=> //.
 progress; smt(take_cat).
 splitwhile{2} 1 : i < n1.
 seq 1 1 :
@@ -1710,7 +1711,8 @@ transitivity{1}
   bs{1} = blocks2bits bs{2} /\
   eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 progress [-delta];
-  exists HybridIROEager.mp{1} (blocks2bits bs{2}) (size bs{2} * r) m{1} x{2}=> //.
+  exists HybridIROEager.mp{1} (blocks2bits bs{2}) (size bs{2} * r)
+         m{1} x{2}=> //.
 inline HybridIROEagerTrans.next_block; sim.
 (transitivity{2}
    { (bs, i) <@ BlockSpongeTrans.next_block(x, i, bs);
@@ -1803,7 +1805,7 @@ auto.
 qed.
 
 local lemma RealIndif_Sponge_BlockSponge &m :
-  Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] =
+  Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] =
   Pr[BlockSponge.RealIndif
      (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res].
 proof.
@@ -1957,7 +1959,7 @@ by rewrite (Ideal_IRO_Experiment_HybridLazy &m)
 qed.
 
 lemma conclu &m :
-  `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] -
+  `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] -
     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
   `|Pr[BlockSponge.RealIndif
        (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res] -
@@ -1975,7 +1977,7 @@ lemma conclusion
       (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
       (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
       &m :
-  `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m: res] -
+  `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] -
     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
   `|Pr[BlockSponge.RealIndif
        (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res] -
