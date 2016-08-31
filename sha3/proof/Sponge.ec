@@ -1778,6 +1778,8 @@ declare module Dist : DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
 
 local clone HybridIRO as HIRO.
 
+(* working toward the Real side of the top-level theorem *)
+
 local lemma Sponge_Raise_BlockSponge_f :
   equiv[Sponge(Perm).f ~ RaiseFun(BlockSponge.Sponge(Perm)).f :
         ={bs, n, glob Perm} ==> ={res, glob Perm}].
@@ -1804,6 +1806,8 @@ auto; progress; by rewrite -cats1 blocks2bits_cat blocks2bits_sing.
 auto.
 qed.
 
+(* the Real side of top-level theorem *)
+
 local lemma RealIndif_Sponge_BlockSponge &m :
   Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] =
   Pr[BlockSponge.RealIndif
@@ -1815,6 +1819,11 @@ call (_ : ={glob Perm}); first 2 sim.
 conseq Sponge_Raise_BlockSponge_f=> //.
 auto.
 qed.
+
+(* working toward the Ideal side of the top-level theorem *)
+
+(* first step of Ideal side: express in terms of Experiment and
+   HIRO.HybridIROLazy *)
 
 local lemma Ideal_IRO_Experiment_HybridLazy &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
@@ -1844,6 +1853,11 @@ by conseq HIRO.IRO_RaiseHybridIRO_HybridIROLazy_f.
 auto.
 qed.
 
+(* working toward middle step of Ideal side: using Experiment, and
+   taking HIRO.HybridIROLazy to HIRO.HybridIROEager
+
+   we will employ HIRO.HybridIROExper_Lazy_Eager *)
+
 (* make a Hybrid IRO distinguisher from BlockSim and Dist (HI.f is
    used by BlockSim, and HI.g is used by HIRO.RaiseHybridIRO;
    HI.init is unused -- see the SIMULATOR module type) *)
@@ -1857,6 +1871,8 @@ local module (HybridIRODist : HIRO.HYBRID_IRO_DIST) (HI : HIRO.HYBRID_IRO) = {
   }
 }.
 
+(* initial bridging step *)
+
 local lemma Experiment_HybridIROExper_Lazy &m :
   Pr[Experiment
      (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy), BlockSim(HIRO.HybridIROLazy),
@@ -1868,6 +1884,8 @@ seq 2 2 : (={glob Dist, glob BlockSim, HIRO.HybridIROLazy.mp}).
 swap{2} 1 1; wp; call (_ : true); auto.
 sim.
 qed.
+
+(* final bridging step *)
 
 local lemma HybridIROExper_Experiment_Eager &m :
   Pr[HIRO.HybridIROExper(HIRO.HybridIROEager, HybridIRODist).main() @
@@ -1882,6 +1900,9 @@ swap{2} 1 1; wp; call (_ : true); auto.
 sim.
 qed.
 
+(* middle step of Ideal side: using Experiment, and taking HIRO.HybridIROLazy
+   to HIRO.HybridIROEager *)
+
 local lemma Experiment_Hybrid_Lazy_Eager &m :
   Pr[Experiment
      (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy), BlockSim(HIRO.HybridIROLazy),
@@ -1894,6 +1915,8 @@ by rewrite (Experiment_HybridIROExper_Lazy &m)
            (HIRO.HybridIROExper_Lazy_Eager HybridIRODist &m)
            (HybridIROExper_Experiment_Eager &m).
 qed.
+
+(* working toward last step of Ideal side *)
 
 local lemma RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f :
   equiv[HIRO.RaiseHybridIRO(HIRO.HybridIROEager).f ~
@@ -1915,6 +1938,9 @@ have gt0_n2 : 0 < n{2} by smt().
 by have [-> _] := gt0_n2_imp gt0_n2.
 have [-> ->] := not_vb_imp not_vb; by rewrite blocks2bits_nil.
 qed.
+
+(* last step of Ideal side: express in terms of Experiment and
+   HIRO.HybridIROEager *)
 
 local lemma Experiment_HybridEager_Ideal_BlockIRO &m :
   Pr[Experiment
@@ -1947,6 +1973,8 @@ exists* n{1}; elim *=> n'.
 conseq RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f=> //.
 auto.
 qed.
+
+(* the Ideal side of top-level theorem *)
 
 local lemma IdealIndif_IRO_BlockIRO &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
