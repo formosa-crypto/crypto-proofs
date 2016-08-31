@@ -29,6 +29,7 @@ theory Block.
     op zeror             <- b0,
     op ( + )             <- (+^),
     op [ - ] (b : block) <- b
+  remove abbrev (-)
   proof *.
   realize addrA by exact/addbA.
   realize addrC by exact/addbC.
@@ -155,10 +156,8 @@ module FC (F : FUNCTIONALITY) : FUNCTIONALITY = {
   proc f (p : block list) = {
     var b <- witness;
 
-    if (valid p) {
-      C.c <- C.c + size p;
-      b   <@ F.f(p);
-    }
+    C.c <- C.c + size p;
+    b   <@ F.f(p);
     return b;
   }
 }.
@@ -192,7 +191,7 @@ module (DRestr (D : DISTINGUISHER) : DISTINGUISHER)
 }.
 
 (** Ideal Primitive **)
-clone import RP as Perm with
+clone export RP as Perm with
   type t <- block * capacity,
   op   dt <- bdistr `*` cdistr
   rename
@@ -285,6 +284,11 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     return y;
   }
 }.
+
+(** Initial and Final Games **)
+module GReal  (D : DISTINGUISHER) = RealIndif(Core,PC(Perm),D).
+
+module GIdeal (D : DISTINGUISHER) = IdealIndif(ICore,S,D).
 
 (*** PROOF ***)
 (** TODO -- This is not indifferentiability -- clean up and fix **)
