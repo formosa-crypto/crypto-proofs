@@ -1771,6 +1771,8 @@ qed.
 
 end HybridIRO.
 
+(* now we use HybridIRO to prove the main result *)
+
 section.
 
 declare module BlockSim : BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO}.
@@ -1778,7 +1780,7 @@ declare module Dist : DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
 
 local clone HybridIRO as HIRO.
 
-(* working toward the Real side of the top-level theorem *)
+(* working toward the Real side of the main result *)
 
 local lemma Sponge_Raise_BlockSponge_f :
   equiv[Sponge(Perm).f ~ RaiseFun(BlockSponge.Sponge(Perm)).f :
@@ -1806,7 +1808,7 @@ auto; progress; by rewrite -cats1 blocks2bits_cat blocks2bits_sing.
 auto.
 qed.
 
-(* the Real side of top-level theorem *)
+(* the Real side of main result *)
 
 local lemma RealIndif_Sponge_BlockSponge &m :
   Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] =
@@ -1820,7 +1822,7 @@ conseq Sponge_Raise_BlockSponge_f=> //.
 auto.
 qed.
 
-(* working toward the Ideal side of the top-level theorem *)
+(* working toward the Ideal side of the main result *)
 
 (* first step of Ideal side: express in terms of Experiment and
    HIRO.HybridIROLazy *)
@@ -1838,9 +1840,9 @@ seq 2 2 :
 inline*; wp; call (_ : true); auto.
 call
   (_ :
-  ={glob Dist, glob BlockSim} /\
-  IRO.mp{1} = map0 /\ HIRO.HybridIROLazy.mp{2} = map0 ==>
-  ={res}).
+   ={glob Dist, glob BlockSim} /\
+   IRO.mp{1} = map0 /\ HIRO.HybridIROLazy.mp{2} = map0 ==>
+   ={res}).
 proc
   (={glob BlockSim} /\
    HIRO.lazy_invar IRO.mp{1} HIRO.HybridIROLazy.mp{2})=> //.
@@ -1974,7 +1976,7 @@ conseq RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f=> //.
 auto.
 qed.
 
-(* the Ideal side of top-level theorem *)
+(* the Ideal side of main result *)
 
 local lemma IdealIndif_IRO_BlockIRO &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
