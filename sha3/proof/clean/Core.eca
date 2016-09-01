@@ -90,105 +90,109 @@ clone include Indifferentiability with
          [module] "GIdeal"  as "IdealIndif".
 
 (** Query Counting **)
-module C = {
-  var c:int
-  proc init() = { c <- 0; }
-}.
+theory Counting.
+  module C = {
+    var c:int
+    proc init() = { c <- 0; }
+  }.
 
-module PC (P : PRIMITIVE) : PRIMITIVE = {
-  proc init () = {
-    C.init();
-    P.init();
-  }
+  module PC (P : PRIMITIVE) : PRIMITIVE = {
+    proc init () = {
+      C.init();
+      P.init();
+    }
 
-  proc f (x : state) = {
-    var y;
+    proc f (x : state) = {
+      var y;
 
-    C.c <- C.c + 1;
-    y   <@ P.f(x);
-    return y;
-  }
-
-  proc fi(x : state) = {
-    var y;
-
-    C.c <- C.c + 1;
-    y   <@ P.fi(x);
-    return y;
-  }
-}.
-
-module DPRestr (P : DPRIMITIVE) : DPRIMITIVE = {
-  proc f (x : state) = {
-    var y <- (b0,c0);
-
-    if (C.c + 1 <= max_query) {
       C.c <- C.c + 1;
       y   <@ P.f(x);
+      return y;
     }
-    return y;
-  }
 
-  proc fi(x : state) = {
-    var y <- (b0,c0);
+    proc fi(x : state) = {
+      var y;
 
-    if (C.c + 1 <= max_query) {
       C.c <- C.c + 1;
       y   <@ P.fi(x);
+      return y;
     }
-    return y;
-  }
-}.
+  }.
 
-module PRestr (P : PRIMITIVE) : PRIMITIVE = {
-  proc init () = {
-    C.init();
-    P.init();
-  }
+  module DPRestr (P : DPRIMITIVE) : DPRIMITIVE = {
+    proc f (x : state) = {
+      var y <- (b0,c0);
 
-  proc f = DPRestr(P).f
-  proc fi = DPRestr(P).fi
-}.
-
-module FC (F : FUNCTIONALITY) : FUNCTIONALITY = {
-  proc init = F.init
-
-  proc f (p : block list) = {
-    var b <- b0;
-
-    C.c <- C.c + size p;
-    b   <@ F.f(p);
-    return b;
-  }
-}.
-
-module DFRestr (F : DFUNCTIONALITY) : DFUNCTIONALITY = {
-  proc f (bs : block list) = {
-    var b <- b0;
-
-    if (C.c + size bs <= max_query) {
-      C.c <- C.c + size bs;
-      b <@ F.f(bs);
+      if (C.c + 1 <= max_query) {
+        C.c <- C.c + 1;
+        y   <@ P.f(x);
+      }
+      return y;
     }
-    return b;
-  }
-}.
 
-module FRestr(F : FUNCTIONALITY) : FUNCTIONALITY = {
-  proc init = F.init
-  proc f = DFRestr(F).f
-}.
+    proc fi(x : state) = {
+      var y <- (b0,c0);
 
-module (DRestr (D : DISTINGUISHER) : DISTINGUISHER)
-         (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
-  proc distinguish() = {
-    var b;
+      if (C.c + 1 <= max_query) {
+        C.c <- C.c + 1;
+        y   <@ P.fi(x);
+      }
+      return y;
+    }
+  }.
 
-         C.init();
-    b <@ D(DFRestr(F), DPRestr(P)).distinguish();
-    return b;
-  }
-}.
+  module PRestr (P : PRIMITIVE) : PRIMITIVE = {
+    proc init () = {
+      C.init();
+      P.init();
+    }
+
+    proc f = DPRestr(P).f
+    proc fi = DPRestr(P).fi
+  }.
+
+  module FC (F : FUNCTIONALITY) : FUNCTIONALITY = {
+    proc init = F.init
+
+    proc f (p : block list) = {
+      var b <- b0;
+
+      if (valid p) {
+        C.c <- C.c + size p;
+        b   <@ F.f(p);
+      }
+      return b;
+    }
+  }.
+
+  module DFRestr (F : DFUNCTIONALITY) : DFUNCTIONALITY = {
+    proc f (bs : block list) = {
+      var b <- b0;
+
+      if (valid bs /\ C.c + size bs <= max_query) {
+        C.c <- C.c + size bs;
+        b <@ F.f(bs);
+      }
+      return b;
+    }
+  }.
+
+  module FRestr(F : FUNCTIONALITY) : FUNCTIONALITY = {
+    proc init = F.init
+    proc f = DFRestr(F).f
+  }.
+
+  module (DRestr (D : DISTINGUISHER) : DISTINGUISHER)
+           (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+    proc distinguish() = {
+      var b;
+
+           C.init();
+      b <@ D(DFRestr(F), DPRestr(P)).distinguish();
+      return b;
+    }
+  }.
+end Counting.
 
 (** Ideal Primitive **)
 clone export RP as Perm with
@@ -284,27 +288,22 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     return y;
   }
 }.
+import Counting.
 
 (** Initial and Final Games **)
-module GReal  (D : DISTINGUISHER) = RealIndif(Core,PC(Perm),D).
-
+module GReal  (D : DISTINGUISHER) = RealIndif(Core,Perm,D).
 module GIdeal (D : DISTINGUISHER) = IdealIndif(ICore,S,D).
 
 (*** PROOF ***)
-(** TODO -- This is not indifferentiability -- clean up and fix **)
-(** However, this is what's proven (modulo the additional validity
-    check in ICore, not present in IF. The validity checks may be
-    problematic in combination with counting, so we need to make sure
-    both are present throughout before diving in. **)
 lemma CoreIndiff (D <: DISTINGUISHER {C, Perm, Core, ICore, S}) &m:
      (forall (F <: DFUNCTIONALITY {D}) (P <: DPRIMITIVE {D}),
            islossless P.f
         => islossless P.fi
         => islossless F.f
         => islossless D(F,P).distinguish)
-  => Pr[RealIndif(Core,PC(Perm),D).main() @ &m: res /\ C.c <= max_query]
-     <= Pr[IdealIndif(ICore,S,DRestr(D)).main() @ &m :res]
-        + (max_query ^ 2)%r / (2^(r + c))%r
+  => `| Pr[RealIndif(Core,Perm,DRestr(D)).main() @ &m: res]
+        - Pr[IdealIndif(ICore,S,DRestr(D)).main() @ &m :res] |
+     <= (max_query ^ 2)%r / (2^(r + c))%r
         + max_query%r * ((2*max_query)%r / (2^c)%r)
         + max_query%r * ((2*max_query)%r / (2^c)%r).
-abort.
+admitted.

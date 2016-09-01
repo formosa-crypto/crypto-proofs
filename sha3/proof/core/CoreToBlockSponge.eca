@@ -1,6 +1,27 @@
 (* -------------------------------------------------------------------- *)
 require import Option Pair Int Real Distr List FSet NewFMap DProd.
-require import BlockSponge Gconcl.
+require import BlockSponge.
+
+require (*--*) Core.
+
+op max_query : int.
+axiom max_query_ge0: 0 <= max_query.
+
+clone Core as CoreConstruction with
+  op   Block.r           <- Common.r,
+  type Block.block       <- Common.block,
+  op   Block.b0          <- Common.Block.b0,
+  op   Block.(+^)        <- Common.Block.(+^),
+  op   Block.enum        <- Common.Block.blocks,
+  op   Capacity.c        <- Common.c,
+  type Capacity.capacity <- Common.capacity,
+  op   Capacity.c0       <- Common.Capacity.c0,
+  op   Capacity.enum     <- Common.Capacity.caps,
+  op   max_query         <- max_query
+proof *.
+realize Block.r_ge0 by exact/Common.ge0_r.
+search Common.Block.(+^).
+realize Block.addbA by exact/Common.Block.addwA.
 
 (*---*) import Common Perm.
 
