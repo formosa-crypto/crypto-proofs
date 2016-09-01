@@ -54,8 +54,10 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
     (* squeezing *)
     while (i < (n + r - 1) %/ r) {
       z        <- z ++ ofblock sa;
-      (sa, sc) <@ P.f(sa, sc);
       i        <- i + 1;
+      if (i < (n + r - 1) %/ r) {
+        (sa, sc) <@ P.f(sa, sc);
+      }
     }
 
     return take n z;
@@ -1803,7 +1805,11 @@ seq 0 1 :
    n0{2} = (n{1} + r - 1) %/ r); first auto.
 while (={n, glob Perm, i, sa, sc} /\ blocks2bits z{2} = z{1} /\
        n0{2} = (n{1} + r - 1) %/ r).
-wp. call (_ : ={glob Perm}); first sim. auto.
+case (i{1} + 1 < (n{1} + r - 1) %/ r).
+rcondt{1} 3; first auto. rcondt{2} 3; first auto.
+call (_ : ={glob Perm}); first sim.
+auto; progress; by rewrite -cats1 blocks2bits_cat blocks2bits_sing.
+rcondf{1} 3; first auto. rcondf{2} 3; first auto.
 auto; progress; by rewrite -cats1 blocks2bits_cat blocks2bits_sing.
 auto.
 qed.

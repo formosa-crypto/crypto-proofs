@@ -42,9 +42,11 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
       }
       (* Squeezing *)
       while (i < n) {
-        z        <- rcons z sa;
-        (sa, sc) <@ P.f(sa, sc);
-        i        <- i + 1;
+        z <- rcons z sa;
+        i <- i + 1;
+        if (i < n) {
+          (sa, sc) <@ P.f(sa, sc);
+        }
       }
     }
     return z;
