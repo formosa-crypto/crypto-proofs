@@ -40,7 +40,7 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
         (sa, sc) <@ P.f(sa +^ head b0 xs, sc);
         xs       <- behead xs;
       }
-      (* Squeezing *)
+      (* squeezing *)
       while (i < n) {
         z <- rcons z sa;
         i <- i + 1;
