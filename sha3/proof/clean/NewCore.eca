@@ -1,0 +1,324 @@
+require import Pred Fun Option Pair Int Real List FSet NewFMap NewDistr.
+require import StdOrder Ring DProd.
+(*---*) import IntOrder.
+
+require (*..*) RP Indifferentiability.
+
+(*** THEORY PARAMETERS ***)
+(** Block/Rate **)
+theory Block.
+  op r : int.
+  axiom r_ge0: 0 <= r.
+
+  type block.
+
+  op b0: block.
+  op (+^): block -> block -> block.
+
+  axiom addbA b1 b2 b3: b1 +^ (b2 +^ b3) = b1 +^ b2 +^ b3.
+  axiom addbC b1 b2: b1 +^ b2 = b2 +^ b1.
+  axiom add0b b: b0 +^ b = b.
+  axiom addbK b: b +^ b = b0.
+
+  op enum: block list.
+  axiom block_enum b: count (pred1 b) enum = 1.
+  axiom card_block: size enum = 2^r.
+
+  clone import Ring.ZModule as BlockMonoid with 
+    type t               <- block,
+    op zeror             <- b0,
+    op ( + )             <- (+^),
+    op [ - ] (b : block) <- b
+  remove abbrev (-)
+  proof *.
+  realize addrA by exact/addbA.
+  realize addrC by exact/addbC.
+  realize add0r by exact/add0b.
+  realize addNr by exact/addbK.
+
+  clone import MFinite as DBlock with
+    type t            <- block,
+    op   Support.enum <- enum
+  rename "dunifin"  as "bdistr"
+         "duniform" as "bdistr"
+  proof *.
+  realize Support.enum_spec by exact/block_enum.
+end Block.
+import Block DBlock.
+
+(**  Capacity  **)
+theory Capacity.
+  op c : int.
+  axiom c_ge0: 0 <= c.
+
+  type capacity.
+
+  op c0: capacity.
+
+  op enum: capacity list.
+  axiom capacity_enum b: count (pred1 b) enum = 1.
+  axiom card_capacity: size enum = 2^c.
+
+  clone import MFinite as DCapacity with
+    type t            <- capacity,
+    op   Support.enum <- enum
+  rename "dunifin"  as "cdistr"
+         "duniform" as "cdistr"
+  proof *.
+  realize Support.enum_spec by exact/capacity_enum.
+end Capacity.
+import Capacity DCapacity.
+
+(** Validity of Functionality Queries **)
+op valid: block list -> bool.
+axiom valid_not_nil m: valid m => m <> [].
+
+(** Adversary's Query Cost **)
+op max_query: int.
+axiom max_query_ge0: 0 <= max_query.
+
+(*** DEFINITIONS ***)
+type state  = block  * capacity.
+op   dstate = bdistr `*` cdistr.
+
+(** Indifferentiability Experiment **)
+clone include Indifferentiability with
+  type p     <- state, 
+  type f_in  <- block list,
+  type f_out <- block list
+  rename [module] "GReal" as "RealIndif"
+         [module] "GIdeal"  as "IdealIndif".
+
+(** Query Counting **)
+theory Counting.
+  module C = {
+    var c:int
+    proc init() = { c <- 0; }
+  }.
+
+  module PC (P : PRIMITIVE) : PRIMITIVE = {
+    proc init () = {
+      C.init();
+      P.init();
+    }
+
+    proc f (x : state) = {
+      var y;
+
+      C.c <- C.c + 1;
+      y   <@ P.f(x);
+      return y;
+    }
+
+    proc fi(x : state) = {
+      var y;
+
+      C.c <- C.c + 1;
+      y   <@ P.fi(x);
+      return y;
+    }
+  }.
+
+  module DPRestr (P : DPRIMITIVE) : DPRIMITIVE = {
+    proc f (x : state) = {
+      var y <- (b0,c0);
+
+      if (C.c + 1 <= max_query) {
+        C.c <- C.c + 1;
+        y   <@ P.f(x);
+      }
+      return y;
+    }
+
+    proc fi(x : state) = {
+      var y <- (b0,c0);
+
+      if (C.c + 1 <= max_query) {
+        C.c <- C.c + 1;
+        y   <@ P.fi(x);
+      }
+      return y;
+    }
+  }.
+
+  module PRestr (P : PRIMITIVE) : PRIMITIVE = {
+    proc init () = {
+      C.init();
+      P.init();
+    }
+
+    proc f = DPRestr(P).f
+    proc fi = DPRestr(P).fi
+  }.
+
+  module FC (F : FUNCTIONALITY) : FUNCTIONALITY = {
+    proc init = F.init
+
+    proc f (p : block list) = {
+      var r <- [];
+
+      if (valid p) {
+        C.c <- C.c + size p;
+        r   <@ F.f(p);
+      }
+      return r;
+    }
+  }.
+
+  module DFRestr (F : DFUNCTIONALITY) : DFUNCTIONALITY = {
+    proc f (bs : block list) = {
+      var r <- [];
+
+      if (valid bs /\ C.c + size bs <= max_query) {
+        C.c <- C.c + size bs;
+        r   <@ F.f(bs);
+      }
+      return r;
+    }
+  }.
+
+  module FRestr(F : FUNCTIONALITY) : FUNCTIONALITY = {
+    proc init = F.init
+    proc f = DFRestr(F).f
+  }.
+
+  module (DRestr (D : DISTINGUISHER) : DISTINGUISHER)
+           (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+    proc distinguish() = {
+      var b;
+
+           C.init();
+      b <@ D(DFRestr(F), DPRestr(P)).distinguish();
+      return b;
+    }
+  }.
+end Counting.
+
+(** Ideal Primitive **)
+clone export RP as Perm with
+  type t <- block * capacity,
+  op   dt <- bdistr `*` cdistr
+  rename
+    [module type] "RP" as "PRIMITIVE"
+    [module] "P" as "Perm".
+
+(** Core Construction **)
+module (Core : CONSTRUCTION) (P:DPRIMITIVE): FUNCTIONALITY = {
+  proc init () = {}
+
+  proc f(p : block list): block list = {
+    var (sa,sc) <- (b0,c0);
+    var r <- [];
+
+    while (p <> []) {
+      (sa,sc) <@ P.f((sa +^ head witness p,sc));
+      r <- rcons r sa;
+      p <- behead p;
+    }
+    return r;
+  }
+}.
+
+(** Ideal Core Functionality **)
+module ICore : FUNCTIONALITY = {
+  var m : (block list,block) fmap
+
+  proc init() = {
+    m = map0;
+  }
+
+  proc fill_in(p : block list) = {
+    if (!mem (dom m) p) {
+      m.[p] <$ bdistr;
+    }
+    return oget m.[p];
+  }
+
+  proc f(p : block list): block list = {
+    var r <- [];
+    var i <- 0;
+    var b;
+
+    if (valid p) {
+      while (i < size p) {
+        b <@ fill_in(take i p);
+        r <- rcons r b;
+        i <- i + 1;
+      }
+    }
+    return r;
+  }
+}.
+
+(** Core Simulator **)
+module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
+  var m, mi : (state,state) fmap
+  var pi    : (capacity, block list * block) fmap
+
+  proc init() = {
+    m  <- map0;
+    mi <- map0;
+    pi <- map0.[c0 <- ([<:block>],b0)];
+  }
+
+  proc f(x : state): state = {
+    var p, v, y, y1, y2;
+    var b;
+
+    if (!mem (dom m) x) {
+      if (mem (dom pi) x.`2) {
+        (p,v) <- oget pi.[x.`2]; 
+        (* Not sure *)
+        b     <- F.f (rcons p (v +^ x.`1));
+        y1    <- last b0 b;
+      } else {
+        y1 <$ bdistr;
+      }
+      y2     <$ cdistr;
+      y      <- (y1,y2);
+      m.[x]  <- y;
+      mi.[y] <- x;
+      if (mem (dom pi) x.`2) {
+        (p,v)     <- oget pi.[x.`2]; 
+        pi.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+      }
+    } else {   
+      y <- oget m.[x];
+    }
+    return y;
+  }
+
+  proc fi(x : state): state = {
+    var y, y1, y2;
+
+    if (!mem (dom mi) x) {
+      y1     <$ bdistr;
+      y2     <$ cdistr;
+      y      <- (y1,y2);
+      mi.[x] <- y;
+      m.[y]  <- x;
+    } else {
+      y <- oget mi.[x];
+    }
+    return y;
+  }
+}.
+
+(** Initial and Final Games **)
+module GReal  (D : DISTINGUISHER) = RealIndif(Core,Perm,D).
+module GIdeal (D : DISTINGUISHER) = IdealIndif(ICore,S,D).
+
+(*** PROOF ***)
+import Counting.
+lemma CoreIndiff (D <: DISTINGUISHER {C, Perm, Core, ICore, S}) &m:
+     (forall (F <: DFUNCTIONALITY {D}) (P <: DPRIMITIVE {D}),
+           islossless P.f
+        => islossless P.fi
+        => islossless F.f
+        => islossless D(F,P).distinguish)
+  => `| Pr[RealIndif(Core,Perm,DRestr(D)).main() @ &m: res]
+        - Pr[IdealIndif(ICore,S,DRestr(D)).main() @ &m :res] |
+     <= (max_query ^ 2)%r / (2^(r + c))%r
+        + max_query%r * ((2*max_query)%r / (2^c)%r)
+        + max_query%r * ((2*max_query)%r / (2^c)%r).
+admitted.
