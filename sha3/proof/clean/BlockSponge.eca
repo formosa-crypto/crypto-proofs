@@ -1,0 +1,218 @@
+require import Pred Fun NewLogic NewDistr.
+require import Option Int Real List NewFMap FSet.
+require import StdOrder.
+(*---*) import IntOrder.
+
+require import NewCommon.
+(*---*) import Block DBlock Capacity DCapacity.
+
+(*** THEORY PARAMETERS ***)
+(** Validity of Functionality Queries **)
+op valid: block list -> int -> bool.
+
+(** Validity and Parsing/Formatting of Functionality Queries **)
+op format (p : block list) (n : int) = p ++ nseq n b0.
+op parse: block list -> (block list * int).
+
+axiom formatK bs: format (parse bs).`1 (parse bs).`2 = bs.
+axiom parseK t n: valid t n => parse (format t n) = (t,n).
+
+lemma parse_injective: injective parse.
+proof. by move=> bs1 bs2 eq_format; rewrite -formatK eq_format (@formatK bs2). qed.
+
+(*** DEFINITIONS ***)
+(** Low-Level Definitions **)
+require (*--*) NewCore.
+
+clone import NewCore as Low with
+  op valid bs <- valid (parse bs).`1 (parse bs).`2
+proof * by done.
+
+(** High-Level Definitions **)
+(* Indifferentiability *)
+clone import Indifferentiability as BS_Ind with
+  type p     <- block * capacity,
+  type f_in  <- block list * int,
+  type f_out <- block list
+proof * by done.
+
+(* BlockSponge Construction *)
+module (BlockSponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
+  proc init() = {}
+
+  proc f(p : block list, n : int) : block list = {
+    var r <- [];
+    var (sa,sc) <- (b0,c0);
+    var i <- 0;
+
+    while (i < size p) {
+      (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
+      i <- i + 1;
+    }
+    i <- 0;
+    while (i < n) {
+      r <- rcons r sa;
+      i       <- i + 1;
+      if (i < n) {
+        (sa,sc) <@ P.f(sa,sc);
+      }
+    }
+    return r;
+  }
+}.
+
+(* Ideal Block Sponge Functionality *)
+module IBlockSponge : FUNCTIONALITY = {
+  var m : (block list * int,block) fmap
+
+  proc init() = {
+    m <- map0;
+  }
+
+  proc fill_in(x, n) = {
+    if (!mem (dom m) (x, n)) {
+      m.[(x,n)] <$ bdistr;
+    }
+    return oget m.[(x,n)];
+  }
+
+  proc f(x, n) = {
+    var b, bs;
+    var i <- 0;
+
+    bs <- [];
+    if (valid x n) {
+      while (i < n) {
+        b <@ fill_in(x, i);
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+    }
+    return bs;
+  }
+}.
+
+(* Parametric Simulator *)
+module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
+  module LoF = {
+    proc f(x : block list): block list = {
+      var r <- [];
+      var (p,n) <- parse x;
+      var b <- [];
+      var i <- 1;
+
+      while (i <= n) {
+        b <- F.f(take i p,1);
+        r <- r ++ b;
+        i <- i + 1;
+      }
+      return r;
+    }
+  }
+
+  proc init = S(LoF).init
+  proc f    = S(LoF).f
+  proc fi   = S(LoF).fi
+}.
+
+(* Constructed Distinguisher *)
+module (LoDist (D : DISTINGUISHER) : Low.DISTINGUISHER)
+           (F : Low.DFUNCTIONALITY) (P : Low.DPRIMITIVE) = {
+  module HiF = {
+    proc f(p : block list, n : int) = {
+      var r <- [];
+
+      r <@ F.f(format p (n - 1));
+      if (n <= 0) {
+        r <- drop (size p) r;
+      } else {
+        r <- drop (size p - 1) r;
+      }
+      return r;
+    }
+  }
+
+  proc distinguish = D(HiF,P).distinguish
+}.
+
+(*** PROOF
+     forall P D S,
+          LoDist(D)^{Core(P),P} ~ LoDist(D)^{ICore,S(ICore)}
+       => D^{BlockSponge(P),P} ~ D^{IBlockSponge,HiSim(S)(IBlockSponge)} ***)
+section PROOF.
+  declare module P : PRIMITIVE     { Low.ICore, IBlockSponge }.
+  declare module S : Low.SIMULATOR { Low.ICore, IBlockSponge, P }.
+  declare module D : DISTINGUISHER { Low.ICore, IBlockSponge, P, S }.
+
+  lemma LiftInd &m:
+    `| Pr[Low.Indif(Core(P),P,LoDist(D)).main() @ &m: res]
+       - Pr[Low.Indif(ICore,S(ICore),LoDist(D)).main() @ &m: res] |
+    = `| Pr[Indif(BlockSponge(P),P,D).main() @ &m: res]
+         - Pr[Indif(IBlockSponge,HiSim(S,IBlockSponge),D).main() @ &m: res] |.
+  proof.
+  do !congr.
+  + byequiv (_: ={glob D, glob P} ==> _ )=> //=; proc.
+    call (_: ={glob P}); first 2 by sim.
+    + proc=> /=; inline{1} 2.
+      seq  5  3: (   ={glob P, p, n, r, sa, sc, i}
+                  /\ sa{1} = b0
+                  /\ i{1} = 0
+                  /\ r{1} = []
+                  /\ r0{1} = []
+                  /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0); 1: by auto.
+      splitwhile{1} 1: (i < size p); wp.
+      seq  1  1: (   ={glob P, p, n, r, sa, sc, i}
+                  /\ r{2} = []
+                  /\ i{1} = size p{1}
+                  /\ size r0{1} = size p{1}
+                  /\ last b0 r0{1} = sa{2}
+                  /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
+      + while (   ={glob P, p, n, r, sa, sc, i}
+               /\ i{1} <= size p{1}
+               /\ size r0{1} = i{1}
+               /\ last b0 r0{1} = sa{2}
+               /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
+        + wp; call (_: true); auto=> /> &1 &2 _ _ r_p.
+          rewrite nth_cat r_p=> /= -[sa sc] /=.
+          by rewrite last_rcons size_rcons /= size_cat size_nseq /#.
+        by auto=> /> &2; rewrite size_cat size_nseq; smt (size_ge0).
+      case: (n{1} <= 0).
+      + rcondf{1} 1; 1:by auto=> /> &hr; rewrite size_cat size_nseq /#.
+        rcondf{2} 2; 1:by auto=> /> &hr /#.
+        by auto=> /> &1 &2 <-; rewrite drop_size.
+      splitwhile{2} 2: (i < n - 1). rcondt{2} 3.
+      + auto; while (i < n); 2:by auto=> /#.
+        rcondt 3; 1:by auto=> /#.
+        by call (_: true)=> //; auto=> /#.
+      rcondf{2} 5.
+      + auto; while (i < n); 2:by auto=> /#.
+        rcondt 3; 1:by auto=> /#.
+        by call (_: true)=> //; auto=> /#.
+      rcondf{2} 5.
+      + auto; while (i < n); 2:by auto=> /#.
+        rcondt 3; 1:by auto=> /#.
+        by call (_: true)=> //; auto=> /#.
+      wp.
+      while (   ={glob P, n, sa, sc}
+             /\ 0 < n{1}
+             /\ i{1} = i{2} + size p{1}
+             /\ size p{1} <= size r0{1}
+             /\ size p{1} <= i{1}
+             /\ drop (size p{1} - 1) r0{1} = rcons r{2} sa{2}
+             /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
+      + rcondt{2} 3; 1:by auto=> /> &hr /#.
+        wp; call (_: true); auto=> /> &1 &2 In Is Ii Ir.
+        rewrite size_cat size_nseq=> ? _ ?.
+        rewrite nth_cat ltzNge Ii /= nth_nseq 1:/#.
+        rewrite BlockMonoid.AddMonoid.addm0=> /= -[sa sc] /=.
+        by rewrite size_rcons -Ir -cats1 drop_cat !cats1 /#.
+      auto=> &1 &2 [#] <*> ^Hsize <- /ltzNge ^n_gt0 -> /=.
+      rewrite size_cat size_nseq /= -Hsize; do 2?split=> [|/#|/#].
+      have: r0{1} <> [] by smt (size_eq0).
+      move=> {p_not_nil Hsize}; elim/last_ind: (r0{1})=> //= r sa ih _.
+      + by rewrite last_rcons size_rcons -cats1 addzK drop_cat.
+    by inline *; call (_: true).
+  byequiv=> //=.
+  admit.
+  qed.
+end section PROOF.
