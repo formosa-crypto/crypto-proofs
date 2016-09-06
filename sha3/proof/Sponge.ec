@@ -96,7 +96,93 @@ module LowerDist (D : DISTINGUISHER, F : BlockSponge.DFUNCTIONALITY) =
 module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
   S(LowerFun(F)).
 
+(* Our main result will be:
+
+   lemma conclusion
+         (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
+         (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
+         &m :
+     `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] -
+       Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
+     `|Pr[BlockSponge.RealIndif
+          (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res] -
+       Pr[BlockSponge.IdealIndif
+          (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main() @ &m : res]|
+*)
+
 (*------------------------------- Proof --------------------------------*)
+
+(* Proving the Real side
+
+     Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] =
+     Pr[BlockSponge.RealIndif
+        (BlockSponge.Sponge, Perm, LowerDist(Dist)).main() @ &m : res]
+
+   is easy (see lemma RealIndif_Sponge_BlockSponge)
+
+   And we split the proof of the Ideal side (IdealIndif_IRO_BlockIRO)
+
+     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
+     Pr[BlockSponge.IdealIndif
+        (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res].
+
+   into three steps, involving Hybrid IROs, which, in addition to
+   an init procedure, have procedures
+
+     (* hashing block lists, giving n bits *)
+     proc g(x : block list, n : int) : bool list
+
+     (* hashing block lists, giving n blocks *)
+     proc f(x : block list, n : int) : block list
+
+   We have lazy (HybridIROLazy) and eager (HybridIROEager) Hybrid
+   IROs, both of which work with a finite map from block list * int to
+   bool. In both versions, f is defined in terms of g. In the lazy
+   version, g consults/randomly updates just those elements of the
+   map's domain needed to produce the needed bits. But the eager
+   version goes further, consulting/randomly updating enough extra
+   domain elements so that a multiple of r domain elements were
+   consulted/randomly updated (those extra bits are discarded)
+
+   We have a parameterized module RaiseHybridIRO for turning a Hybrid
+   IRO into a FUNCTIONALITY in the obvious way, and we split the proof
+   of the Ideal side into three steps:
+
+   Step 1:
+
+     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
+     Pr[Experiment
+        (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+         Dist).main() @ &m : res]
+
+   This step is proved using a lazy invariant relating the
+   maps of the bit-based IRO and HybridIROLazy
+
+   Step 2:
+
+     Pr[Experiment
+        (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+         Dist).main() @ &m : res] =
+     Pr[Experiment
+        (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+         Dist).main() @ &m : res]
+
+   This step is proved using the eager sampling lemma provided by
+   RndO.
+
+   Step 3:
+
+     Pr[Experiment
+        (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+         Dist).main() @ &m : res] =
+     Pr[BlockSponge.IdealIndif
+        (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res]
+
+   This step is proved using an invariant relating the maps of
+   HybridIROEager and the block-based IRO. Its proof is the most
+   involved, and uses the Program abstract theory of DList to show the
+   equivalence of randomly choosing a block and forming a block out
+   of r randomly chosen bits *)
 
 (*------------------- abstract theory of Hybrid IROs -------------------*)
 
@@ -106,10 +192,10 @@ module type HYBRID_IRO = {
   (* initialization *)
   proc init() : unit
 
-  (* hashing blocks, giving n bits *)
+  (* hashing block lists, giving n bits *)
   proc g(x : block list, n : int) : bool list
 
-  (* hashing blocks, giving n blocks *)
+  (* hashing block lists, giving n blocks *)
   proc f(x : block list, n : int) : block list
 }.
 
