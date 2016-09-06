@@ -22,16 +22,8 @@ clone include Indifferentiability with
   rename [module] "GReal" as "RealIndif"
          [module] "GIdeal"  as "IdealIndif".
 
-(** Ideal Primitive **)
-clone export RP as Perm with
-  type t <- block * capacity,
-  op   dt <- bdistr `*` cdistr
-  rename
-    [module type] "RP" as "PRIMITIVE"
-    [module] "P" as "Perm".
-
 (** Core Construction **)
-module (Core : CONSTRUCTION) (P:DPRIMITIVE): FUNCTIONALITY = {
+module (Core : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
   proc init () = {}
 
   proc f(p : block list): block list = {
@@ -97,7 +89,6 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     if (!mem (dom m) x) {
       if (mem (dom pi) x.`2) {
         (p,v) <- oget pi.[x.`2]; 
-        (* Not sure *)
         b     <- F.f (rcons p (v +^ x.`1));
         y1    <- last b0 b;
       } else {
@@ -132,7 +123,3 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     return y;
   }
 }.
-
-(** Initial and Final Games **)
-module GReal  (D : DISTINGUISHER) = RealIndif(Core,Perm,D).
-module GIdeal (D : DISTINGUISHER) = IdealIndif(ICore,S,D).
