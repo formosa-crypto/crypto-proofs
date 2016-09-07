@@ -145,8 +145,8 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
    consulted/randomly updated (those extra bits are discarded)
 
    We have a parameterized module RaiseHybridIRO for turning a Hybrid
-   IRO into a FUNCTIONALITY in the obvious way, and we split the proof
-   of the Ideal side into three steps:
+   IRO into a FUNCTIONALITY in the obvious way (not using f), and we
+   split the proof of the Ideal side into three steps:
 
    Step 1:
 
