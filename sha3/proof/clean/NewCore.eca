@@ -1,4 +1,4 @@
-require import Pred Fun Option Pair Int Real List FSet NewFMap NewDistr.
+require import Core Int Real List FSet NewFMap Distr.
 require import StdOrder Ring DProd.
 (*---*) import IntOrder.
 
@@ -22,8 +22,8 @@ clone include Indifferentiability with
   rename [module] "GReal" as "RealIndif"
          [module] "GIdeal"  as "IdealIndif".
 
-(** Core Construction **)
-module (Core : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
+(** CORE Construction **)
+module (CORE : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
   proc init () = {}
 
   proc f(p : block list): block list = {
@@ -40,8 +40,8 @@ module (Core : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
   }
 }.
 
-(** Ideal Core Functionality **)
-module ICore : FUNCTIONALITY = {
+(** Ideal CORE Functionality **)
+module ICORE : FUNCTIONALITY = {
   var m : (block list,block) fmap
 
   proc init() = {
@@ -71,7 +71,7 @@ module ICore : FUNCTIONALITY = {
   }
 }.
 
-(** Core Simulator **)
+(** CORE Simulator **)
 module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
   var m, mi : (state,state) fmap
   var pi    : (capacity, block list * block) fmap

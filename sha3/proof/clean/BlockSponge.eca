@@ -1,5 +1,5 @@
-require import Pred Fun NewLogic NewDistr.
-require import Option Int IntExtra Real List NewFMap FSet.
+require import Core Logic Distr.
+require import Int IntExtra Real List NewFMap FSet.
 require import StdOrder.
 (*---*) import IntOrder.
 
@@ -10,6 +10,8 @@ require import NewCommon.
 (** Validity of Functionality Queries **)
 op valid: block list -> bool.
 axiom valid_spec p: valid p => p <> [].
+(* FIXME : verify if this axiom is correct. *)
+axiom valid_take p i: valid p => 0 < i => valid (take i p).
 
 (** Validity and Parsing/Formatting of Functionality Queries **)
 op format (p : block list) (n : int) = p ++ nseq (n - 1) b0.
@@ -20,6 +22,25 @@ axiom parseK p n: 0 < n => valid p => parse (format p n) = (p,n).
 
 lemma parse_injective: injective parse.
 proof. by move=> bs1 bs2 eq_format; rewrite -formatK eq_format (@formatK bs2). qed.
+
+lemma parse_valid p: valid p => parse p = (p,1).
+proof. 
+move=>h;cut{1}->:p=format p 1;2:smt(parseK). 
+by rewrite/format/=nseq0 cats0.
+qed.
+
+(******************* Useful lemmas ******************)
+lemma take_nseq (b:block) i j : take i (nseq j b) = nseq (min i j) b.
+proof. 
+move:i;elim/natind=>//=.
++ smt(take_le0 nseq0_le). 
+move=>i hi0 hind. 
+case(i + 1 <= j)=>hi1j. 
++ rewrite (take_nth b);1:smt(size_nseq).
+  rewrite hind nth_nseq 1:/# //=-nseqSr/#. 
+rewrite take_oversize;smt(size_nseq).
+qed.
+
 
 (*** DEFINITIONS ***)
 (** Low-Level Definitions **)
@@ -106,7 +127,7 @@ module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
 
       if (valid p /\ 0 < n)
       {
-        while (i <= size p) {
+        while (i < size p) {
           b <@ F.f(take i p,1);
           r <- r ++ b;
           i <- i + 1;
@@ -149,13 +170,13 @@ module (LoDist (D : DISTINGUISHER) : Low.DISTINGUISHER)
           LoDist(D)^{Core(P),P} ~ LoDist(D)^{ICore,S(ICore)}
        => D^{BlockSponge(P),P} ~ D^{IBlockSponge,HiSim(S)(IBlockSponge)} ***)
 section PROOF.
-  declare module P : PRIMITIVE     { Low.ICore, IBlockSponge, HiSim }.
-  declare module S : Low.SIMULATOR { Low.ICore, IBlockSponge, HiSim, P }.
-  declare module D : DISTINGUISHER { Low.ICore, IBlockSponge, HiSim, P, S }.
+  declare module P : PRIMITIVE     { Low.ICORE, IBlockSponge, HiSim }.
+  declare module S : Low.SIMULATOR { Low.ICORE, IBlockSponge, HiSim, P }.
+  declare module D : DISTINGUISHER { Low.ICORE, IBlockSponge, HiSim, P, S }.
 
   lemma LiftInd &m:
-    `| Pr[Low.Indif(Core(P),P,LoDist(D)).main() @ &m: res]
-       - Pr[Low.Indif(ICore,S(ICore),LoDist(D)).main() @ &m: res] |
+    `| Pr[Low.Indif(CORE(P),P,LoDist(D)).main() @ &m: res]
+       - Pr[Low.Indif(ICORE,S(ICORE),LoDist(D)).main() @ &m: res] |
     = `| Pr[Indif(BlockSponge(P),P,D).main() @ &m: res]
          - Pr[Indif(IBlockSponge,HiSim(S,IBlockSponge),D).main() @ &m: res] |.
   proof.
@@ -212,8 +233,8 @@ section PROOF.
    by inline *; call (_: true).
   byequiv (_: ={glob D, glob S} ==> _)=> //=; proc.
   call (_:    ={glob S}
-           /\ INV ICore.m{1} IBlockSponge.m{2}).
-  + proc (INV ICore.m{1} IBlockSponge.m{2})=> //.
+           /\ INV ICORE.m{1} IBlockSponge.m{2}).
+  + proc (INV ICORE.m{1} IBlockSponge.m{2})=> //.
     proc=> /=; sp; if=> [&1 &2 [#] <*> <-| |] //.
     conseq (_:    ={r, i}
                /\ r{2} = []
@@ -222,84 +243,59 @@ section PROOF.
                /\ parse p{1} = (p{2},n{2})
                /\ valid p{2}
                /\ 0 < n{2}
-               /\ INV ICore.m{1} IBlockSponge.m{2}
+               /\ INV ICORE.m{1} IBlockSponge.m{2}
                ==> _)=> />.
     + by move=> &1 &2=> <-.
-    splitwhile{1} 1: (i <= size (parse p).`1); inline{2} 2.
+    splitwhile{1} 1: (i < size (parse p).`1); inline{2} 2.
     rcondt{2} 6; first by auto; while (true)=> //; auto=> /> &hr <- //.
-    wp; while (   i{1} = i0{2} + size x0{2} - 1
+    wp. while (   i{1} = i0{2} + size x0{2} - 1
                /\ p{1} = x0{2} ++ nseq (n0 - 1){2} b0
                /\ r{1} = r{2} ++ bs{2}
                /\ 0 < i0{2}
                /\ valid x0{2}
-               /\ INV ICore.m{1} IBlockSponge.m{2}).
-    + wp; call (_:    arg{1} = format arg{2}.`1 arg{2}.`2
-                   /\ 0 < arg{2}.`2
-                   /\ valid arg{2}.`1
-                   /\ INV ICore.m{1} IBlockSponge.m{2}
-                   ==>    ={res}
-                       /\ INV ICore.m{1} IBlockSponge.m{2}).
-      + proc; if=> //=.
-        + by move=> /> &1 &2 n_gt0 valid_x; rewrite !in_dom -parseK=> // ->.
-        + auto=> /> &1 &2 n_gt0 valid_x HINV _ b _; rewrite !getP /=.
-          move=> p'; rewrite !getP; case: (parse p' = (x,n){2}).
-          + by rewrite -parseK=> // /parse_injective ->.
-          by case: (p' = format x{2} n{2})=> //= [<*>|_ _]; [rewrite parseK|exact/HINV].
-        by auto=> /> &1 &2 n_gt0 valid_x ->; rewrite parseK.
-      auto=> /> &1 &2 i0_gt0 + + _ i0_le_n0.
-      have ->: take (i0 + size x0 - 1){2} (x0 ++ nseq (n0 - 1) Block.b0){2}
-               = x0{2} ++ nseq (i0 - 1){2} b0.
-      + rewrite take_cat.
-        have -> /=: !i0{2} + size x0{2} - 1 < size x0{2} by smt ().
-        congr; apply/(eq_from_nth witness).
-        + by rewrite size_take ?size_nseq /#.
-        move=> j; rewrite size_take ?size_nseq 1:/#.
-        by move=> [j_ge0 j_lt_i0]; rewrite nth_take ?nth_nseq /#.
-      rewrite /format size_cat size_nseq=> /= _ _ b mc mb _.
-      by rewrite rcons_cat /= /#.
-      wp; conseq (_:    ={r, i}
-                     /\ r{2} = []
-                     /\ b{2} = []
-                     /\ i{2} = 1
-                     /\ parse p{1} = (p,n){2}
-                     /\ valid p{2}
-                     /\ 0 < n{2}
-                     /\ INV ICore.m{1} IBlockSponge.m{2}
-                     ==>    ={r}
-                         /\ i{1} = size p{2}
-                         /\ INV ICore.m{1} IBlockSponge.m{2})=> //=.
-      + move=> &1 &2 [#] !<<- !->> parse_p valid_p n_gt0 _ mc i r1 mb ? [#] <<*> HINV.
-        move: n_gt0 valid_p=> ^n_gt0 /parseK H ^valid_p /H {H}.
-        rewrite -parse_p cats0 valid_p HINV=> /parse_injective <<- @/format /=.
-        by rewrite size_cat size_nseq /= /#.
-      while (   ={r, i}
+               /\ n{2} = n0{2}
+               /\ INV ICORE.m{1} IBlockSponge.m{2}
+               /\ parse p{1} = (p{2}, n{2})).
+    + wp;inline*;sp;wp;if;auto;smt(parseK min_lel size_nseq take_nseq 
+        rcons_cat parse_injective getP in_dom oget_some take_size take0
+        take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
+    wp=>/=. 
+    conseq(:_==>  ={r, i}
              /\ valid p{2}
              /\ 0 < n{2}
-             /\ p{1} = p{2} ++ nseq (n - 1){2} b0
-             /\ 0 < i{1}
-             /\ INV ICore.m{1} IBlockSponge.m{2}).
-      + wp; call (_:    arg{1} = arg{2}.`1
-                     /\ arg{2}.`2 = 1
-                     /\ INV ICore.m{1} IBlockSponge.m{2}
-                     ==>    res{2} = [res{1}]
-                         /\ INV ICore.m{1} IBlockSponge.m{2}).
-        + admit. (* This is false because of the validity check. Figure it out. *)
-        auto=> /> &1 &2 valid_p n_gt0 i_gt0 _ _ _ i_le_szp.
-        have ->: take i{2} (p{2} ++ nseq (n{2} - 1) b0) = take i{2} p{2}.
-        + rewrite take_cat; case: (i{2} = size p{2})=> [-> /=|/#].
-          by rewrite take0 take_size cats0.
-        move: n_gt0 valid_p=> ^n_gt0 /parseK H ^valid_p /H {H} @/format -> /=.
-        by move=> b mc mb _; rewrite cats1 /= size_cat size_nseq /#.
-      (* BUG: auto=> />. anomaly: ECLowGOal.InvalidProofTerm *)
-      auto=> &1 &2 [#] !->> parse_p valid_p n_gt0 HINV /=; rewrite valid_p n_gt0 HINV.
-      move: n_gt0 valid_p=> ^n_gt0 /parseK H ^valid_p /H {H}.
-      rewrite -parse_p=> /parse_injective <<- @/format /=.
-      rewrite parse_p size_cat size_nseq /=.
-      split=> [/#|mc i r mb ? ? + + [#] <*> /=].
-      (* stupid off-by-one *) admit.
+             /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0
+             /\ i{1} = size p{2}
+             /\ parse p{1} = (p{2}, n{2})
+             /\ INV ICORE.m{1} IBlockSponge.m{2});progress;..-2:smt(cats0 size_cat size_ge0).
+    while(   ={r,i}
+          /\ valid p{2}
+          /\ 0 < n{2}
+          /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0
+          /\ 0 < i{1} <= size p{2}
+          /\ parse p{1} = (p{2}, n{2})
+          /\ INV ICORE.m{1} IBlockSponge.m{2}).
+    + inline*;auto;sp;rcondt{2}1;1:(auto;smt(valid_take)). 
+      rcondt{2}1;1:auto;sp;rcondf{2}5;1:auto;if;auto;
+        smt(parse_injective getP oget_some in_dom take_size take0 take_cat 
+          parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
+    auto;smt(parseK min_lel size_nseq take_nseq valid_spec
+        rcons_cat parse_injective getP in_dom oget_some take_size take0
+        take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
   + admit.
   + proc; sp; if=> //=; inline{1} 1; rcondt{1} 4.
     + by auto=> /> &hr _ ^valid_x+ ^n_gt0 /parseK H - /H {H} ->.
+      sp;wp.
+      conseq(:_==> drop (size p{1} - 1) r0{1} = bs{2}
+                /\ ={glob S}
+                /\ INV ICORE.m{1} IBlockSponge.m{2});progress.
+      by do !congr;rewrite b2i_eq1/#.
+    inline*;rewrite/INV.
+(* This is false : because ICORE.m{1} will be bigger than IBlockSponge.m{2} *)
+    splitwhile{1}1:i<=size p;rcondt{2}1;1:auto=>/#.
+    inline*.
+    while( i{1} = i{2} + size p{1} - 1
+        /\ 
+
     (* same as the second loop in LoF.f *)  
     admit.
   by inline *; auto; call (_: true); auto=> /> p; rewrite !map0P.

@@ -1,5 +1,5 @@
-require import Pred Fun NewLogic NewDistr.
-require import Int Real List NewFMap FSet.
+require import Core Logic Distr.
+require import Int IntExtra Real List NewFMap FSet.
 require import StdOrder.
 (*---*) import IntOrder.
 
