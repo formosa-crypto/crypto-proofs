@@ -281,7 +281,19 @@ section PROOF.
     auto;smt(parseK min_lel size_nseq take_nseq valid_spec
         rcons_cat parse_injective getP in_dom oget_some take_size take0
         take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
-  + admit.
+  + proc (INV ICORE.m{1} IBlockSponge.m{2})=> //.
+    proc.
+    sp;if;1:progress=>/#.
+    splitwhile{1} 1 : i < size (parse p).`1.
+    rcondt{1}2;progress.
+    + while(i <= size (parse p).`1);auto;1:call(:true);auto;progress.
+      + rewrite/#.
+      + smt(size_ge0 valid_spec).
+      cut/#:size (parse x{m0}).`1 <= size x{m0}.
+      by rewrite-{2}(formatK x{m0}) -H/=/format size_cat size_nseq/#. 
+    inline*;auto.    
+(* now we should manage the while loops *)
+
   + proc; sp; if=> //=; inline{1} 1; rcondt{1} 4.
     + by auto=> /> &hr _ ^valid_x+ ^n_gt0 /parseK H - /H {H} ->.
       sp;wp.
