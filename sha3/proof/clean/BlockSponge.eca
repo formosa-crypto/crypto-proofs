@@ -293,6 +293,8 @@ section PROOF.
       by rewrite-{2}(formatK x{m0}) -H/=/format size_cat size_nseq/#. 
     inline*;auto.    
 (* now we should manage the while loops *)
+    admit.
+  + auto.
 
   + proc; sp; if=> //=; inline{1} 1; rcondt{1} 4.
     + by auto=> /> &hr _ ^valid_x+ ^n_gt0 /parseK H - /H {H} ->.
@@ -305,9 +307,6 @@ section PROOF.
 (* This is false : because ICORE.m{1} will be bigger than IBlockSponge.m{2} *)
     splitwhile{1}1:i<=size p;rcondt{2}1;1:auto=>/#.
     inline*.
-    while( i{1} = i{2} + size p{1} - 1
-        /\ 
-
     (* same as the second loop in LoF.f *)  
     admit.
   by inline *; auto; call (_: true); auto=> /> p; rewrite !map0P.
