@@ -131,3 +131,9 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     return y;
   }
 }.
+
+
+(* we want to build S such that, 
+     forall D,
+          D^{Core(P),P} ~ D^{ICore,S(ICore)}
+*)
