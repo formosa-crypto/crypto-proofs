@@ -1,6 +1,5 @@
 pragma -oldip.
-require import Pair Option List FSet NewFMap NewDistr.
-        import NewLogic Fun.
+require import Core List FSet NewFMap Distr.
 require IterProc.
 
 (* FIXME notation *)
@@ -302,7 +301,8 @@ module LRO : RO = {
 
 lemma RRO_resample_ll : islossless RRO.resample.
 proof. 
-  proc;call (iter_ll RRO.I _)=>//;proc;auto=>/=?;apply sampleto_ll. 
+  proc;call (iter_ll RRO.I _)=>//;proc;auto=>/=?;
+    by split; first apply sampleto_ll. 
 qed.
 
 lemma eager_init :
@@ -355,9 +355,13 @@ proof.
     exists*x{1}, ((oget FRO.m.[x{2}]){1});elim*=>x1 mx;inline RRO.resample.
     call (iter_inv RRO.I (fun z=>x1<>z) (fun o1 o2 => o1 = o2 /\ o1.[x1]= Some mx) _)=>/=.
     + by conseq (I_f_neq x1 (Some mx))=>//.
-    auto=>?&mr[#]4->Hd Hget;rewrite sampleto_ll /==>?_;split.
+    auto=>?&mr[#]4->Hd Hget.
+    split; first apply sampleto_ll.
+    move=> /=_?_; split.
     + by rewrite get_oget//oget_some/==> x;rewrite -memE dom_restr/#.
-    by move=>[#]_ Heq?mr[#]->Heq'?_;rewrite in_dom Heq' oget_some /= set_eq /#.
+    move=>[#]_ Heq?mr[#]->Heq'.
+    split=> [| _ r _]; first apply sampleto_ll.
+    rewrite in_dom Heq' oget_some /= set_eq /#.
   case ((mem (dom FRO.m) x){1}).
   + inline{1} RRO.resample=>/=;rnd{1}.
     transitivity{1} 
@@ -370,7 +374,8 @@ proof.
        FRO.m{2}.[x{2}] = Some (result{2},Known)).
     + by move=>?&mr[#]-> -> ??;exists FRO.m{mr} x{mr}=>/#.
     + move=>???;rewrite in_dom=>[#]<*>[#]->/eq_except_sym H Hxm Hx2.
-      rewrite sampleto_ll=> r _;rewrite /= Hxm oget_some /=;apply /eq_sym.
+      split=> [| _ r _]; first apply sampleto_ll.
+      rewrite /= Hxm oget_some /=;apply /eq_sym.
       have /(congr1 oget):= Hx2 => <-;apply eq_except_set_eq=>//.
       by rewrite in_dom Hx2.
     + symmetry;call (iter1_perm RRO.I iter_perm2).
@@ -420,7 +425,8 @@ proof.
     seq 3 1: (={x,y} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
               l{1} = (elems (dom (restr Unknown FRO.m))){2} /\ !mem l{1} x{1} /\
               (FRO.m.[x]=Some(y, Known)){2}).
-    + inline *;auto=>?&mr[#]3->/=Hmem Hget;rewrite sampleto_ll=>?_.
+    + inline *;auto=>?&mr[#]3->/=Hmem Hget.
+      split=> [|_ c _]; first apply sampleto_ll.
       by rewrite set2_eq_except getP_eq restr_set /= dom_rem -memE !inE negb_and.
     exists* x{1},y{1},(FRO.m.[x]{1});elim*=>x1 y1 mx1;pose mx2:=Some(y1,Known).
     call (iter_inv RRO.I (fun z=>x1<>z) 
@@ -455,7 +461,8 @@ proof.
     seq 3 1: (={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
               l{1} = (elems (dom (restr Unknown FRO.m))){2} /\ !mem l{1} x{1} /\
               (FRO.m.[x]=None){2}).
-    + inline *;auto=>??[#]2->Hidm/=;rewrite sampleto_ll=>?_.
+    + inline *;auto=>??[#]2->Hidm/=.
+      split=> [| _ c _]; first apply sampleto_ll.
       rewrite eq_except_rem 2:set_eq_except // remP -memE in_fsetD1 negb_and /=.
       by rewrite restr_rem Hidm /= dom_rem.
     exists* x{1},(FRO.m.[x]{1});elim*=>x1 mx1.
@@ -486,7 +493,10 @@ proof.
   while (={l,FRO.m} /\ (forall z, mem l z => in_dom_with FRO.m z Unknown){1} /\
          in_dom_with FRO.m{1} x{1} f{1} = result{2}).
   + auto=>?&mr[#]2->Hz <-?_/=?->/=. 
-    split=>[z /mem_drop Hm|];rewrite /in_dom_with dom_set getP !inE /#.
+    split=>[z /mem_drop Hm|].
+    rewrite /in_dom_with dom_set getP !inE /#.
+    rewrite /in_dom_with in Hz.
+    rewrite /in_dom_with dom_set getP !inE; smt(mem_head_behead).
   by auto=>?&mr/=[#]3->/=;split=>// z;rewrite -memE dom_restr. 
 qed.
 
@@ -523,7 +533,9 @@ proof.
     seq 1 7 : (={x} /\ eq_except FRO.m{1} FRO.m{2} (pred1 x{1}) /\
                l{2} = (elems (dom (restr Unknown FRO.m))){1} /\
                (FRO.m.[x]){2} = Some(c{1},Unknown) /\ (FRO.m.[x]){1} = None).
-    + wp;rnd;auto=>?&mr[#]2->;rewrite in_dom sampleto_ll/==>Heq?_?->.
+    + wp;rnd;auto=>?&mr[#]2->; rewrite in_dom /=.
+      move=> Heq; split; first apply sampleto_ll.
+      move=> _ c _ ??; split=> // _.
       rewrite getP_eq restr_set/=dom_set fsetDK eq_except_sym set_set Heq/=set_eq_except/=.
       congr;apply fsetP=>z;rewrite in_fsetD1 dom_restr /in_dom_with !in_dom /#.
     exists*x{1},c{1};elim*=>x1 c1;pose mx2:=Some(c1,Unknown).
@@ -599,7 +611,7 @@ equiv LRO_RRO_get : LRO.get ~ RRO.get :
    ={x} /\ RO.m{1} = restr Known FRO.m{2} ==> ={res} /\ RO.m{1} = restr Known FRO.m{2}.
 proof. 
   proc;auto=>?&ml[]->->/=?->/=.
-  rewrite dom_restr negb_and ora_or neqK_eqU.
+  rewrite dom_restr orabP negb_and neqK_eqU.
   rewrite !restr_set/= !getP_eq oget_some;progress.
   by move:H;rewrite negb_or/= restrP in_dom /#. 
 qed.
@@ -619,8 +631,10 @@ qed.
 equiv LRO_RRO_sample : LRO.sample ~ RRO.sample:
    ={x} /\ RO.m{1} = restr Known FRO.m{2} ==> RO.m{1} = restr Known FRO.m{2}.
 proof. 
-  proc;auto=>?&ml[]_->;rewrite sampleto_ll=> ??;rewrite restr_set /==>Hnd. 
-  by rewrite rem_id // dom_restr /in_dom_with Hnd.
+  proc;auto=>?&ml[]_->.
+split=> [| _ ? _]; first apply sampleto_ll.
+rewrite restr_set /==>Hnd. 
+by rewrite rem_id // dom_restr /in_dom_with Hnd.
 qed.
 
 lemma LRO_RRO_D (D<:RO_Distinguisher{RO,FRO}) : 
