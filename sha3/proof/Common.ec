@@ -8,11 +8,11 @@ prover ["Z3"].
 prover ["Alt-Ergo"].
 *)
 
-require import Option Fun Pair Int IntExtra IntDiv Real List NewDistr.
+require import Core Int IntExtra IntDiv Real List Distr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
 require (*--*) FinType BitWord RP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
-require import NewLogic.
+(* require import NewLogic. *)
 
 pragma +implicits.
 
@@ -40,14 +40,18 @@ clone BitWord as Capacity with
          "word"  as "cap"
          "zerow" as "c0".
 
+op cdistr = Capacity.DWord.dunifin.
+
 clone export BitWord as Block with
   type word <- block,
     op n    <- r
   proof gt0_n by apply/gt0_r
 
-  rename "dword" as "bdistr"
-         "word"  as "block"
+  rename "word"  as "block"
+         "Word"  as "Block"
          "zerow" as "b0".
+
+op bdistr = DBlock.dunifin.
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
 
@@ -104,7 +108,7 @@ qed.
 
 clone export RP as Perm with
   type t <- block * capacity,
-  op   dt <- bdistr `*` Capacity.cdistr
+  op   dt <- bdistr `*` cdistr
   rename
     [module type] "RP" as "PRIMITIVE"
     [module] "P" as "Perm".
@@ -564,8 +568,8 @@ proof.
 move=> vb_xs; have bp := valid_blockP xs.
 rewrite vb_xs /= in bp.
 move: bp=> [s n] _ b2b_xs_eq.
-case: (last b0 xs <> b0)=> [// | last_xs_eq_b0].
-rewrite nnot in last_xs_eq_b0.
+case: (last b0 xs <> b0)=> [// | last_xs_eq_b0]. 
+rewrite negbK in last_xs_eq_b0.
 have xs_non_nil : xs <> [].
   case: xs b2b_xs_eq last_xs_eq_b0 vb_xs=> // contrad.
   rewrite blocks2bits_nil in contrad.

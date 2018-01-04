@@ -3,7 +3,7 @@
    independently. We obviously make it lazy. Inputs not satisfying
    a validity predicate are mapped to the empty list *)
 
-require import Option Int Bool List FSet NewFMap.
+require import Core Int Bool List FSet NewFMap.
 
 type to, from.
 

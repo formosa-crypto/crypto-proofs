@@ -1,6 +1,6 @@
 (*-------------------- Padded Block Sponge Construction ----------------*)
 
-require import Option Pair Int Real List.
+require import Core Int Real List.
 require (*--*) IRO Indifferentiability.
 require import Common.
 
@@ -65,4 +65,6 @@ lemma conclusion :
       `|  Pr[RealIndif(Sponge, Perm, D).main() @ &m : res]
         - Pr[IdealIndif(IRO, S, D).main() @ &m : res]|
        < eps.
-proof. admit. qed.
+proof. 
+admit.
+qed.

@@ -72,11 +72,11 @@ module (BlockSponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
         (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
         i <- i + 1;
       }
-      i <- 0;
-      while (i < n) {
+      i <- 1;
+      while (i <= n) {
         r <- rcons r sa;
-        i       <- i + 1;
-        if (i < n) {
+        i <- i + 1;
+        if (i <= n) {
           (sa,sc) <@ P.f(sa,sc);
         }
       }
@@ -112,10 +112,13 @@ module IBlockSponge : FUNCTIONALITY = {
       }
       i <- 1;
       while (i <= n) {
-        b <@ fill_in(x, i);
         bs <- rcons bs b;
         i <- i + 1;
+        if (i <= n) {
+          b <@ fill_in(x, i);
+        }
       }
+      bs <- rcons bs b;
     }
     return bs;
   }

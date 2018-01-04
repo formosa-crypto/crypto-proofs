@@ -1,6 +1,6 @@
 (*************************- Random Permutation -*************************)
 
-require import Option Real FSet NewFMap Distr.
+require import Core Real FSet NewFMap Distr.
 require import Dexcepted StdOrder. import RealOrder.
 require import Ring StdRing. import RField.
 require Monoid. import AddMonoid.
@@ -54,7 +54,7 @@ proof. by proc; auto. qed.
 (* maybe a useful standard lemma? *)
 
 lemma mu_except ['a] (d : 'a distr, y : 'a, P : 'a -> bool) :
-  in_supp y d => ! P y => mu d P < mu d predT.
+  y \in d => ! P y => mu d P < mu d predT.
 proof.
 move=> in_supp_yd notP_y.
 have -> : mu d P = mu d predT - mu d (predC P)
