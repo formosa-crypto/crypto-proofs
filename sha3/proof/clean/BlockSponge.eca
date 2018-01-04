@@ -24,20 +24,20 @@ lemma parse_injective: injective parse.
 proof. by move=> bs1 bs2 eq_format; rewrite -formatK eq_format (@formatK bs2). qed.
 
 lemma parse_valid p: valid p => parse p = (p,1).
-proof. 
-move=>h;cut{1}->:p=format p 1;2:smt(parseK). 
+proof.
+move=>h;cut{1}->:p=format p 1;2:smt(parseK).
 by rewrite/format/=nseq0 cats0.
 qed.
 
 (******************* Useful lemmas ******************)
 lemma take_nseq (b:block) i j : take i (nseq j b) = nseq (min i j) b.
-proof. 
+proof.
 move:i;elim/natind=>//=.
-+ smt(take_le0 nseq0_le). 
-move=>i hi0 hind. 
-case(i + 1 <= j)=>hi1j. 
++ smt(take_le0 nseq0_le).
+move=>i hi0 hind.
+case(i + 1 <= j)=>hi1j.
 + rewrite (take_nth b);1:smt(size_nseq).
-  rewrite hind nth_nseq 1:/# //=-nseqSr/#. 
+  rewrite hind nth_nseq 1:/# //=-nseqSr/#.
 rewrite take_oversize;smt(size_nseq).
 qed.
 
@@ -47,7 +47,7 @@ qed.
 require (*--*) NewCore.
 
 clone import NewCore as Low with
-  op valid bs <- valid (parse bs).`1 /\ 0 < (parse bs).`2
+  op valid bs <- let (b,s) = bs in valid b /\ 0 < s
 proof * by done.
 
 (** High-Level Definitions **)
@@ -102,10 +102,15 @@ module IBlockSponge : FUNCTIONALITY = {
 
   proc f(x, n) = {
     var b, bs;
-    var i <- 1;
+    var i <- 0;
 
     bs <- [];
     if (valid x /\ 0 < n) {
+      while (i < size x) {
+        b <@ fill_in(take i x,1);
+        i <- i + 1;
+      }
+      i <- 1;
       while (i <= n) {
         b <@ fill_in(x, i);
         bs <- rcons bs b;
@@ -116,12 +121,11 @@ module IBlockSponge : FUNCTIONALITY = {
   }
 }.
 
-(* Parametric Simulator *)
+(* Parametric Simulator *) 
 module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
   module LoF = {
-    proc f(x : block list): block list = {
+    proc f(p : block list, n : int): block list = {
       var r <- [];
-      var (p,n) <- parse x;
       var b <- [];
       var i <- 1;
 
@@ -155,8 +159,7 @@ module (LoDist (D : DISTINGUISHER) : Low.DISTINGUISHER)
       var r <- [];
 
       if (valid p /\ 0 < n) {
-        r <@ F.f(format p n);
-        r <- drop (size p - b2i (n <> 0)) r;
+        r <@ F.f(p,n);
       }
       return r;
     }
@@ -184,58 +187,22 @@ section PROOF.
   + byequiv (_: ={glob D, glob P} ==> _ )=> //=; proc.
     call (_: ={glob P}); first 2 by sim.
     + proc=> /=; sp; if=>//=; inline{1} 1.
-      seq  4  0: (   ={glob P, p, n, r, sa, sc, i}
-                  /\ p{1} <> []
-                  /\ 0 < n{1}
-                  /\ sa{1} = b0
-                  /\ i{1} = 0
-                  /\ r{1} = []
-                  /\ r0{1} = []
-                  /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
-      + by auto=> /> &2 /valid_spec.
-      splitwhile{1} 1: (i < size p).
-      splitwhile{2} 3: (i < n - 1).
-      rcondt{2} 4.
-      + auto; while (i < n); 2:by wp; conseq (_: _ ==> true)=> // /#.
-        by sp; if; 1:call (_: true); auto=> /#.
-      rcondf{2} 6.
-      + auto; while (i < n); 2:by wp; conseq (_: _ ==> true)=> // /#.
-        by sp; if; 1:call (_: true); auto=> /#.
-      rcondf{2} 6.
-      + auto; while (i < n); 2:by wp; conseq (_: _ ==> true)=> // /#.
-        by sp; if; 1:call (_: true); auto=> /#.
-      wp; while (   ={glob P, p, n, sa, sc}
-                 /\ i{1} = i{2} + size p{2}
-                 /\ drop (size p - 1){1} r0{1} = rcons r{2} sa{2}
-                 /\ 0 <= i{2}
-                 /\ p{1} <> []
-                 /\ 0 < n{1}
-                 /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
-      + rcondt{2} 3; 1:by auto=> /#.
-        wp; call (_: true); auto=> /> &1 &2 eq_r i_ge0 p_neq_nil n_ge0 i1_lt_szp0 _ i2_lt_Pn.
-        rewrite nth_cat -subr_lt0 addzK ltzNge i_ge0 /=.
-        rewrite nth_nseq // BlockMonoid.AddMonoid.addm0=> /= -[sa sc] /=.
-        rewrite size_cat size_nseq; split=> [|/#]; split=> [/#|]; split=> [|/#].
-        smt (@List).
-     wp; while (   ={glob P, p, n, sa, sc, i}
-                /\ i{1} <= size p{1}
-                /\ size r0{1} = i{1}
-                /\ last b0 r0{1} = sa{2}
-                /\ p0{1} = p{1} ++ nseq (n{1} - 1) b0).
-     + wp; call (_: true); auto=> /> &1 &2.
-       rewrite size_cat size_nseq=> _ _ szr0_lt_szp.
-       rewrite nth_cat szr0_lt_szp=> /= -[sa sc] /=.
-       by rewrite size_rcons last_rcons /= /#.
-     auto=> /> &2 p_neq_nil n_gt0.
-     rewrite size_cat size_nseq size_ge0; split=> [/#|r _].
-     rewrite ltzNge=> /= szp_le_szr szr_le_szp; split=> [|/#]; split=> [|/#]; split=> [/#|].
-     smt (@List).
-   by inline *; call (_: true).
+      sp;wp.
+      rcondt{1}3;progress.
+      + by wp;while(valid p0 /\ 0 < n0);auto;call(:true);auto.
+      while( ={sa,sc,glob P} /\ i{1} = i{2} + 1 /\ r0{1} = r{2}
+          /\ n{2} = n0{1});auto.
+      + sp;if;1:progress=>/#;1:call(:true);auto=>/#.
+      by conseq(:_==> ={sa, sc, glob P} /\ r0{1} = r{2} /\ n{2} = n0{1});
+        2:sim;progress=>/#.
+
+    by inline*;auto;call(:true);auto.
+
   byequiv (_: ={glob D, glob S} ==> _)=> //=; proc.
-  call (_:    ={glob S}
-           /\ INV ICORE.m{1} IBlockSponge.m{2}).
-  + proc (INV ICORE.m{1} IBlockSponge.m{2})=> //.
-    proc=> /=; sp; if=> [&1 &2 [#] <*> <-| |] //.
+  call (_:    ={glob S} /\ ={m}(ICORE,IBlockSponge) ).
+  + proc (ICORE.m{1} = IBlockSponge.m{2})=> //.
+    proc=> /=; sp;if=> [&1 &2 [#] <*>| |] //.
+    inline *.
     conseq (_:    ={r, i}
                /\ r{2} = []
                /\ b{2} = []
@@ -291,7 +258,32 @@ section PROOF.
       + smt(size_ge0 valid_spec).
       cut/#:size (parse x{m0}).`1 <= size x{m0}.
       by rewrite-{2}(formatK x{m0}) -H/=/format size_cat size_nseq/#. 
-    inline*;auto.    
+    inline*;auto.
+    replace{2} { 
+      while { 
+        setup; 
+        if {
+         (while as loop)
+        };
+        setup_end
+      };
+      after
+    } by {
+      while(i < size p) {
+        setup;
+        loop;
+        setup_end;
+      }
+      after;
+    }
+    (r{2} = [] /\ (p{2}, n{2}) = parse x{2} /\ b{2} = [] /\ 
+      i{2} = 1 /\ r{1} = [] /\ i{1} = 1 /\ p{1} = x{2} /\ 
+      INV ICORE.m{1} IBlockSponge.m{2} /\ valid (parse p{1}).`1 /\ 
+      0 < (parse p{1}).`2
+      ==> r{1} = r{2} ++ bs0{2} /\ INV ICORE.m{1} IBlockSponge.m{2})
+    (={i,p,n,x,r,b,IBlockSponge.m,
+
+
 (* now we should manage the while loops *)
     admit.
   + auto.

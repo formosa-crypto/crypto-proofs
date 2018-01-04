@@ -8,7 +8,7 @@ require import NewCommon.
 (*---*) import Block DBlock Capacity DCapacity.
 
 (** Validity of Functionality Queries **)
-op valid: block list -> bool.
+op valid: block list * int -> bool.
 
 (*** DEFINITIONS ***)
 type state  = block  * capacity.
@@ -17,7 +17,7 @@ op   dstate = bdistr `*` cdistr.
 (** Indifferentiability Experiment **)
 clone include Indifferentiability with
   type p     <- state,
-  type f_in  <- block list,
+  type f_in  <- block list * int,
   type f_out <- block list
   rename [module] "GReal" as "RealIndif"
          [module] "GIdeal"  as "IdealIndif".
@@ -26,15 +26,24 @@ clone include Indifferentiability with
 module (CORE : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
   proc init () = {}
 
-  proc f(p : block list): block list = {
+  proc f(p : block list, n : int): block list = {
     var (sa,sc) <- (b0,c0);
     var r <- [];
     var i <- 0;
 
     while (i < size p) {
       (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
-      r <- rcons r sa;
       i <- i + 1;
+    }
+    i <- 1;
+    if (valid (p,n)) {
+      while(i <= n) {
+        r <- rcons r sa;
+        i <- i + 1;
+        if (i <= n) {
+          (sa,sc) <@ P.f(sa,sc);
+        }
+      }
     }
     return r;
   }
@@ -42,27 +51,27 @@ module (CORE : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
 
 (** Ideal CORE Functionality **)
 module ICORE : FUNCTIONALITY = {
-  var m : (block list,block) fmap
+  var m : (block list * int,block) fmap
 
   proc init() = {
     m = map0;
   }
 
-  proc fill_in(p : block list) = {
-    if (!mem (dom m) p) {
-      m.[p] <$ bdistr;
+  proc fill_in(p : block list, n : int): block = {
+    if (!mem (dom m) (p,n)) {
+      m.[(p,n)] <$ bdistr;
     }
-    return oget m.[p];
+    return oget m.[(p,n)];
   }
 
-  proc f(p : block list): block list = {
+  proc f(p : block list, n : int): block list = {
     var r <- [];
     var i <- 1;
     var b;
 
-    if (valid p) {
-      while (i <= size p) {
-        b <@ fill_in(take i p);
+    if (valid (p,n)) {
+      while (i <= n) {
+        b <@ fill_in(p,i);
         r <- rcons r b;
         i <- i + 1;
       }
@@ -71,7 +80,7 @@ module ICORE : FUNCTIONALITY = {
   }
 }.
 
-(** CORE Simulator **)
+(** CORE Simulator **) 
 module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
   var m, mi : (state,state) fmap
   var pi    : (capacity, block list * block) fmap
@@ -89,7 +98,7 @@ module (S : SIMULATOR) (F : DFUNCTIONALITY) : PRIMITIVE = {
     if (!mem (dom m) x) {
       if (mem (dom pi) x.`2) {
         (p,v) <- oget pi.[x.`2]; 
-        b     <- F.f (rcons p (v +^ x.`1));
+        b     <- F.f (rcons p (v +^ x.`1),1);
         y1    <- last b0 b;
       } else {
         y1 <$ bdistr;
