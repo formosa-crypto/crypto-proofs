@@ -31,18 +31,17 @@ module (CORE : CONSTRUCTION) (P : DPRIMITIVE): FUNCTIONALITY = {
     var r <- [];
     var i <- 0;
 
-    while (i < size p) {
-      (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
-      i <- i + 1;
-    }
-    i <- 1;
     if (valid (p,n)) {
-      while(i <= n) {
+      while (i < size p) {
+        (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
+        i <- i + 1;
+      }
+      i <- 1;
+      r <- rcons r sa;
+      while(i < n) {
+        (sa,sc) <@ P.f(sa,sc);
         r <- rcons r sa;
         i <- i + 1;
-        if (i <= n) {
-          (sa,sc) <@ P.f(sa,sc);
-        }
       }
     }
     return r;

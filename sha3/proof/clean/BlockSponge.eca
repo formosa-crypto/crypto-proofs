@@ -73,12 +73,11 @@ module (BlockSponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
         i <- i + 1;
       }
       i <- 1;
-      while (i <= n) {
+      r <- rcons r sa;
+      while (i < n) {
+        (sa,sc) <@ P.f(sa,sc);
         r <- rcons r sa;
         i <- i + 1;
-        if (i <= n) {
-          (sa,sc) <@ P.f(sa,sc);
-        }
       }
     }
     return r;
@@ -102,27 +101,27 @@ module IBlockSponge : FUNCTIONALITY = {
 
   proc f(x, n) = {
     var b, bs;
-    var i <- 0;
+    var i <- 1;
 
     bs <- [];
     if (valid x /\ 0 < n) {
-      while (i < size x) {
-        b <@ fill_in(take i x,1);
-        i <- i + 1;
-      }
-      i <- 1;
-      while (i <= n) {
-        bs <- rcons bs b;
-        i <- i + 1;
-        if (i <= n) {
-          b <@ fill_in(x, i);
-        }
-      }
+      (* while (i < size x) { *)
+      (*   b <@ fill_in(take i x,1); *)
+      (*   i <- i + 1; *)
+      (* } *)
+      (* i <- 1; *)
+      b <@ fill_in(x, 1);
       bs <- rcons bs b;
+      while (i < n) {
+        i <- i + 1;
+        b <@ fill_in(x, i);
+        bs <- rcons bs b;
+      }
     }
     return bs;
   }
 }.
+
 
 (* Parametric Simulator *) 
 module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
@@ -134,11 +133,11 @@ module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
 
       if (valid p /\ 0 < n)
       {
-        while (i < size p) {
-          b <@ F.f(take i p,1);
-          r <- r ++ b;
-          i <- i + 1;
-        }
+        (* while (i < size p) { *)
+        (*   b <@ F.f(take i p,1); *)
+        (*   r <- r ++ b; *)
+        (*   i <- i + 1; *)
+        (* } *)
         b <@ F.f(p,n);
         r <- r ++ b;
       }
@@ -191,11 +190,8 @@ section PROOF.
     call (_: ={glob P}); first 2 by sim.
     + proc=> /=; sp; if=>//=; inline{1} 1.
       sp;wp.
-      rcondt{1}3;progress.
-      + by wp;while(valid p0 /\ 0 < n0);auto;call(:true);auto.
-      while( ={sa,sc,glob P} /\ i{1} = i{2} + 1 /\ r0{1} = r{2}
-          /\ n{2} = n0{1});auto.
-      + sp;if;1:progress=>/#;1:call(:true);auto=>/#.
+      rcondt{1}1;progress.
+      while( ={sa,sc,glob P,i} /\ r0{1} = r{2} /\ n{2} = n0{1});auto;1:call(:true);auto.
       by conseq(:_==> ={sa, sc, glob P} /\ r0{1} = r{2} /\ n{2} = n0{1});
         2:sim;progress=>/#.
 
@@ -205,105 +201,127 @@ section PROOF.
   call (_:    ={glob S} /\ ={m}(ICORE,IBlockSponge) ).
   + proc (ICORE.m{1} = IBlockSponge.m{2})=> //.
     proc=> /=; sp;if=> [&1 &2 [#] <*>| |] //.
-    inline *.
-    conseq (_:    ={r, i}
-               /\ r{2} = []
-               /\ b{2} = []
-               /\ i{2} = 1
-               /\ parse p{1} = (p{2},n{2})
-               /\ valid p{2}
-               /\ 0 < n{2}
-               /\ INV ICORE.m{1} IBlockSponge.m{2}
-               ==> _)=> />.
-    + by move=> &1 &2=> <-.
-    splitwhile{1} 1: (i < size (parse p).`1); inline{2} 2.
-    rcondt{2} 6; first by auto; while (true)=> //; auto=> /> &hr <- //.
-    wp. while (   i{1} = i0{2} + size x0{2} - 1
-               /\ p{1} = x0{2} ++ nseq (n0 - 1){2} b0
-               /\ r{1} = r{2} ++ bs{2}
-               /\ 0 < i0{2}
-               /\ valid x0{2}
-               /\ n{2} = n0{2}
-               /\ INV ICORE.m{1} IBlockSponge.m{2}
-               /\ parse p{1} = (p{2}, n{2})).
-    + wp;inline*;sp;wp;if;auto;smt(parseK min_lel size_nseq take_nseq 
-        rcons_cat parse_injective getP in_dom oget_some take_size take0
-        take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
-    wp=>/=. 
-    conseq(:_==>  ={r, i}
-             /\ valid p{2}
-             /\ 0 < n{2}
-             /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0
-             /\ i{1} = size p{2}
-             /\ parse p{1} = (p{2}, n{2})
-             /\ INV ICORE.m{1} IBlockSponge.m{2});progress;..-2:smt(cats0 size_cat size_ge0).
-    while(   ={r,i}
-          /\ valid p{2}
-          /\ 0 < n{2}
-          /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0
-          /\ 0 < i{1} <= size p{2}
-          /\ parse p{1} = (p{2}, n{2})
-          /\ INV ICORE.m{1} IBlockSponge.m{2}).
-    + inline*;auto;sp;rcondt{2}1;1:(auto;smt(valid_take)). 
-      rcondt{2}1;1:auto;sp;rcondf{2}5;1:auto;if;auto;
-        smt(parse_injective getP oget_some in_dom take_size take0 take_cat 
-          parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
-    auto;smt(parseK min_lel size_nseq take_nseq valid_spec
-        rcons_cat parse_injective getP in_dom oget_some take_size take0
-        take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0).
-  + proc (INV ICORE.m{1} IBlockSponge.m{2})=> //.
-    proc.
-    sp;if;1:progress=>/#.
-    splitwhile{1} 1 : i < size (parse p).`1.
-    rcondt{1}2;progress.
-    + while(i <= size (parse p).`1);auto;1:call(:true);auto;progress.
-      + rewrite/#.
-      + smt(size_ge0 valid_spec).
-      cut/#:size (parse x{m0}).`1 <= size x{m0}.
-      by rewrite-{2}(formatK x{m0}) -H/=/format size_cat size_nseq/#. 
-    inline*;auto.
-    replace{2} { 
-      while { 
-        setup; 
-        if {
-         (while as loop)
-        };
-        setup_end
-      };
-      after
-    } by {
-      while(i < size p) {
-        setup;
-        loop;
-        setup_end;
-      }
-      after;
-    }
-    (r{2} = [] /\ (p{2}, n{2}) = parse x{2} /\ b{2} = [] /\ 
-      i{2} = 1 /\ r{1} = [] /\ i{1} = 1 /\ p{1} = x{2} /\ 
-      INV ICORE.m{1} IBlockSponge.m{2} /\ valid (parse p{1}).`1 /\ 
-      0 < (parse p{1}).`2
-      ==> r{1} = r{2} ++ bs0{2} /\ INV ICORE.m{1} IBlockSponge.m{2})
-    (={i,p,n,x,r,b,IBlockSponge.m,
-
-
-(* now we should manage the while loops *)
-    admit.
-  + auto.
-
-  + proc; sp; if=> //=; inline{1} 1; rcondt{1} 4.
-    + by auto=> /> &hr _ ^valid_x+ ^n_gt0 /parseK H - /H {H} ->.
-      sp;wp.
-      conseq(:_==> drop (size p{1} - 1) r0{1} = bs{2}
-                /\ ={glob S}
-                /\ INV ICORE.m{1} IBlockSponge.m{2});progress.
-      by do !congr;rewrite b2i_eq1/#.
-    inline*;rewrite/INV.
-(* This is false : because ICORE.m{1} will be bigger than IBlockSponge.m{2} *)
-    splitwhile{1}1:i<=size p;rcondt{2}1;1:auto=>/#.
     inline*.
-    (* same as the second loop in LoF.f *)  
-    admit.
-  by inline *; auto; call (_: true); auto=> /> p; rewrite !map0P.
-  qed.
+    sp;rcondt{2}1;auto.
+    rcondt{1}1;1:auto=>/#.
+    conseq(:_ ==> r{1} = bs{2} /\ ICORE.m{1} = IBlockSponge.m{2});progress.
+    by while( i{1} = i0{2} + 1 /\ n{1} = n0{2} /\ x{2} = p{1}
+        /\ ICORE.m{1} = IBlockSponge.m{2} /\ r{1} = bs{2});sp;if;auto=>/#.
+
+  + proc(={m}(ICORE,IBlockSponge))=>//=.
+    proc;inline*;sp;if;auto;sp;rcondt{2}1;auto;sp.
+    rcondt{1}1;1:auto=>/#;sp.
+    conseq(:_ ==> r{1} = bs{2} /\ ICORE.m{1} = IBlockSponge.m{2});progress.
+    by while( i{1} = i0{2} + 1 /\ n{1} = n0{2} /\ x{2} = p{1}
+        /\ ICORE.m{1} = IBlockSponge.m{2} /\ r{1} = bs{2});sp;if;auto=>/#.
+
+  + proc;inline*;sp;if;auto;sp;rcondt{1}1;auto;progress.
+    rcondt{1}1;1:auto=>/#;sp.
+    conseq(:_ ==> r0{1} = bs{2} /\ ICORE.m{1} = IBlockSponge.m{2});progress.
+    by while( i{1} = i{2} + 1 /\ n0{1} = n{2} /\ x{2} = p0{1}
+        /\ ICORE.m{1} = IBlockSponge.m{2} /\ r0{1} = bs{2});sp;if;auto=>/#.
+
+  by inline*;auto;call(:true);auto.
+qed.
+
+(*     conseq (_:    ={r, i} *)
+(*                /\ r{2} = [] *)
+(*                /\ b{2} = [] *)
+(*                /\ i{2} = 1 *)
+(*                /\ parse p{1} = (p{2},n{2}) *)
+(*                /\ valid p{2} *)
+(*                /\ 0 < n{2} *)
+(*                /\ INV ICORE.m{1} IBlockSponge.m{2} *)
+(*                ==> _)=> />. *)
+(*     + by move=> &1 &2=> <-. *)
+(*     splitwhile{1} 1: (i < size (parse p).`1); inline{2} 2. *)
+(*     rcondt{2} 6; first by auto; while (true)=> //; auto=> /> &hr <- //. *)
+(*     wp. while (   i{1} = i0{2} + size x0{2} - 1 *)
+(*                /\ p{1} = x0{2} ++ nseq (n0 - 1){2} b0 *)
+(*                /\ r{1} = r{2} ++ bs{2} *)
+(*                /\ 0 < i0{2} *)
+(*                /\ valid x0{2} *)
+(*                /\ n{2} = n0{2} *)
+(*                /\ INV ICORE.m{1} IBlockSponge.m{2} *)
+(*                /\ parse p{1} = (p{2}, n{2})). *)
+(*     + wp;inline*;sp;wp;if;auto;smt(parseK min_lel size_nseq take_nseq  *)
+(*         rcons_cat parse_injective getP in_dom oget_some take_size take0 *)
+(*         take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0). *)
+(*     wp=>/=.  *)
+(*     conseq(:_==>  ={r, i} *)
+(*              /\ valid p{2} *)
+(*              /\ 0 < n{2} *)
+(*              /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0 *)
+(*              /\ i{1} = size p{2} *)
+(*              /\ parse p{1} = (p{2}, n{2}) *)
+(*              /\ INV ICORE.m{1} IBlockSponge.m{2});progress;..-2:smt(cats0 size_cat size_ge0). *)
+(*     while(   ={r,i} *)
+(*           /\ valid p{2} *)
+(*           /\ 0 < n{2} *)
+(*           /\ p{1} = p{2} ++ nseq (n{2} - 1) Block.b0 *)
+(*           /\ 0 < i{1} <= size p{2} *)
+(*           /\ parse p{1} = (p{2}, n{2}) *)
+(*           /\ INV ICORE.m{1} IBlockSponge.m{2}). *)
+(*     + inline*;auto;sp;rcondt{2}1;1:(auto;smt(valid_take)).  *)
+(*       rcondt{2}1;1:auto;sp;rcondf{2}5;1:auto;if;auto; *)
+(*         smt(parse_injective getP oget_some in_dom take_size take0 take_cat  *)
+(*           parse_valid valid_take cat_rcons cats0 size_cat size_ge0). *)
+(*     auto;smt(parseK min_lel size_nseq take_nseq valid_spec *)
+(*         rcons_cat parse_injective getP in_dom oget_some take_size take0 *)
+(*         take_cat parse_valid valid_take cat_rcons cats0 size_cat size_ge0). *)
+(*   + proc (INV ICORE.m{1} IBlockSponge.m{2})=> //. *)
+(*     proc. *)
+(*     sp;if;1:progress=>/#. *)
+(*     splitwhile{1} 1 : i < size (parse p).`1. *)
+(*     rcondt{1}2;progress. *)
+(*     + while(i <= size (parse p).`1);auto;1:call(:true);auto;progress. *)
+(*       + rewrite/#. *)
+(*       + smt(size_ge0 valid_spec). *)
+(*       cut/#:size (parse x{m0}).`1 <= size x{m0}. *)
+(*       by rewrite-{2}(formatK x{m0}) -H/=/format size_cat size_nseq/#.  *)
+(*     inline*;auto. *)
+(*     replace{2} {  *)
+(*       while {  *)
+(*         setup;  *)
+(*         if { *)
+(*          (while as loop) *)
+(*         }; *)
+(*         setup_end *)
+(*       }; *)
+(*       after *)
+(*     } by { *)
+(*       while(i < size p) { *)
+(*         setup; *)
+(*         loop; *)
+(*         setup_end; *)
+(*       } *)
+(*       after; *)
+(*     } *)
+(*     (r{2} = [] /\ (p{2}, n{2}) = parse x{2} /\ b{2} = [] /\  *)
+(*       i{2} = 1 /\ r{1} = [] /\ i{1} = 1 /\ p{1} = x{2} /\  *)
+(*       INV ICORE.m{1} IBlockSponge.m{2} /\ valid (parse p{1}).`1 /\  *)
+(*       0 < (parse p{1}).`2 *)
+(*       ==> r{1} = r{2} ++ bs0{2} /\ INV ICORE.m{1} IBlockSponge.m{2}) *)
+(*     (={i,p,n,x,r,b,IBlockSponge.m, *)
+
+
+(* (* now we should manage the while loops *) *)
+(*     admit. *)
+(*   + auto. *)
+
+(*   + proc; sp; if=> //=; inline{1} 1; rcondt{1} 4. *)
+(*     + by auto=> /> &hr _ ^valid_x+ ^n_gt0 /parseK H - /H {H} ->. *)
+(*       sp;wp. *)
+(*       conseq(:_==> drop (size p{1} - 1) r0{1} = bs{2} *)
+(*                 /\ ={glob S} *)
+(*                 /\ INV ICORE.m{1} IBlockSponge.m{2});progress. *)
+(*       by do !congr;rewrite b2i_eq1/#. *)
+(*     inline*;rewrite/INV. *)
+(* (* This is false : because ICORE.m{1} will be bigger than IBlockSponge.m{2} *) *)
+(*     splitwhile{1}1:i<=size p;rcondt{2}1;1:auto=>/#. *)
+(*     inline*. *)
+(*     (* same as the second loop in LoF.f *)   *)
+(*     admit. *)
+(*   by inline *; auto; call (_: true); auto=> /> p; rewrite !map0P. *)
+(*   qed. *)
 end section PROOF.
