@@ -132,12 +132,12 @@ module (HiSim (S : Low.SIMULATOR) : SIMULATOR) (F : DFUNCTIONALITY) = {
     proc f(p : block list, n : int): block list = {
       var r <- [];
       var b;
-      var i <- 0;
+      var i <- 1;
 
       if (valid p /\ 0 < n)
       {
-        while (i < n) {
-          b <@ F.f(p ++ nseq i b0);
+        while (i <= n) {
+          b <@ F.f(format p i);
           r <- rcons r b;
           i <- i + 1;
         }
@@ -205,17 +205,16 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
     var (p,n) <- parse x;
 
     while (i < size p) {
-      ICORE.fill_in(take i p, 1);
-      order <- rcons order (take i p);
+      ICORE.fill_in(parse(take i p));
       i <- i + 1;
     }
     i <- 1;
-    while (i <= n) {
+    while (i < n) {
       ICORE.fill_in(p, i);
-      order <- rcons order (format p i);
       i <- i + 1;
     }
-    c <@ ICORE.fill_in(p,n);
+    c <@ ICORE.fill_in(parse(format p n));
+    order <- rcons order x;
     return c;
   }
 
@@ -236,35 +235,39 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
   }
   proc ewhile() : unit = {
     var world <- order;
+    var i <- 1;
+    var (p,n);
     
     var y <- [];
+
     while(world <> []) {
       y <- head ([]) world;
-      fill_in(y);
+      i <- 1;
+      (p,n) <- parse y;
+      while (i < size p) {
+        ICORE.fill_in(parse(take i p));
+        i <- i + 1;
+      }
+      i <- 1;
+      while (i < n) {
+        ICORE.fill_in(parse(format p i));
+        i <- i + 1;
+      }
       world <- behead world;
     }
   }
   }.
 
-  local module ICORE_e = {
+  local module ICORE_e : Low.FUNCTIONALITY = {
   proc init = ICORE_eager.init
 
 
   proc fill_in (x : block list) = {
-    var i <- 1;
     var c;
     var (p,n) <- parse x;
 
-    while (i < size p) {
-      ICORE_eager.order <- rcons ICORE_eager.order (take i p);
-      i <- i + 1;
-    }
-    i <- 1;
-    while (i <= n) {
-      ICORE_eager.order <- rcons ICORE_eager.order (format p i);
-      i <- i + 1;
-    }
     c <@ ICORE.fill_in(p,n);
+    ICORE_eager.order <- rcons ICORE_eager.order (x);
     return c;
   }
 
@@ -286,6 +289,223 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
   }
   }.
 
+  local lemma eager_ICORE_fill_in :
+    eager[ ICORE_eager.ewhile();, ICORE.fill_in 
+         ~ ICORE.fill_in, ICORE_eager.ewhile();
+         : ={arg, ICORE_eager.order, ICORE.m}
+        ==>
+           ={res, ICORE_eager.order, ICORE.m}].
+  proof.
+  eager proc.
+  inline ICORE_eager.ewhile;symmetry.
+  swap{1}[1..2]2.
+  replace{1} { all } by {
+      result <- b0;
+      all;
+    }
+    (={p,n,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m})
+    (={p,n,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m});
+    progress;1:rewrite/#;1:sim.
+  replace{2} { all } by {
+      result <- b0;
+      all;
+    }
+    (={p,n,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m})
+    (={p,n,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m});
+    progress;1:rewrite/#;2:sim.
+  sp;swap{1}3-2;sp.
+  conseq(: ={world, ICORE_eager.order, ICORE.m, p, n, result}
+      ==> ={world, ICORE_eager.order, ICORE.m, p, n, result});progress.
+  eager while(J: 
+      if (!((p,n) \in dom ICORE.m)) {
+        ICORE.m.[(p,n)] <$ bdistr;
+      }
+      result <- oget ICORE.m.[(p, n)];
+      ~
+      if (!((p,n) \in dom ICORE.m)) {
+        ICORE.m.[(p,n)] <$ bdistr;
+      }
+      result <- oget ICORE.m.[(p, n)];
+    :
+      ={world, ICORE_eager.order, ICORE.m, p, n, result}
+    ==>
+      ={world, ICORE_eager.order, ICORE.m, p, n, result});progress;1,3:sim.
+    swap{2}7 2;sim;swap{1}3-2;sp 1 1.
+    conseq(: ={y,p,n,ICORE.m,ICORE_eager.order}
+      ==> ={result,ICORE.m,ICORE_eager.order});progress.
+
+    replace{1} { (if;<-); body } by {
+        result <@ ICORE.fill_in(p,n);
+        body;
+      }
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={result,ICORE.m,ICORE_eager.order})
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={result,ICORE.m,ICORE_eager.order});
+      progress;1:rewrite/#;1:(inline{2}1;sim).
+    replace{2} { body;(if;<-) } by {
+        body;
+        result <@ ICORE.fill_in(p,n);
+      }
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={result,ICORE.m,ICORE_eager.order})
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={result,ICORE.m,ICORE_eager.order});
+      progress;1:rewrite/#;2:(inline*;sim).
+
+    replace{2} { begin; (while as loop); (<@ as result) } by {
+        begin;
+        result;
+        loop;
+      }
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={n0,p0,result,ICORE.m,ICORE_eager.order})
+      (={y,p,n,ICORE.m,ICORE_eager.order}
+        ==> ={n0,p0,result,ICORE.m,ICORE_eager.order});
+      progress;1:rewrite/#;last first.
+
+    + seq 4 4:(={i,n0,p,p0,n,ICORE_eager.order,ICORE.m});1:sim.
+      replace{1} { all } by { result <- b0; all; }
+        (={i, n0, p, p0, n, ICORE_eager.order, ICORE.m}
+          ==> ={n0,p0,result, ICORE.m, ICORE_eager.order})
+        (={i, n0, p, p0, n, ICORE_eager.order, ICORE.m}
+          ==> ={n0,p0,result, ICORE.m, ICORE_eager.order});
+        progress;1:rewrite/#;1:sim.
+      replace{2} { all } by { result <- b0; all; }
+        (={i, n0, p, p0, n, ICORE_eager.order, ICORE.m}
+          ==> ={n0,p0,result, ICORE.m, ICORE_eager.order})
+        (={i, n0, p, p0, n, ICORE_eager.order, ICORE.m}
+          ==> ={n0,p0,result, ICORE.m, ICORE_eager.order});
+        progress;1:rewrite/#;2:sim.
+      sp;conseq(: ={i, n0, p, p0, n, ICORE_eager.order, ICORE.m, result}
+          ==> _);progress.
+      eager while(K: 
+          result <@ ICORE.fill_in(p, n);  ~
+          result <@ ICORE.fill_in(p, n);  :
+          ={i, n0, p, p0, n, ICORE_eager.order, ICORE.m, result} ==>
+          ={i, n0, p, p0, n, ICORE_eager.order, ICORE.m, result});
+        progress;1,3:sim.
+      swap{2}-1;sim;conseq(:_==> ={result,ICORE.m});progress.
+      inline *. (* TODO : reprendre d'ici. Il y avait un pb de parse/format. *)
+
+
+      case((p, n){1} = (p0, i){1}).
+      + sp;rcondf{1}5;first auto;if;auto;smt(dom_set in_fsetU1). 
+        by rcondf{2}4;auto;if;auto;smt(dom_set in_fsetU1).
+      sp;if{1};last first;2:rcondt{2}4;1:rcondf{2}4;progress;2:sim.
+      + auto;if;auto;smt(dom_set in_fsetU1).
+      + if{2};last first;2:rcondt{1}4;1:rcondf{1}4;auto;smt(getP).
+      + auto;if;auto;smt(dom_set in_fsetU1).
+      if{2};last first;2:rcondt{1}5;1:rcondf{1}5;progress.
+      + auto;smt(dom_set in_fsetU1).
+      + auto;smt(getP).
+      + auto;smt(dom_set in_fsetU1).
+      conseq(:_==> ={ICORE.m,result});progress.
+      alias{1} 1 c = b0;
+      transitivity{1} {
+          c <$ bdistr;
+          result <$ bdistr;
+          ICORE.m.[(p,n)] <- result;
+          ICORE.m.[(p0,i)] <- c;
+        }
+        (={p0,i,p,n,ICORE.m} /\ p1{1} = p{1} /\ n1{1} = n{1}
+          /\ ! (p{1} = p0{1} && n{1} = i{1}) ==> ={ICORE.m,result})
+        (={p0,i,p,n,ICORE.m} /\ p1{2} = p0{2} /\ n1{2} = i{2}
+          /\ ! (p{1} = p0{1} && n{1} = i{1}) ==> ={ICORE.m,result});
+        progress;1:rewrite/#.
+      + by swap{2}2;wp;rnd;wp;rnd;auto;smt(getP).
+      transitivity{1} {
+          c <$ bdistr;
+          result <$ bdistr;
+          ICORE.m.[(p,n)] <- result;
+          ICORE.m.[(p0,i)] <- c;
+        }
+        (={p0,i,p,n,ICORE.m} /\ ! (p{1} = p0{1} && n{1} = i{1})
+          ==> ={ICORE.m,result})
+        (={p0,i,p,n,ICORE.m} /\ p1{2} = p0{2} /\ n1{2} = i{2}
+          /\ ! (p{1} = p0{1} && n{1} = i{1}) ==> ={ICORE.m,result});
+        progress;1:rewrite/#.
+      + by wp;rnd;rnd;auto;smt(set_set).
+      by wp;rnd;wp;rnd;auto;progress;smt(set_set getP).
+    sim;swap{2}-1;sim;swap{1}2;sp.
+    
+  conseq(: ={p,n,p0,n0,i,ICORE.m,ICORE_eager.order}
+          ==> ={result,ICORE_eager.order,ICORE.m});first 2 progress=>/#.
+  replace{1} { all } by {
+      result <- b0;
+      all;
+    }
+    (={p,n,p0,i,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m})
+    (={p,n,p0,i,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m});
+    progress;1:rewrite/#;1:sim.
+  replace{2} { all } by {
+      result <- b0;
+      all;
+    }
+    (={p,n,p0,i,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m})
+    (={p,n,p0,i,ICORE_eager.order,ICORE.m}
+      ==> ={result,ICORE_eager.order,ICORE.m});
+    progress;1:rewrite/#;2:sim.
+    sp;conseq(: ={p,n,p0,i,ICORE.m,ICORE_eager.order,result} ==> _);
+      progress.
+    eager while(K: 
+        result <@ ICORE.fill_in(p, n);  ~
+        result <@ ICORE.fill_in(p, n);  :
+        ={p, n, p0, i, ICORE.m, ICORE_eager.order, result} ==>
+        ={p, n, p0, i, ICORE.m, ICORE_eager.order, result});
+      progress;1,3:sim.
+
+    swap{2}-1;sim;conseq(:_==> ={result,ICORE.m});progress.
+    inline *.
+    case((p, n){1} = parse (take i p0){1}).
+    + sp;rcondf{1}4;first auto;if;auto;smt(dom_set in_fsetU1). 
+      by rcondf{2}4;auto;if;auto;smt(dom_set in_fsetU1).
+    sp;if{1};last first;2:rcondt{2}4;1:rcondf{2}4;progress;2:sim.
+      + auto;if;auto;smt(dom_set in_fsetU1).
+      + if{2};last first;2:rcondt{1}3;1:rcondf{1}3;auto;smt(getP).
+      + auto;if;auto;smt(dom_set in_fsetU1).
+      if{2};last first;2:rcondt{1}4;1:rcondf{1}4;progress.
+      + auto;smt(dom_set in_fsetU1).
+      + auto;smt(getP).
+      + auto;smt(dom_set in_fsetU1).
+      conseq(:_==> ={ICORE.m,result});progress.
+      alias{1} 1 c = b0.
+      transitivity{1} {
+          c <$ bdistr;
+          result <$ bdistr;
+          ICORE.m.[(p,n)] <- result;
+          ICORE.m.[parse(take i p0)] <- c;
+        }
+        (={p0,i,p,n,ICORE.m} /\ p1{1} = p{1} /\ n1{1} = n{1}
+          /\ (p1{1},n1{1}) <> parse (take i{1} p0{1}) ==> ={ICORE.m,result})
+        (={p0,i,p,n,ICORE.m} /\ (p1{2},n1{2}) = parse(take i{1} p0{2})
+          /\ (p1{1},n1{1}) <> parse (take i{1} p0{1}) ==> ={ICORE.m,result});
+        progress;1:rewrite/#.
+      + by swap{2}2;wp;rnd;wp;rnd;auto;smt(getP).
+      transitivity{1} {
+          c <$ bdistr;
+          result <$ bdistr;
+          ICORE.m.[(p,n)] <- result;
+          ICORE.m.[parse(take i p0)] <- c;
+        }
+        (={p0,i,p,n,ICORE.m} /\ (p1{1},n1{1}) <> parse (take i{1} p0{1})
+          ==> ={ICORE.m,result})
+        (={p0,i,p,n,ICORE.m} /\ (p1{2},n1{2}) = parse(take i{1} p0{2})
+           /\ (p1{1},n1{1}) <> parse (take i{1} p0{1}) ==> ={ICORE.m,result});
+        progress;1:rewrite/#.
+      + by wp;rnd;rnd;auto;smt(set_set).
+      wp;rnd;wp;rnd;auto;progress. smt(set_set getP).
+    
+  qed.
+
+
   local lemma eager_ICORE_e_f :
     eager[ ICORE_eager.ewhile();, ICORE_eager.f
          ~ ICORE_e.f, ICORE_eager.ewhile(); :
@@ -304,111 +524,83 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
       by sp;seq 1 : (  (valid p /\ 0 < n));1:while(  (valid p /\ 0 < n));auto;sp;if;auto.
     conseq(: ={p, n, glob ICORE_eager, i, r} ==>
         ={p, n, glob ICORE_eager, i, r});progress.
-    eager while(J : ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={p, n, glob ICORE_eager, i, r} ==> ={p, n, glob ICORE_eager, i, r});progress;1,3:sim.
+
+    eager while(J :
+          ICORE_eager.ewhile();  ~
+          ICORE_eager.ewhile();  :
+          ={p, n, glob ICORE_eager, i, r} ==>
+          ={p, n, glob ICORE_eager, i, r});
+      progress;1,3:sim.
     swap{2}-1;wp 3 3.
     swap{2}-1;sim.
     conseq(:_==>  ={p, n, b, glob ICORE_eager});progress.
-    inline{1}2;inline{2}1.
-    (* TODO : a lot of eager while to prepare. *)
+    inline{2}1.
+    swap{2}3 1;swap{2}-1.
+    replace{2} { (<@ as fill_in);(<@ as ewhile) } by {
+          ewhile;
+          fill_in;
+        }
+        (={i, r, p, n, glob ICORE_eager} ==> ={b, p, n, glob ICORE_eager})
+        (={i, r, p, n, glob ICORE_eager} ==> ={b, p, n, glob ICORE_eager});
+        progress;1:rewrite/#;last first.
+    + sim;conseq(:_==> ={ICORE_eager.order, ICORE.m,c});progress.
+      seq 3 3:(={p0,n0,ICORE_eager.order, ICORE.m});1:sim.
+      by eager call(eager_ICORE_fill_in);auto.
+    inline{1}2;sim;swap{1}-1;sim.
+    
+    inline{2}4.
+    splitwhile{2}7: 1 < size world.
+    rcondt{2}8;progress. 
+    + sp;while(last (head [] (behead world)) world = format p i /\ 1 <= size world);
+        auto;last smt(last_rcons size_rcons size_ge0 size_eq0).
+      inline*=>//=.
+      sp;seq 1 : (last (head [] (behead world)) (behead world) = format p i
+          /\ 1 <= size (behead world)).
+      + while(last (head [] (behead world)) (behead world) = format p i
+          /\ 1 <= size (behead world));auto.
+        + by sp;if;auto.
+        by progress;smt(head_behead). 
+      sp;seq 1 : (last (head [] (behead world)) (behead world) = format p i
+          /\ 1 <= size (behead world)).
+      + while(last (head [] (behead world)) (behead world) = format p i
+          /\ 1 <= size (behead world));auto.
+        by sp;if;auto.
+      by auto;progress;smt(head_behead). 
+    rcondf{2}15;progress.
+    + seq 8 : (world = [format p i]).
+      + wp;sp;while(last (head [] world) world = format p i /\ 1 <= size world);
+          auto;last first.
+        + smt(last_rcons size_rcons size_ge0 head_behead size_eq0).
+        inline*=>//=.
+        sp;seq 1 : (last (head [] world) (behead world) = format p i
+            /\ 1 <= size (behead world)).
+        + while(last (head [] world) (behead world) = format p i
+            /\ 1 <= size (behead world));auto.
+          + by sp;if;auto.
+          by progress;smt(head_behead). 
+        sp;seq 1 : (last (head [] world) (behead world) = format p i
+            /\ 1 <= size (behead world)).
+        + while(last (head [] world) (behead world) = format p i
+            /\ 1 <= size (behead world));auto.
+          by sp;if;auto.
+        by auto;progress;smt(head_behead). 
+      inline*=>/=. 
+      sp;seq 1:(world = [format p i]);1:while(world = [format p i]);1:(sp;if);auto.
+      by sp;seq 1:(world = [format p i]);1:while(world = [format p i]);1:(sp;if);auto.
 
-    replace{2} { while;_ as loop1; (while;_ as loop2); eage } by {
-        loop1;
-        eage;
-        loop2;
-      }
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m})
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m});
-      progress;1:rewrite/#.
-    + sim.
-      conseq(: ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i}
-        ==> ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress.
-      eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-      swap{2}-1;sim.
-      inline*.
-      splitwhile{2}4:world <> [(take i p)].
-      sp. swap{1}-4;sp.
-      seq 1 1: ( ={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = [(take i{2} p{2})]
-              /\ world{1} = []
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last first.
-      + rcondt{2}1;1:auto=>/#.
-        by rcondf{2}6;auto;sp;if;auto.
-      while(={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last auto=>/#.
-      by sp;if;auto;smt(head_behead).
-    swap{1}3 -1;seq 2 2 :(={glob ICORE_eager,n,p,r,i});1:sim.
-    eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-    inline ICORE_eager.ewhile.
-    swap{2}[4..6]-2;sim;swap{2}2;sp.
-    symmetry;conseq(: ={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress.
-    replace{1} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;1:sim.
-    replace{2} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;2:sim.
-    sp;conseq(: ={world,ICORE.m,p,i,b} ==> ={world,ICORE.m,p,i,b});progress.
-    eager while(J: b <@ ICORE.fill_in(p,i); ~ b <@ ICORE.fill_in(p,i); :
-        ={world, p, ICORE.m, i, b} ==> ={world, p, ICORE.m, i, b});
-          progress;1,3:sim. 
-    inline*;sp;wp.
-    swap{1}[3..5]-2;swap{2}[3..4]-2;sp.
-    case(((p0,n0)=(p1,n1)){1})=>//=.
-    - if;auto;1:rcondf{1}3;1:auto;1:smt(dom_set in_fsetU1).
-      + by rcondf{2}3;auto;smt(dom_set in_fsetU1).
-      by sp;if;auto.
-    if{2};last first;2:rcondt{1}3;1:rcondf{1}3;progress.
-    + if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    if{1};last first;2:rcondt{2}3;1:rcondf{2}3;progress.
-    + auto;smt(dom_set in_fsetU1).
-    + auto;smt(dom_set getP in_fsetU1).
-    + auto;smt(dom_set in_fsetU1).
-    swap{2}-1;wp;conseq(:_==> ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p1{2}, n1{2})]);progress.
-    alias{1} 1 c = b0.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p0, n0)] <- b;
-        ICORE.m.[(p1, n1)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p0{2}, n0{2})])
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{2}3-1;wp;rnd=>/=.
-      wp 2 2;conseq(:_==> ={ICORE.m});1:smt(getP).
-      by wp;rnd;auto.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p1, n1)] <- b;
-        ICORE.m.[(p0, n0)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m,p0,p1,n0,n1})
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{1}1;wp;conseq(:_==> (b,c){1} = (c,b){2});progress;2:(rnd;rnd;auto).
-      by rewrite set_set H0.
-    by swap{1}3-1;wp;rnd;wp;rnd;auto.
+    swap{1}-3;sim.
+    inline*;sim;swap{1}[5..8]-1;wp;sp=>/=. 
+    conseq(:_==> ={ICORE.m,ICORE_eager.order} 
+              /\ world{1} = [] /\ world{2} = [format p{2} i{2}]);
+        1:smt(parseK). 
+
+    while(={ICORE.m} /\ world{2} = rcons world{1} (format p{2} i{2}));
+      auto;last smt(size_eq0 size_rcons size_ge0). 
+    rewrite/=.
+    sp;conseq(:_==> ={ICORE.m});
+      1:smt(head_behead size_eq0 size_rcons size_ge0);sim. 
+    smt(head_behead). 
   qed.
-  eager proc.
 
   local lemma eager_ICORE &m :
       Pr[Low.Indif(ICORE, S(ICORE), LoDist(D)).main() @ &m : res] =
@@ -422,33 +614,15 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
     + proc(={glob ICORE});auto;proc.
       sp;if;auto;sp;inline*. 
       while(={ICORE.m,r,i,p,n} /\ valid p{1} /\ 0 < n{1} /\ 0 < i{1})=>//=;1:auto.
-      swap{2}[7..8]-3;sp.
-      conseq(:_==> ={ICORE.m,r,p,n});1:smt(parseK).
-      sim.
-      conseq(:_==> ={ICORE.m,r,p,n});1:smt(parseK).
-      while{2}(={n, p, r, ICORE.m})(n0{2} - i0{2} + 1);1:auto;1:progress=>/#.
-      conseq(:_==> ={n, p, r, ICORE.m});1:progress=>/#.
-      wp;while{2}(={n, p, r, ICORE.m})(size p0{2} - i0{2});auto=>/#.
+      sp;if;auto;smt(parseK).
     + proc(={glob ICORE});auto;proc.
       sp;if;auto;sp;inline*. 
       while(={ICORE.m,r,i,p,n} /\ valid p{1} /\ 0 < n{1} /\ 0 < i{1})=>//=;1:auto.
-      swap{2}[7..8]-3;sp.
-      conseq(:_==> ={ICORE.m,r,p,n});1:smt(parseK).
-      sim.
-      conseq(:_==> ={ICORE.m,r,p,n});1:smt(parseK).
-      while{2}(={n, p, r, ICORE.m})(n0{2} - i0{2} + 1);1:auto;1:progress=>/#.
-      conseq(:_==> ={n, p, r, ICORE.m});1:progress=>/#.
-      wp;while{2}(={n, p, r, ICORE.m})(size p0{2} - i0{2});auto=>/#.
+      sp;if;auto;smt(parseK).
     + proc;inline*;sp;if;auto;1:progress=>/#;sp. 
       sp;if;1:auto=>/#;sp;inline*. 
       while(={ICORE.m,r0,i,p0,n0} /\ valid p0{1} /\ 0 < n0{1} /\ 0 < i{1})=>//=;1:auto.
-      swap{2}[7..8]-3;sp.
-      conseq(:_==> ={ICORE.m,r0,p0,n0});1:smt(parseK). 
-      sim.
-      conseq(:_==> ={ICORE.m,r0,p0,n0});1:smt(parseK).
-      while{2}(={n0, p0, r0, ICORE.m})(n1{2} - i0{2} + 1);1:auto;1:progress=>/#.
-      conseq(:_==> ={n0, p0, r0, ICORE.m});1:progress=>/#.
-      by wp;while{2}(={n0, p0, r0, ICORE.m})(size p1{2} - i0{2});auto=>/#.
+      sp;if;auto;smt(parseK).
     + by auto=>/#. 
     + by auto=>/#. 
     by inline*;auto;call(:true);auto.
@@ -469,9 +643,12 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
       + by proc(={glob ICORE_e});auto;proc;sim. 
       + by proc;sim. 
       by call(:true);auto. 
-    by sp;while{2}(={b})(size world{2});auto;1:(sp;if);auto;
-      smt(bdistr_ll head_behead size_eq0 size_ge0).
-  
+    sp;while{2}(={b})(size world{2});auto;2:smt(size_eq0 size_ge0). 
+    while(b = b{m0} /\ size (behead world) < z)(n+1-i);
+      first progress;sp;if;auto;smt(bdistr_ll head_behead size_eq0 size_ge0).
+    wp;while(b = b{m0} /\ size (behead world) < z)(size p-i);
+      first progress;sp;if;auto;smt(bdistr_ll head_behead size_eq0 size_ge0).
+    auto;smt(head_behead). 
   
     replace{2} { all; <@ } by {
       all;
@@ -480,9 +657,8 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
       b <- ICORE_eager.dist_res;
     }
     (={glob D, glob S} ==> ={b})
-    (={glob D, glob S} ==> ={b});progress;last first.
-  + by inline*;rcondf{1}7;auto;2:sim;call(:true);auto.
-  + by rewrite/#.
+    (={glob D, glob S} ==> ={b});progress;1:rewrite/#;last first.
+  + by inline*;rcondf{1}8;auto;2:sim;call(:true);auto.
   
   swap{1}-1;sim.
   
@@ -494,328 +670,65 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
       ={glob S, glob ICORE_eager} ==> ={glob S, glob ICORE_eager})
     (={glob S, glob ICORE_eager});auto;progress;1,3,5,7:sim. 
 
-  + eager proc(H': ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
+  +eager proc(H': ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
       ={glob ICORE_eager} ==> ={glob ICORE_eager})
       (={glob ICORE_eager});auto;progress;1,3:sim. 
-
+    
     (* eager : ewhile; ICORE_eager.f ~ ICORE_e.f ; ewhile *)
     eager proc.
-    swap{1}2;swap{2}-1;sp;wp.
-    if{2};1:rcondt{1}2;last first;1:rcondf{1}2;progress;2:sim.
-    + inline*;sp;while(! (valid p /\ 0 < n));auto;sp;if;auto.
-    + inline*;sp;while(valid p /\ 0 < n);auto;sp;if;auto.
-    replace{2} { while as loop1; (<-;while as loop2); eage } by {
-        loop1;
-        eage;
-        loop2;
+    replace{1} { <@ as ewhile; rest }  by {
+        ewhile;
+        result <@ ICORE_eager.f(p,n);
       }
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m})
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m});
-      progress;1:rewrite/#.
-    + sim.
-      conseq(: ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i}
-        ==> ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress.
-      eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-      swap{2}-1;sim.
-      inline*.
-      splitwhile{2}4:world <> [(take i p)].
-      sp. swap{1}-4;sp.
-      seq 1 1: ( ={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = [(take i{2} p{2})]
-              /\ world{1} = []
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last first.
-      + rcondt{2}1;1:auto=>/#.
-        by rcondf{2}6;auto;sp;if;auto.
-      while(={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last auto=>/#.
-      by sp;if;auto;smt(head_behead).
-    swap{1}3 -1;seq 2 2 :(={glob ICORE_eager,n,p,r,i});1:sim.
-    eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-    inline ICORE_eager.ewhile.
-    swap{2}[4..6]-2;sim;swap{2}2;sp.
-    symmetry;conseq(: ={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress.
-    replace{1} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;1:sim.
-    replace{2} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;2:sim.
-    sp;conseq(: ={world,ICORE.m,p,i,b} ==> ={world,ICORE.m,p,i,b});progress.
-    eager while(J: b <@ ICORE.fill_in(p,i); ~ b <@ ICORE.fill_in(p,i); :
-        ={world, p, ICORE.m, i, b} ==> ={world, p, ICORE.m, i, b});
-          progress;1,3:sim. 
-    inline*;sp;wp.
-    swap{1}[3..5]-2;swap{2}[3..4]-2;sp.
-    case(((p0,n0)=(p1,n1)){1})=>//=.
-    - if;auto;1:rcondf{1}3;1:auto;1:smt(dom_set in_fsetU1).
-      + by rcondf{2}3;auto;smt(dom_set in_fsetU1).
-      by sp;if;auto.
-    if{2};last first;2:rcondt{1}3;1:rcondf{1}3;progress.
-    + if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    if{1};last first;2:rcondt{2}3;1:rcondf{2}3;progress.
-    + auto;smt(dom_set in_fsetU1).
-    + auto;smt(dom_set getP in_fsetU1).
-    + auto;smt(dom_set in_fsetU1).
-    swap{2}-1;wp;conseq(:_==> ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p1{2}, n1{2})]);progress.
-    alias{1} 1 c = b0.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p0, n0)] <- b;
-        ICORE.m.[(p1, n1)] <- c;
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager})
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager});
+      progress;1:rewrite/#;1:(inline*;sim).
+    replace{2} { rest; (<@ as ewhile) }  by {
+        result <@ ICORE_e.f(p,n);
+        ewhile;
       }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p0{2}, n0{2})])
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{2}3-1;wp;rnd=>/=.
-      wp 2 2;conseq(:_==> ={ICORE.m});1:smt(getP).
-      by wp;rnd;auto.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p1, n1)] <- b;
-        ICORE.m.[(p0, n0)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m,p0,p1,n0,n1})
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{1}1;wp;conseq(:_==> (b,c){1} = (c,b){2});progress;2:(rnd;rnd;auto).
-      by rewrite set_set H0.
-    by swap{1}3-1;wp;rnd;wp;rnd;auto.
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager})
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager});
+      progress;1:rewrite/#;2:(inline*;sim).
+    
+      by eager call(eager_ICORE_e_f);auto.
 
- + eager proc(H': ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
+
+  +eager proc(H': ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
       ={glob ICORE_eager} ==> ={glob ICORE_eager})
       (={glob ICORE_eager});auto;progress;1,3:sim. 
+    
+    (* eager : ewhile; ICORE_eager.f ~ ICORE_e.f ; ewhile *)
     eager proc.
-    swap{1}2;swap{2}-1;sp;wp.
-    if{2};1:rcondt{1}2;last first;1:rcondf{1}2;progress;2:sim.
-    + inline*;sp;while(! (valid p /\ 0 < n));auto;sp;if;auto.
-    + inline*;sp;while(valid p /\ 0 < n);auto;sp;if;auto.
-    replace{2} { while as loop1; (<-;while as loop2); eage } by {
-        loop1;
-        eage;
-        loop2;
+    replace{1} { <@ as ewhile; rest }  by {
+        ewhile;
+        result <@ ICORE_eager.f(p,n);
       }
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m})
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m});
-      progress;1:rewrite/#.
-    + sim.
-      conseq(: ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i}
-        ==> ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress.
-      eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-      swap{2}-1;sim.
-      inline*.
-      splitwhile{2}4:world <> [(take i p)].
-      sp. swap{1}-4;sp.
-      seq 1 1: ( ={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = [(take i{2} p{2})]
-              /\ world{1} = []
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last first.
-      + rcondt{2}1;1:auto=>/#.
-        by rcondf{2}6;auto;sp;if;auto.
-      while(={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last auto=>/#.
-      by sp;if;auto;smt(head_behead).
-    swap{1}3 -1;seq 2 2 :(={glob ICORE_eager,n,p,r,i});1:sim.
-    eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-    inline ICORE_eager.ewhile.
-    swap{2}[4..6]-2;sim;swap{2}2;sp.
-    symmetry;conseq(: ={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress.
-    replace{1} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;1:sim.
-    replace{2} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;2:sim.
-    sp;conseq(: ={world,ICORE.m,p,i,b} ==> ={world,ICORE.m,p,i,b});progress.
-    eager while(J: b <@ ICORE.fill_in(p,i); ~ b <@ ICORE.fill_in(p,i); :
-        ={world, p, ICORE.m, i, b} ==> ={world, p, ICORE.m, i, b});
-          progress;1,3:sim. 
-    inline*;sp;wp.
-    swap{1}[3..5]-2;swap{2}[3..4]-2;sp.
-    case(((p0,n0)=(p1,n1)){1})=>//=.
-    - if;auto;1:rcondf{1}3;1:auto;1:smt(dom_set in_fsetU1).
-      + by rcondf{2}3;auto;smt(dom_set in_fsetU1).
-      by sp;if;auto.
-    if{2};last first;2:rcondt{1}3;1:rcondf{1}3;progress.
-    + if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    if{1};last first;2:rcondt{2}3;1:rcondf{2}3;progress.
-    + auto;smt(dom_set in_fsetU1).
-    + auto;smt(dom_set getP in_fsetU1).
-    + auto;smt(dom_set in_fsetU1).
-    swap{2}-1;wp;conseq(:_==> ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p1{2}, n1{2})]);progress.
-    alias{1} 1 c = b0.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p0, n0)] <- b;
-        ICORE.m.[(p1, n1)] <- c;
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager})
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager});
+      progress;1:rewrite/#;1:(inline*;sim).
+    replace{2} { rest; (<@ as ewhile) }  by {
+        result <@ ICORE_e.f(p,n);
+        ewhile;
       }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p0{2}, n0{2})])
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{2}3-1;wp;rnd=>/=.
-      wp 2 2;conseq(:_==> ={ICORE.m});1:smt(getP).
-      by wp;rnd;auto.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p1, n1)] <- b;
-        ICORE.m.[(p0, n0)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m,p0,p1,n0,n1})
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{1}1;wp;conseq(:_==> (b,c){1} = (c,b){2});progress;2:(rnd;rnd;auto).
-      by rewrite set_set H0.
-    by swap{1}3-1;wp;rnd;wp;rnd;auto.
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager})
+      (={p,n,glob ICORE_eager} ==> ={result,glob ICORE_eager});
+      progress;1:rewrite/#;2:(inline*;sim).
+    
+      by eager call(eager_ICORE_e_f);auto.
 
   eager proc.
   swap{1}3;sp;swap{2}-1;sim. 
   if{2};last first;2:rcondt{1}2;1:rcondf{1}2;progress;2:sim.
-  + by inline*;sp;while(! (valid x /\ 0 < n));auto;1:(sp;if);auto=>/#.
-  + by inline*;sp;while(   valid x /\ 0 < n );auto;1:(sp;if);auto=>/#.
+  + inline*;sp;while(! (valid x /\ 0 < n));auto;2:rewrite/#.
+    while(! (valid x /\ 0 < n));1:(sp;if);auto.
+    while(! (valid x /\ 0 < n));1:(sp;if);auto.
+  + inline*;sp;while(  (valid x /\ 0 < n));auto;2:rewrite/#.
+    while(  (valid x /\ 0 < n));1:(sp;if);auto.
+    while(  (valid x /\ 0 < n));1:(sp;if);auto.
   swap{2}-1;sim.
-  eager call(: ={p, n, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m}
-        ==> ={res, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m}).
-
-  (* eager : ewhile; ICORE_eager.f ~ ICORE_e.f ; ewhile *)
-  eager proc.
-  swap{1}2;swap{2}-1;sp;wp.
-  if{2};1:rcondt{1}2;last first;1:rcondf{1}2;progress;2:sim.
-  + inline*;sp;while(! (valid p /\ 0 < n));auto;sp;if;auto.
-  + inline*;sp;while(valid p /\ 0 < n);auto;sp;if;auto.
-    replace{2} { while as loop1; (<-;while as loop2); eage } by {
-        loop1;
-        eage;
-        loop2;
-      }
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m})
-      (={i,r,p,n,glob ICORE_eager} /\ i{2} = 1 /\ r{2} = [] /\ valid p{2}
-        /\ 0 < n{2} ==> ={r, ICORE_eager.dist_res, ICORE_eager.order, ICORE.m});
-      progress;1:rewrite/#.
-    + sim.
-      conseq(: ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i}
-        ==> ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress.
-      eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-      swap{2}-1;sim.
-      inline*.
-      splitwhile{2}4:world <> [(take i p)].
-      sp. swap{1}-4;sp.
-      seq 1 1: ( ={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = [(take i{2} p{2})]
-              /\ world{1} = []
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last first.
-      + rcondt{2}1;1:auto=>/#.
-        by rcondf{2}6;auto;sp;if;auto.
-      while(={glob ICORE_eager,n,p,r,i} /\ i{1} < size p{1}
-              /\ world{2} = rcons world{1} (take i{2} p{2}));last auto=>/#.
-      by sp;if;auto;smt(head_behead).
-    swap{1}3 -1;seq 2 2 :(={glob ICORE_eager,n,p,r,i});1:sim.
-    eager while(J: ICORE_eager.ewhile(); ~ ICORE_eager.ewhile(); :
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i} ==>
-        ={ICORE_eager.dist_res, ICORE_eager.order, n, p, r, ICORE.m, i});
-          progress;1,3:sim. 
-    inline ICORE_eager.ewhile.
-    swap{2}[4..6]-2;sim;swap{2}2;sp.
-    symmetry;conseq(: ={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress.
-    replace{1} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;1:sim.
-    replace{2} { all } by { b <- b0; all; }
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b})
-      (={world,ICORE.m,p,i} ==> ={world,ICORE.m,p,i,b});progress;1:rewrite/#;2:sim.
-    sp;conseq(: ={world,ICORE.m,p,i,b} ==> ={world,ICORE.m,p,i,b});progress.
-    eager while(J: b <@ ICORE.fill_in(p,i); ~ b <@ ICORE.fill_in(p,i); :
-        ={world, p, ICORE.m, i, b} ==> ={world, p, ICORE.m, i, b});
-          progress;1,3:sim. 
-    inline*;sp;wp.
-    swap{1}[3..5]-2;swap{2}[3..4]-2;sp.
-    case(((p0,n0)=(p1,n1)){1})=>//=.
-    - if;auto;1:rcondf{1}3;1:auto;1:smt(dom_set in_fsetU1).
-      + by rcondf{2}3;auto;smt(dom_set in_fsetU1).
-      by sp;if;auto.
-    if{2};last first;2:rcondt{1}3;1:rcondf{1}3;progress.
-    + if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    + sp;if;auto;smt(dom_set in_fsetU1).
-    if{1};last first;2:rcondt{2}3;1:rcondf{2}3;progress.
-    + auto;smt(dom_set in_fsetU1).
-    + auto;smt(dom_set getP in_fsetU1).
-    + auto;smt(dom_set in_fsetU1).
-    swap{2}-1;wp;conseq(:_==> ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p1{2}, n1{2})]);progress.
-    alias{1} 1 c = b0.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p0, n0)] <- b;
-        ICORE.m.[(p1, n1)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ b{1} = oget ICORE.m{2}.[(p0{2}, n0{2})])
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-    + swap{2}3-1;wp;rnd=>/=.
-      wp 2 2;conseq(:_==> ={ICORE.m});1:smt(getP).
-      by wp;rnd;auto.
-    transitivity{1} {
-        b <$ bdistr;
-        c <$ bdistr;
-        ICORE.m.[(p1, n1)] <- b;
-        ICORE.m.[(p0, n0)] <- c;
-      }
-      (={ICORE.m,p0,n0,p1,n1} /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m,p0,p1,n0,n1})
-      (={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2} 
-        /\ ! (p0{1} = p1{1} && n0{1} = n1{1}) ==>
-        ={ICORE.m} /\ (p0,n0,p1,n1){1} = (p1,n1,p0,n0){2});
-      progress;1:rewrite/#.
-  + swap{1}1;wp;conseq(:_==> (b,c){1} = (c,b){2});progress;2:(rnd;rnd;auto).
-    by rewrite set_set H0.
-  by swap{1}3-1;wp;rnd;wp;rnd;auto.
-
-  by auto;progress=>/#.
+  eager call(eager_ICORE_e_f). 
+  auto=>/#.
   qed.
 
   lemma LiftInd &m:
@@ -875,11 +788,11 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
       cut->/=:i{1} - 1 < n{2} - 1 by rewrite/#.
       by rewrite BlockMonoid.addr0.
      
-    by inline*;auto;call(:true);auto. print HiSim. print ICORE.
+    by inline*;auto;call(:true);auto. 
 
   (* TODO : Introduce an equivalent module to ICORE whose fill_in procedure 
             makes the same calls as IBlockSponge *)
-  (* rewrite (eager_ICORE &m). *)
+  rewrite (eager_ICORE &m).
   byequiv (_: ={glob D, glob S} ==> _)=> //=; proc.
     
   call (_:    ={glob S} /\ INV IBlockSponge.m{2} ICORE.m{1}).
@@ -894,8 +807,37 @@ local module ICORE_eager : Low.FUNCTIONALITY = {
         /\ valid p{1} /\ 0 < n{1});last auto=>/#.
     rcondt{2}6;auto;progress.
     + by cut:=parseK p{hr} (i{hr}+1) H0 H1;rewrite/format-addzA/==>->/=. 
-    + by cut:=parseK p{hr} (i{hr}+1) H0 H1;rewrite/format-addzA/==>->/=. 
+    + by cut:=parseK p{hr} (i{hr}+1) H0 H1;rewrite/format-addzA/==>->/=.
     sp.
+    conseq(:_==> (INV IBlockSponge.m{2} ICORE.m{1} /\
+              rcons r{1} (oget ICORE.m{1}.[(p3{1}, n3{1})]) =
+              rcons r{2} (oget IBlockSponge.m{2}.[x1{2}])));1:progress=>/#.
+    seq 3 1:(x{2} = format p0{1} n0{1} /\ INV IBlockSponge.m{2} ICORE.m{1}
+              /\ valid p0{1} /\ 0 < n0{1} /\ ={r});last first.
+    sp;if;auto;smt(in_dom parseK getP formatK).  
+
+    splitwhile{2}1:i0 < size p.
+    conseq(:_==> INV IBlockSponge.m{2} ICORE.m{1});1:smt(parseK).
+    while(INV IBlockSponge.m{2} ICORE.m{1}
+            /\ valid p0{1}
+            /\ 0 < i0{1}
+            /\ 0 < n0{1}
+            /\ i0{1} = i0{2} - size p0{1} + 1
+            /\ format p0{1} i0{1} = take i0{2} x{2}
+            /\ x{2} = format p0{1} n0{1});auto.
+    + sp;if;auto;smt(parseK formatK in_dom getP take_cat size_cat
+            size_nseq take_nseq).  
+    conseq(:_==> INV IBlockSponge.m{2} ICORE.m{1} /\ 
+        i0{2} = size p0{1});1:smt(parseK formatK take_cat nseq0 cats0 take0 size_cat size_nseq). 
+    while(={i0} /\ 0 < i0{1} <= size p0{1} /\ p0{1} = p{2} /\
+           valid p0{1} /\ 0 < n0{1} /\
+           x{2} = format p0{1} n0{1} /\ INV IBlockSponge.m{2} ICORE.m{1});auto.
+    + sp;if;auto;progress. move:H7;rewrite 2!in_dom take_cat H6/=H3. smt(in_dom take_cat nseq0 cats0). rewrite in_dom/=H3.
+smt(in_dom take_cat parseK formatK).
+
+
+
+    sp;sim.
     conseq(:_==> INV IBlockSponge.m{2} ICORE.m{1} /\ x1{2} = x{2} /\ );1:progress. 
               rewrite/#.
              congr;congr;rewrite H6 -H;congr;congr;2:rewrite/#.
