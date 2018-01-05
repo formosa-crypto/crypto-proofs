@@ -8,9 +8,9 @@ prover ["Z3"].
 prover ["Alt-Ergo"].
 *)
 
-require import Bool Fun Pair Option Int IntDiv Real List FSet NewFMap.
-(*---*) import Pred IntExtra.
-require import NewDistr DBool DList.
+require import Core Int IntDiv Real List FSet NewFMap.
+(*---*) import IntExtra.
+require import Distr DBool DList.
 require import StdBigop StdOrder. import IntOrder.
 require import Common.
 require (*--*) IRO BlockSponge RndO.
@@ -1168,12 +1168,12 @@ proof *.
 (* nothing to be proved *)
 
 lemma PrLoopSnoc_sample &m (bs : bool list) :
-  Pr[Prog.LoopSnoc.sample(r) @ &m : bs = res] =
+  Pr[Prog.LoopSnoc.sample(r) @ &m : res = bs] =
   mu (dlist {0,1} r) (pred1 bs).
 proof.
 have -> :
-  Pr[Prog.LoopSnoc.sample(r) @ &m : bs = res] =
-  Pr[Prog.Sample.sample(r) @ &m : bs = res].
+  Pr[Prog.LoopSnoc.sample(r) @ &m : res = bs] =
+  Pr[Prog.Sample.sample(r) @ &m : res = bs].
   byequiv=> //.
   symmetry.
   conseq (_ : ={n} ==> ={res})=> //.
@@ -1220,15 +1220,15 @@ lemma BlockGen_loop_direct :
   equiv[BlockGen.loop ~ BlockGen.direct : true ==> ={res}].
 proof.
 bypr res{1} res{2}=> // &1 &2 w.
-have -> : Pr[BlockGen.direct() @ &2 : w = res] = 1%r / (2 ^ r)%r.
+have -> : Pr[BlockGen.direct() @ &2 : res = w] = 1%r / (2 ^ r)%r.
   byphoare=> //.
-  proc; rnd; skip; progress; rewrite DWord.bdistrE.
-  have -> : (fun x => w = x) = (pred1 w)
-    by apply ExtEq.fun_ext=> x; by rewrite (eq_sym w x).
-  by rewrite count_uniq_mem 1:enum_uniq enumP b2i1.
+  proc; rnd; skip; progress.
+  rewrite DBlock.dunifinE.
+  have -> : (transpose (=) w) = (pred1 w) by rewrite /pred1.
+  by rewrite DBlock.Support.enum_spec block_card.
 have -> :
-  Pr[BlockGen.loop() @ &1 : w = res] =
-  Pr[Prog.LoopSnoc.sample(r) @ &1 : ofblock w = res].
+  Pr[BlockGen.loop() @ &1 : res = w] =
+  Pr[Prog.LoopSnoc.sample(r) @ &1 : res = ofblock w].
   byequiv=> //; proc.
   seq 2 2 :
     (r = n{2} /\ j{1} = i{2} /\ j{1} = 0 /\
@@ -1245,11 +1245,11 @@ have -> :
   have sz_ds_eq_r : size ds = r by smt().
   progress; [by rewrite ofblockK | by rewrite mkblockK].
 rewrite (PrLoopSnoc_sample &1 (ofblock w)).
-rewrite mux_dlist 1:ge0_r size_block /=.
+rewrite dlist1E 1:ge0_r size_block /=.
 have -> :
-  (fun (x : bool) => mu {0,1} (pred1 x)) =
+  (fun (x : bool) => mu1 {0,1} x) =
   (fun (x : bool) => 1%r / 2%r).
-  apply ExtEq.fun_ext=> x; by rewrite dboolb.
+apply fun_ext=> x; by rewrite dbool1E.
 by rewrite Bigreal.BRM.big_const count_predT size_block
            iter_mul_one_half_pos 1:gt0_r.
 qed.
