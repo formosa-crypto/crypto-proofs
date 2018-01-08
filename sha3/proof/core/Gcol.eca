@@ -1,5 +1,5 @@
 pragma -oldip.
-require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
+require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
 require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
@@ -295,9 +295,9 @@ section PROOF.
       by rewrite le_fromint;smt ml=0 w=max_ge0. 
     + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
       wp.
-      rnd (mem (image fst (rng FRO.m)));skip;progress;2:smt ml=0.
-      rewrite (Mu_mem.mu_mem (image fst (rng FRO.m{hr})) cdistr (1%r/(2^c)%r))//.
-      + move=>x _; apply DWord.cdistr1E.
+      rnd (mem (image fst (rng FRO.m)));skip;progress;2:smt ml=0. 
+      cut->:=(Mu_mem.mu_mem (image fst (rng FRO.m{hr})) cdistr (1%r/(2^c)%r) _).
+      + move=>x _; rewrite DWord.dunifin1E;do !congr;exact cap_card. 
       apply ler_wpmul2r;2:by rewrite le_fromint.
       by apply divr_ge0=>//;apply /c_ge0r. 
     + move=>ci;proc;rcondt 2;auto=>/#.

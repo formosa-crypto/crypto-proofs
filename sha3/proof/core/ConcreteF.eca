@@ -1,4 +1,4 @@
-require import Pred Fun Option Pair Int Real StdOrder Ring.
+require import Core Int Real StdOrder Ring Distr IntExtra.
 require import List FSet NewFMap Utils Common SLCommon DProd Dexcepted.
 
 (*...*) import Capacity IntOrder RealOrder.
@@ -54,20 +54,23 @@ section.
     type D  <- state,
       op uD <- dstate,
     type K  <- unit,
-      op dK <- (NewDistr.MUnit.dunit<:unit> tt),
+      op dK <- (MUnit.dunit<:unit> tt),
       op q  <- max_size
   proof *.
   realize ge0_q by smt w=max_ge0.
   realize uD_uf_fu.
   split.
-    case=> [x y]; rewrite support_dprod /=.
-    by rewrite Block.DWord.support_bdistr Capacity.DWord.support_cdistr.
-  apply/dprod_uf.
-    by rewrite Block.DWord.bdistr_uf.
-  by rewrite Capacity.DWord.cdistr_uf.
+    case=> [x y]; rewrite supp_dprod /=.
+    rewrite Block.DBlock.supp_dunifin Capacity.DWord.supp_dunifin/=. 
+      smt(dprod1E Block.DBlock.dunifin_funi Capacity.DWord.dunifin_funi).
+  split. 
+    smt(dprod_ll  Block.DBlock.dunifin_ll Capacity.DWord.dunifin_ll).
+  apply/dprod_fu.
+    rewrite Block.DBlock.dunifin_fu.
+  by rewrite Capacity.DWord.dunifin_fu.
   qed.
   realize dK_ll.
-  by rewrite /is_lossless NewDistr.MUnit.dunit_ll.
+  by rewrite /is_lossless MUnit.dunit_ll.
   qed.
 
   (* TODO move this *)
@@ -121,18 +124,16 @@ section.
       by sp; if=> //=; auto=> /> &2 cL /size_behead=> ->; progress; ring.
     have p_ll := P_f_ll _ _.
     + apply/dprod_ll; split.
-      + exact/Block.DWord.bdistr_ll.
-      exact/Capacity.DWord.cdistr_ll.
-    + apply/fun_ext=>- [] a b; rewrite support_dprod.
-      rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Block.enumP.
-      by rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Capacity.enumP.
+      + exact/Block.DBlock.dunifin_ll.
+      exact/Capacity.DWord.dunifin_ll.
+    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
+      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DWord.dunifin_fu. 
     have pi_ll := P_fi_ll _ _.
     + apply/dprod_ll; split.
-      + exact/Block.DWord.bdistr_ll.
-      exact/Capacity.DWord.cdistr_ll.
-    + apply/fun_ext=>- [] a b; rewrite support_dprod.
-      rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Block.enumP.
-      by rewrite -/(Distr.support _ _) NewDistr.MUniform.duniform_fu Capacity.enumP.
+      + exact/Block.DBlock.dunifin_ll.
+      exact/Capacity.DWord.dunifin_ll.
+    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
+      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DWord.dunifin_fu. 
     have f_ll : islossless SqueezelessSponge(Perm).f.
     + proc; while true (size p)=> //=.
       * by move=> z; wp; call p_ll; skip=> /> &hr /size_behead /#.

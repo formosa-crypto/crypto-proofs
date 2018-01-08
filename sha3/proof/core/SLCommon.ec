@@ -2,7 +2,7 @@
     functionality is a fixed-output-length random oracle whose output
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
-require import Pred Fun Option Pair Int Real StdOrder Ring.
+require import Core Int Real StdOrder Ring.
 require import List FSet NewFMap Utils Common RndO DProd Dexcepted.
 
 require (*..*) Indifferentiability.
@@ -33,12 +33,11 @@ op bl_univ = FSet.oflist bl_enum.
 
 (* -------------------------------------------------------------------------- *)
 (* Random oracle from block list to block                                     *)
-
 clone import RndO.GenEager as F with
   type from <- block list,
   type to   <- block,
   op sampleto <- fun (_:block list)=> bdistr
-  proof * by exact Block.DWord.bdistr_ll.
+  proof * by exact Block.DBlock.dunifin_ll.
 
 (** We can now define the squeezeless sponge construction **)
 module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
@@ -124,11 +123,11 @@ inductive build_hpath_spec mh p v h =
 lemma build_hpathP mh p v h:
   build_hpath mh p = Some (v,h) <=> build_hpath_spec mh p v h.
 proof.
-elim/last_ind: p v h=> @/build_hpath //= [v h|p b ih v h].
-+ by rewrite anda_and; split=> [!~#] <*>; [exact/Empty|move=> [] /#].
+elim/last_ind: p v h=> @/build_hpath //= [v h|p b ih v h]. 
++ by rewrite andaE; split=> [!~#] <*>; [exact/Empty|move=> [] /#].
 rewrite -{1}cats1 foldl_cat {1}/step_hpath /=.
 case: {-1}(foldl _ _ _) (eq_refl (foldl (step_hpath mh) (Some (b0,0)) p))=> //=.
-+ apply/NewLogic.implybN; case=> [/#|p' b0 v' h'].
++ apply/implybN; case=> [/#|p' b0 v' h'].
   move=> ^/rconssI <<- {p'} /rconsIs ->> {b}.
   by rewrite /build_hpath=> ->.
 move=> [v' h']; rewrite oget_some /= -/(build_hpath _ _)=> build. 
@@ -355,7 +354,7 @@ proof.
   cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
     findP (fun (_ : handle) => pred1 c \o fst) handles.
   + by exists (oget handles.[h]).`2;rewrite oget_some get_oget;2:case (oget handles.[h]).
-  by rewrite -not_def=> Heq; cut := H h;rewrite in_dom Heq.
+  cut := H h;rewrite in_dom/#.
 qed.
 
 lemma huniq_hinv (handles:handles) (h:handle): 
@@ -374,7 +373,7 @@ proof.
   rewrite /hinvK.
   cut @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
   + by rewrite oget_some in_dom restrP;case (handles.[h])=>//= /#.
-  by move=>+h-/(_ h);rewrite in_dom restrP -!not_def=> H1 H2;apply H1;rewrite H2. 
+  by move=>+h-/(_ h);rewrite in_dom restrP => H1/#. 
 qed.
 
 lemma huniq_hinvK (handles:handles) c: 
@@ -394,5 +393,3 @@ qed.
 (* -------------------------------------------------------------------------- *)
 (** The initial Game *)
 module GReal(D:DISTINGUISHER) = RealIndif(SqueezelessSponge, PC(Perm), D).
-
-

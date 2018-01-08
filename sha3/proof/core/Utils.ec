@@ -1,5 +1,5 @@
 (** These should make it into the standard libs **)
-require import Option Pair List FSet NewFMap.
+require import Core List FSet NewFMap.
 
 (* -------------------------------------------------------------------- *)
   (* In NewFMap *)
@@ -24,7 +24,6 @@ proof.
   by move=> y; rewrite getE mem_assoc_uniq 1:uniq_keys.
 qed.
 
-require import Fun.
 
 lemma reindex_injective_on (f : 'a -> 'c) (m : ('a, 'b) fmap):
   (forall x y, mem (dom m) x => f x = f y => x = y) =>

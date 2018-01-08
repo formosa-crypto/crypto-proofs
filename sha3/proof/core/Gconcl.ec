@@ -1,10 +1,11 @@
 pragma -oldip.
-require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
+require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
 require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Gext.
+print F.RO.
 
 module IF = {
   proc init = F.RO.init
@@ -220,14 +221,14 @@ proof.
           [rcondt{1} 3;2:rcondt{2} 3| rcondf{1} 3;2:rcondf{2} 3];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
       inline *;rcondt{1} 6;1:by auto=>/>. 
-      wp;rnd;auto;progress[-split];rewrite DWord.cdistr_ll /= => ?_?->.
+      wp;rnd;auto;progress[-split];rewrite DWord.dunifin_ll /= => ?_?->.
       by rewrite !getP /= oget_some.
     case ((mem (dom G1.mh) (x.`1, hx2) /\ t){1});
           [rcondt{1} 4;2:rcondt{2} 4| rcondf{1} 4;2:rcondf{2} 4];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 7;1:by auto=>/>. 
     wp;rnd;auto;rnd{1};auto;progress[-split].
-    rewrite Block.DWord.support_bdistr DWord.cdistr_ll /==> ?_?->.
+    rewrite Block.DBlock.supp_dunifin DWord.dunifin_ll /==> ?_?->.
     by rewrite !getP /= oget_some.
     
   + proc;sp;if=>//.
@@ -241,7 +242,7 @@ proof.
           [rcondt{1} 3;2:rcondt{2} 3| rcondf{1} 3;2:rcondf{2} 3];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 6;1:by auto=>/>. 
-    wp;rnd;auto;progress[-split];rewrite DWord.cdistr_ll /= => ?_?->.
+    wp;rnd;auto;progress[-split];rewrite DWord.dunifin_ll /= => ?_?->.
     by rewrite !getP /= oget_some.
 
   proc;sp;if=>//.
@@ -342,7 +343,7 @@ proof.
   call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
   sp;sim; while(={i,p,F.RO.m})=>//.
   inline F.RO.sample F.RO.get;if{1};1:by auto. 
-  by sim;inline *;auto;progress;apply DWord.cdistr_ll.
+  by sim;inline *;auto;progress;apply DWord.dunifin_ll.
 qed.
   
 local equiv G4_Ideal : G4(F.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :

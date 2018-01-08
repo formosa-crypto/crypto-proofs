@@ -1,5 +1,5 @@
 pragma -oldip.
-require import Pred Fun Option Pair Int Real RealExtra StdOrder Ring StdBigop.
+require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
 require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
@@ -201,7 +201,7 @@ section.
         + by move=> &m;auto;rewrite /in_dom_with.
 (*        auto=> |>.  (* Bug ???? *)  *)
         auto;progress. 
-        + by apply  DWord.cdistr_ll.
+        + by apply  DWord.dunifin_ll.
         + rewrite /inv_ext1=>/H{H}[->//|[/in_rng[h]Hh|[[x1 x2] h [Hx Hh]]]].
           + case (h = (oget G1.mh{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
             + by left;rewrite Hh oget_some.
@@ -238,7 +238,7 @@ section.
       + inline *;rcondt{2} 4.
         + by move=> &m;auto;rewrite /in_dom_with.
         auto;progress. 
-        + by apply  DWord.cdistr_ll.
+        + by apply  DWord.dunifin_ll.
         + rewrite /inv_ext1=>/H{H}[->//|[/in_rng[h]Hh|[[x1 x2] h [Hx Hh]]]].
           + case (h = (oget G1.mhi{2}.[(x{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
             + by left;rewrite Hh oget_some.
@@ -557,7 +557,7 @@ section EXT.
         rcondt{2} 5;1:by auto;smt w=(sizeE size_ge0).
         rcondt{2} 10. by auto;progress;rewrite dom_set !inE.
         wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3?->/=.
-        rewrite DWord.cdistr_ll /= => ? _;rewrite /bad_ext !getP /= !oget_some /= set_set_eq /=.
+        rewrite DWord.dunifin_ll /= => ? _;rewrite /bad_ext !getP /= !oget_some /= set_set_eq /=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
@@ -579,7 +579,7 @@ section EXT.
         rcondt{2} 5;1:by auto;smt w=(sizeE size_ge0).
         rcondt{2} 10. by auto;progress;rewrite dom_set !inE.
         wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3?->/=.
-        rewrite DWord.cdistr_ll /= => ? _;rewrite /bad_ext !getP /= !oget_some /= set_set_eq /=.
+        rewrite DWord.dunifin_ll /= => ? _;rewrite /bad_ext !getP /= !oget_some /= set_set_eq /=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
@@ -622,22 +622,24 @@ section EXT.
       wp; rnd (mem (image snd (dom G1.m `|` dom G1.mi ))); skip=> /> &hr ? ? -> /= ? ?.
       rewrite (Mu_mem.mu_mem 
                    (image snd (dom G1.m{hr} `|` dom G1.mi{hr}))
-                   cdistr (1%r/(2^c)%r))//.
-      + by move=>x _;apply DWord.cdistr1E.
-      apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+                   cdistr (1%r/(2^c)%r))//. 
+      + by move=>x _;rewrite DWord.dunifin1E cap_card.
+      rewrite ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
       rewrite imageU fcardU le_fromint.
       move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
       by rewrite -!sizeE;smt w=fcard_ge0.
+    + rewrite/#.
     + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
     + by move=> b1 c1;proc;auto=> /#.
     + proc;rcondt 2;1:by auto.
       wp;rnd (mem (image snd (dom G1.m `|` dom G1.mi) `|` fset1 x));skip=> /> &hr ??-> /= ??.
       rewrite (Mu_mem.mu_mem (image snd (dom G1.m{hr}`|`dom G1.mi{hr}) `|` fset1 x{hr}) cdistr (1%r/(2^c)%r))//.
-      + by move=>x _;apply DWord.cdistr1E.
-      apply ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
+      + by move=>x _;rewrite DWord.dunifin1E cap_card.
+      rewrite ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
       rewrite imageU !fcardU le_fromint fcard1.
       move:(fcard_image_leq snd (dom G1.m{hr}))(fcard_image_leq snd (dom G1.mi{hr})).
       by rewrite -!sizeE;smt w=fcard_ge0.
+    + rewrite/#.
     + by move=>c1;proc;auto=> &hr [^H 2->]/#. 
     move=> b1 c1;proc;auto=> /#.
   qed.

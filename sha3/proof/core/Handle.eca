@@ -1,5 +1,5 @@
 pragma -oldip. pragma +implicits.
-require import Pred Fun Option Pair Int Real StdOrder Ring NewLogic.
+require import Core Int Real StdOrder Ring IntExtra.
 require import List FSet NewFMap Utils Common SLCommon RndO.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder.
@@ -10,7 +10,7 @@ clone import GenEager as ROhandle with
   type from   <- handle,
   type to     <- capacity,
   op sampleto <- fun (_:int) => cdistr
-  proof sampleto_ll by apply DWord.cdistr_ll.
+  proof sampleto_ll by apply DWord.dunifin_ll.
 
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
@@ -431,7 +431,7 @@ split=> [xa0 xc0 ya0 yc0|xa0 hx0 ya0 hy0]; rewrite getP.
   by exists hx0 fx0 hy0 fy0; rewrite !getP /#.
 case: ((xa0,hx0) = (xa,hx))=> [[#] <*>> [#] <<*>|] /=.
 + by exists xc f yc f'; rewrite !getP /= /#.
-rewrite anda_and=> /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
+rewrite andaE=> /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
 exists xc0 fx0 yc0 fy0; rewrite !getP; do !split=> [/#|/#|/=].
 move: xahx0_neq_xahx; case: (xa0 = xa)=> [/= <*>>|//=]; case: (xc0 = xc)=> [<*>>|//=].
 by move: hs_hx=> /(Hhuniq _ _ _ _ hs_hx0).
@@ -451,7 +451,7 @@ move=> [] Hm_mh Hmh_m yc_notin_rng1_hs hs_hx hs_hy; split.
   by exists hy0 fy0 hx0 fx0; rewrite !getP /#.
 move=> ya0 hy0 xa0 hx0; rewrite getP; case: ((ya0,hy0) = (ya,hy))=> [[#] <*>> [#] <<*>|].
 + by exists yc fy xc fx; rewrite !getP //= /#.
-rewrite /= anda_and=> /negb_and yahy0_neq_yahy /Hmh_m [yc0 fy0 xc0 fx0] [#] hs_hy0 hs_hx0 mi_yayc0.
+rewrite /= andaE=> /negb_and yahy0_neq_yahy /Hmh_m [yc0 fy0 xc0 fx0] [#] hs_hy0 hs_hx0 mi_yayc0.
 exists yc0 fy0 xc0 fx0; rewrite !getP; do !split=> [/#|/#|].
 move: yahy0_neq_yahy; case: (ya0 = ya)=> [<<*> //=|/#]; case: (yc0 = yc)=> [<*>> /=|//=].
 by move: hs_hy0; rewrite yc_notin_rng1_hs.
@@ -1061,7 +1061,7 @@ split.
   case: {-1}(Gmi.[(ya,yc)]) (eq_refl Gmi.[(ya,yc)])=> [//|[xa' xc']].
   have /incli_of_INV + ^h - <- := HINV; 1:by rewrite h.
   move: Pm_xaxc; have [] -> -> /= := inv_mh_inv_Pm hs Pm Pmi mh mhi _ _ _; first 3 by case: HINV.
-  rewrite anda_and -negP=> [#] <<*>.
+  rewrite andaE -negP=> [#] <<*>.
   move: h; have /invG_of_INV [] <- := HINV.
   by rewrite Gm_xaxc.
 + by case: HINV.
@@ -1288,8 +1288,8 @@ case @[ambient]: {-1}(Gmi.[(xa,xc)]) (eq_refl Gmi.[(xa,xc)])=> [|[ya' yc'] ^] Gm
     have ^/inv_of_INV [] <- /mh_of_INV [] H _ _ /H {H} := inv0.
     move=> [? ? ? ?] [#]; rewrite hs_hx hs_hy=> /= [#] <<*> [#] <<*>.
     case: fx hs_hx=> hs_hx /= => [_|[#]]; first by exists hx.
-    by have /invG_of_INV [] -> := inv0; rewrite Gmi_xaxc.
-  smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    by have /invG_of_INV [] -> := inv0; rewrite Gmi_xaxc. print Block.DBlock.
+  smt (@Block.DBlock @Capacity.DWord).
 have /incli_of_INV <- := inv0; 1:by rewrite Gmi_xaxc.
 rewrite Pmi_xaxc=> /= [#] <<*>.
 rcondf{2} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Gmi_xaxc.
@@ -1329,10 +1329,10 @@ proof.
       (INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} /\
       F.RO.m.[p]{2} = Some sa{1})));last first.
   + case : (! (G1.bcol{2} \/ G1.bext{2}));
-      2: by conseq (_:_ ==> true)=> //; inline *;auto;rewrite Block.DWord.bdistr_ll.
+      2: by conseq (_:_ ==> true)=> //; inline *;auto;rewrite Block.DBlock.dunifin_ll.
     inline *; rcondf{2} 3.
     + by move=> &m;auto=> &hr [#] H /H[_ H1] ??;rewrite in_dom H1.
-    by auto=> /> &m1 &m2;rewrite Block.DWord.bdistr_ll /= => H /H [-> ->];rewrite oget_some.
+    by auto=> /> &m1 &m2;rewrite Block.DBlock.dunifin_ll /= => H /H [-> ->];rewrite oget_some.
   while (
      p{1} = (drop i p){2} /\ (0 <= i <= size p){2} /\
      (!(G1.bcol{2} \/ G1.bext{2}) => 
@@ -1364,7 +1364,7 @@ proof.
     by have := size_drop (i{m2} + 1) p{m2};case (drop (i{m2} + 1) p{m2}) => //= [/#| ];smt w=size_ge0.
   case ((G1.bcol{2} \/ G1.bext{2})).
   + wp;conseq (_: _ ==>  (G1.bcol{2} \/ G1.bext{2}))=> //.
-    by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DWord.bdistr_ll DWord.cdistr_ll).
+    by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DBlock.dunifin_ll DWord.dunifin_ll).
   conseq (_: (x{1} = (sa{1} +^ head witness p{1}, sc{1}) /\
              (p{1} = drop i{2} p{2} /\
              0 <= i{2} <= size p{2} /\
@@ -1416,7 +1416,7 @@ proof.
   move=> Heq Hdom  y1L-> /= y2L-> /=.
   have -> /= : i{m2} + 1 <> 0 by smt ().
   rewrite !getP_eq !oget_some /=.
-  pose p' := (take (i{m2} + 1) p{m2});rewrite -!nor=> [#] ? /= Hy2 ?.
+  pose p' := (take (i{m2} + 1) p{m2});rewrite/==> [#] ? /=.
   split;last first. 
   + split;1: by exists Unknown.
     rewrite /p' (@take_nth witness) 1:// build_hpath_prefix.
@@ -1424,7 +1424,7 @@ proof.
     rewrite /sa' getP_eq /=;apply build_hpath_up => //.
     by move: Hdom;rewrite Heq /sa' in_dom.
   have Hy1L := ch_notin_dom2_mh _ _ _ y1L G1.chandle{m2} Hmmhi Hhs.
-  have := hinvP FRO.m{m2} y2L;rewrite Hy2 /= => Hy2L.      
+  have := hinvP FRO.m{m2} y2L;rewrite /= => Hy2L.      
   have g1_sa' : G1.mh{m2}.[(sa', h{m2})] = None by move: Hdom;rewrite Heq in_dom.
   case :Hsc => f Hsc; have Hh := dom_hs_neq_ch _ _ _ _ _ Hhs Hsc.
   have Hch : FRO.m{m2}.[G1.chandle{m2}] = None.
@@ -1432,7 +1432,7 @@ proof.
     by case {-1}(FRO.m{m2}.[G1.chandle{m2}]) (eq_refl (FRO.m{m2}.[G1.chandle{m2}])) => // ? /H.
   have Hy2_mi: ! mem (dom PF.mi{m1}) (y1L, y2L).
   + rewrite in_dom;case {-1}( PF.mi{m1}.[(y1L, y2L)]) (eq_refl (PF.mi{m1}.[(y1L, y2L)])) => //.
-    by move=> [] ??;case Hmmhi=> H _ /H [] ????;rewrite Hy2L.
+    by move=> [] ??;case Hmmhi=> H _ /H [] ????/#.
   have ch_0 :=  ch_neq0 _ _ Hhs.
   have ch_None : 
     forall xa xb ha hb, G1.mh{m2}.[(xa,ha)] = Some(xb, hb) => 
@@ -1440,10 +1440,10 @@ proof.
   + move=> xa xb ha hb;case Hmmh=> _ H /H [xc fx yc fy [#]].
     by move=> /(dom_hs_neq_ch _ _ _ _ _ Hhs) -> /(dom_hs_neq_ch _ _ _ _ _ Hhs).
   split=> //.
-  + by apply hs_addh => // ??;apply Hy2L.
+  + by apply hs_addh => // ??/#. 
   + by apply inv_addm. 
   + by apply (m_mh_addh_addm f) => //;case Hhs. 
-  + by apply (mi_mhi_addh_addmi f)=> // ??;apply Hy2L.
+  + by apply (mi_mhi_addh_addmi f)=> // ??/#. 
   + by apply incl_upd_nin. 
   + by apply incl_upd_nin.
   + case (Hmh)=> H1 H2 H3;split.
@@ -1674,7 +1674,7 @@ section AUX.
       auto => &m1 &m2 [#] !<- _ _ -> /= _ y1L -> y2L -> /=.
       rewrite !getP_eq pi_x2 !oget_some /=.
       have /hs_of_INV [] Hu _ _:= inv0; have -> := huniq_hinvK_h _ _ _ Hu hs_hx2.
-      rewrite oget_some -!nor => /= -[] ? Hy2L [*].
+      rewrite oget_some => /=  ? Hy2L .
       case:inv0=> Hhs Hinv HinvG Hmmh Hmmhi Hincl Hincli Hmh Hpi.
       have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
       have mh_hx2: G1mh.[(x1,hx2)] = None.
@@ -1689,11 +1689,11 @@ section AUX.
       + apply inv_addm=> //; case: {-1}(G1mi.[(y1L,y2L)]) (eq_refl G1mi.[(y1L,y2L)])=> //.
         move=> [x1L x2L] ^G1mi_y; rewrite -Hincli 1:G1mi_y//.
         case: Hmmhi Hy2L => H _ + /H {H} [hx fx hy fy] [#].
-        by case: (hinvP hs0 y2L)=> [_ ->|//].
+        by case: (hinvP hs0 y2L)=> [_ ->|//]/#.
       + by apply inv_addm=>//; apply (ch_notin_dom2_mh _ _ Hmmhi Hhs).
       + by apply (m_mh_addh_addm _ Hmmh _ hs_hx2)=>//;apply ch_notin_dom_hs.
       + apply (mi_mhi_addh_addmi _ Hmmhi _ hs_hx2);last by apply ch_notin_dom_hs.
-        by have := hinvP hs0 y2L;rewrite Hy2L /#.
+        by have := hinvP hs0 y2L;rewrite /#.
       + by apply incl_addm. + by apply incl_addm.
       + split.
         + move=> xa hx ya hy;rewrite getP;case ((xa, hx) = (x1, hx2))=> /=.
@@ -1747,7 +1747,7 @@ section AUX.
         move=> [h []];rewrite getP build_hpath_upd_ch_iff //.
         case (h=ch0)=> [->> /= [??[# H1 -> ->]]| Hh] /=. 
         + by case Hmh => _ _ /(_ _ _ _ _ _ Hpath H1).
-        by have := hinvP hs0 y2L;rewrite Hy2L /= => ->.
+        by have := hinvP hs0 y2L;rewrite /= => /#.
       case Hpi => ->;apply exists_iff => h /=.
       rewrite build_hpath_upd_ch_iff // getP;case (h = ch0) => [->> | //].
       split;1: by move=> [_ /(dom_hs_neq_ch _ _ _ _ _ Hhs)].
@@ -1782,7 +1782,7 @@ section AUX.
       + by have /hs_of_INV []:= inv0.
       by rewrite /in_dom_with in_dom hs_hy2.
     rcondt{2} 14; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite in_dom pi_x2.
-    auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DWord.bdistr_ll Capacity.DWord.cdistr_ll /=.
+    auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DBlock.dunifin_ll Capacity.DWord.dunifin_ll /=.
     move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
@@ -1790,37 +1790,38 @@ section AUX.
     exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
   (* lossless PF.f *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
-    smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    smt (@Block.DBlock @Capacity.DWord).
   (* lossless and do not reset bad G1.S.f *)
   + move=> _; proc; if; auto.
     conseq (_: _ ==> G1.bcol \/ G1.bext); 1:smt ().
     inline *; if=> //=; wp; rnd predT; wp; rnd predT; auto.
-    + smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
-    smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    + smt (@Block.DBlock @Capacity.DWord).
+    smt (@Block.DBlock @Capacity.DWord).
   (** proofs for G1.S.fi *)
   (* equiv PF.P.fi G1.S.fi *)
   + by conseq (eq_fi D)=> /#.
   (* lossless PF.P.fi *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
-    smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    smt (@Block.DBlock @Capacity.DWord).
   (* lossless and do not reset bad G1.S.fi *)
   + move=> _; proc; if; 2:by auto.
-    by wp; do 2!rnd predT; auto => &hr [#]; smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+    by wp; do 2!rnd predT; auto => &hr [#]; smt (@Block.DBlock @Capacity.DWord).
   (** proofs for G1.C.f *)
   (* equiv PF.C.f G1.C.f *)
   + proc.
+    inline*;sp. admit. (* this is false *)
   (* lossless PF.C.f *)
   + move=> &2 _; proc; inline *; while (true) (size p); auto.
     + sp; if; 2:by auto; smt (size_behead).
-      by wp; do 2!rnd predT; auto; smt (size_behead Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+      by wp; do 2!rnd predT; auto; smt (size_behead @Block.DBlock @Capacity.DWord).
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
   + move=> _; proc; inline *; wp; rnd predT; auto.
     while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
     + if; 1:by auto=> /#.
       wp; rnd predT; wp; rnd predT; auto.
-      smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
-    by auto; smt (Block.DWord.bdistr_uf Capacity.DWord.cdistr_uf).
+      smt (@Block.DBlock @Capacity.DWord).
+    by auto; smt (@Block.DBlock @Capacity.DWord).
   (* Init ok *)
   inline *; auto=> />; split=> [|/#].
   (do !split; last 3 smt (getP map0P build_hpath_map0)); last 5 by move=> ? ? ? ?; rewrite map0P.
