@@ -513,7 +513,7 @@ lemma HybridIROExper_Lazy_Eager
 proof. by apply (HybridIROExper_Lazy_Eager' D &m). qed.
 
 (* turn a Hybrid IRO implementation (lazy or eager) into top-level
-   ideal functionality; its f procedure only uses IH.g *)
+   ideal functionality; its f procedure only uses HI.g *)
 
 module RaiseHybridIRO (HI : HYBRID_IRO) : FUNCTIONALITY = {
   proc init() = {
@@ -710,7 +710,7 @@ auto; progress [-delta];
 auto.
 qed.
 
-(* invariant relating maps of HybridIROEager and BlockSponge.BIRO.IRO *)
+(* invariant relating maps of BlockSponge.BIRO.IRO and HybridIROEager *)
 
 pred eager_invar
      (mp1 : (block list * int, block) fmap,
