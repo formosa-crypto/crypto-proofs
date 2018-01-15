@@ -5,7 +5,6 @@ require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Gext.
-print F.RO.
 
 module IF = {
   proc init = F.RO.init
@@ -363,6 +362,7 @@ axiom D_ll :
  forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
    islossless P.f =>
    islossless P.fi => islossless F.f => islossless D(F, P).distinguish.
+
 
 lemma Real_Ideal &m: 
   Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=

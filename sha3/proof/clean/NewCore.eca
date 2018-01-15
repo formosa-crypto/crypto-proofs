@@ -4,7 +4,7 @@ require import StdOrder Ring DProd.
 
 require (*..*) RP Indifferentiability.
 
-require import NewCommon.
+require import Common.
 (*---*) import Block DBlock Capacity DCapacity.
 
 (** Validity of Functionality Queries **)

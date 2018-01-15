@@ -16,6 +16,7 @@ require (*--*) FinType BitWord RP Monoid.
 
 pragma +implicits.
 
+
 (* -------------------------------------------------------------------- *)
 op r : { int | 2 <= r } as ge2_r.
 op c : { int | 0 <  c } as gt0_c.
@@ -24,6 +25,7 @@ type block.    (* ~ bitstrings of size r *)
 type capacity. (* ~ bitstrings of size c *)
 
 (* -------------------------------------------------------------------- *)
+
 lemma gt0_r: 0 < r.
 proof. by apply/(ltr_le_trans 2)/ge2_r. qed.
 
@@ -36,22 +38,23 @@ clone BitWord as Capacity with
     op n    <- c
   proof gt0_n by apply/gt0_c
 
-  rename "dword" as "cdistr"
-         "word"  as "cap"
-         "zerow" as "c0".
-
-op cdistr = Capacity.DWord.dunifin.
+  rename "word"     as "capacity"
+         "dunifin"  as "cdistr"
+         "Word"     as "Capacity"
+         "zerow"    as "c0".
+export Capacity DCapacity.
 
 clone export BitWord as Block with
   type word <- block,
     op n    <- r
   proof gt0_n by apply/gt0_r
 
-  rename "word"  as "block"
-         "Word"  as "Block"
-         "zerow" as "b0".
+  rename "word"     as "block"
+         "Word"     as "Block"
+         "zerow"    as "b0"
+         "dunifin"  as "bdistr".
+export DBlock.
 
-op bdistr = DBlock.dunifin.
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
 
@@ -105,7 +108,7 @@ by rewrite (@last_nonempty y z).
 qed.
 
 (*------------------------------ Primitive -----------------------------*)
-
+print Block.
 clone export RP as Perm with
   type t <- block * capacity,
   op   dt <- bdistr `*` cdistr

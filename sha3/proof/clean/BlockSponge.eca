@@ -5,8 +5,9 @@ require (*--*) StdBigop.
 require import StdOrder.
 (*---*) import IntOrder.
 
-require import NewCommon Gconcl.
-(*---*) import Block DBlock Capacity DCapacity SLCommon.
+require import Gconcl.
+(*---*) import Common SLCommon.
+(*---*) import Block DBlock Capacity DCapacity.
 
 (*** THEORY PARAMETERS ***)
 (** Validity of Functionality Queries **)
@@ -240,27 +241,34 @@ module DFC1 (F : FUNCTIONALITY) : FUNCTIONALITY = {
   }
 }.
 
+module P = Common.Perm.Perm.
+print Real_Ideal.
 (*** PROOF
      forall P D S,
          HiDist(D)^{BlockSponge(P),P} ~ HiDist(D)^{IBlockSponge,S(IBlockSponge)}
        => D^{Core(P),P} ~ D^{ICore,LowSim(S,ICore)} ***)
 section PROOF.
-  declare module P : PRIMITIVE         { Low.ICORE, IBlockSponge, HiDist, C }.
   declare module S : SIMULATOR         { Low.ICORE, IBlockSponge, HiDist, C, P }.
   declare module D : Low.DISTINGUISHER { Low.ICORE, IBlockSponge, HiDist, C, P, S }.
 
 
-
-  (* FIXME : is this the eager we want ? *)
   local module EagerCORE (P : Low.PRIMITIVE) = {
     var order : block list
     var capa  : capacity
     var blo   : block
+    var map   : (block * capacity) list
     proc init() = {
       order <- [];
       capa <- c0;
       blo <- b0;
+      map <- [];
       CORE(P).init();
+    }
+    proc g(bi,ci) = {
+      var bj, cj;
+      (bj,cj) <@ P.f(bi,ci);
+      map <- rcons map (bi,ci);
+      return (bj,cj);
     }
     proc f (p : block list, n : int) = {
       var r  : block list;
@@ -290,11 +298,42 @@ section PROOF.
       var i : int <- 0;
       blo <- b0;
       capa <- c0;
+      map <- [];
       while(i < size order) {
-        (blo,capa) <@ P.f(blo +^ nth witness order i,capa);
+        (blo,capa) <@ g(blo +^ nth witness order i,capa);
         i <- i + 1;
-      } 
+      }
     }
+    proc nwhile(k : int) : block list = {
+      var i : int <- 1;
+      var result : block list <- [];
+      ewhile();
+      result <- rcons result EagerCORE.blo;
+      while(i < k) {
+        EagerCORE.order <- rcons EagerCORE.order b0;
+        (blo,capa) <@ g(blo,capa);
+        result <- rcons result EagerCORE.blo;
+        i <- i + 1;
+      }
+      return result;
+    }
+    proc enwhile(k : int) : block list = {
+      var i : int <- 1;
+      var m : (block * capacity) list <- [];
+      var result : block list <- [];
+      ewhile();
+      result <- rcons result EagerCORE.blo;
+      while(i < k) {
+        EagerCORE.order <- rcons EagerCORE.order b0;
+        m <- rcons EagerCORE.map (EagerCORE.blo, EagerCORE.capa);
+        ewhile();
+        EagerCORE.map <- m;
+        result <- rcons result EagerCORE.blo;
+        i <- i + 1;
+      }
+      return result;
+    }
+        
   }.
 
   local module EagCORE (P : Low.PRIMITIVE) : Low.FUNCTIONALITY = {
@@ -325,6 +364,138 @@ section PROOF.
   }.
 
 
+  local equiv nwhile_enwhile (n : int) :
+    EagerCORE(P).nwhile ~ EagerCORE(P).enwhile :
+    ={arg, glob P, glob EagerCORE} /\ arg{1} = n ==> ={res, glob P, glob EagerCORE}.
+  proof.
+  move:n;elim/natind=>n Hn0.
+  + by proc;sp;rcondf{1}3;progress;2:rcondf{2}3;progress;-1:sim;
+      (inline*;wp;while(!i<k);1:(sp;if);auto=>/#).
+  move=>Hind;case(1 <= n)=>Hn1;last first.
+  + by proc;sp;rcondf{1}3;2:rcondf{2}3;-1:sim;progress;inline*;
+      by wp;while(!i<k);1:(sp;if);auto=>/#.
+  proc.
+  replace{1} { (!<-)  as init ; rest} by {
+      init;
+      result <@ EagerCORE(P).nwhile(n);
+      EagerCORE.order <- rcons EagerCORE.order b0;
+      (EagerCORE.blo,EagerCORE.capa) <@ EagerCORE(P).g(EagerCORE.blo,EagerCORE.capa);
+      result <- rcons result EagerCORE.blo;
+      i <- i + 1;
+    }
+    (={glob P, glob EagerCORE} /\ k{1} = n + 1
+      ==> ={result, glob P, glob EagerCORE})
+    (={glob P, glob EagerCORE} /\ k{2} = n + 1
+      ==> ={result, glob P, glob EagerCORE});
+    progress;1:rewrite/#.
+  + sp;inline{2}1;sp;sim.
+    splitwhile{1}3: i < n.
+    rcondt{1}4;progress.
+    + inline*;while(i <= n /\ k = n + 1);1:(sp;if;auto=>/#).
+      by conseq(:_==> true);1:progress=>/#;auto.
+    rcondf{1}8;progress.
+    + inline*;sp;wp;conseq(:_==> i=n);progress.
+      seq 3 : (i = n);last by sp;if;auto.
+      while(i <= n);first by sp;if;auto=>/#.
+      by conseq(:_==> true);2:auto;progress=>/#.
+    wp;sim.
+    while(={glob P, glob EagerCORE} /\ (result,i,n){1} = (result0,i0,k0){2}
+        /\ k{1} = n + 1);1:(inline*;sp;if;auto=>/#).
+    by wp;conseq(:_==> ={glob P, glob EagerCORE});1:progress=>/#;sim.
+
+  replace{2} { (!<-)  as init ; rest} by {
+      init;
+      result <@ EagerCORE(P).enwhile(n);
+      EagerCORE.order <- rcons EagerCORE.order b0;
+      m <- rcons EagerCORE.map (EagerCORE.blo, EagerCORE.capa);
+      EagerCORE(P).ewhile();
+      EagerCORE.map <- m;
+      result <- rcons result EagerCORE.blo;
+      i <- i + 1;
+    }
+    (={glob P, glob EagerCORE}
+      ==> ={result, glob P, glob EagerCORE})
+    (={glob P, glob EagerCORE} /\ k{2} = n + 1
+      ==> ={result, glob P, glob EagerCORE});
+    progress;1:rewrite/#;last first.
+  + sp;inline{1}1;sp;sim.
+    splitwhile{2}3: i < n.
+    rcondt{2}4;2:rcondf{2}10;progress.
+    + by while(i <= n /\ k = n + 1);by inline*;sp;wp;conseq(:_==> true);auto=>/#.
+    + wp;conseq(:_==> i = n);progress.
+      seq 3 : (i = n);last by inline*;conseq(:_==> true);auto.
+      by while(i <= n /\ k = n + 1); by inline*;sp;wp;conseq(:_==> true);auto=>/#.
+    sim.
+    while(={glob P, glob EagerCORE} /\ (result,i,n){2} = (result0,i0,k0){1}
+        /\ k{2} = n + 1);1:inline*. 
+    + by sp;wp;conseq(:_==> ={glob P, glob EagerCORE} /\ i1{1} = i0{2});
+        1:progress=>/#;sim.
+    by wp;conseq(:_==> ={glob P, glob EagerCORE});1:progress=>/#;sim.
+
+  replace{2} { (! <- as before); <@ ; after} by {
+      before;
+      result <@ EagerCORE(P).nwhile(n);
+      after;
+    }
+    (={glob P, glob EagerCORE} ==> ={result, glob P, glob EagerCORE})
+    (={glob P, glob EagerCORE} ==> ={result, glob P, glob EagerCORE});
+    progress;1:rewrite/#;last by sim;call(Hind);auto.
+  
+  sp;sim. (* TODO : reprendre ici *)
+
+
+  seq 1 1 : (={glob P, glob EagerCORE, result}
+         /\ size EagerCORE.order{2} = size EagerCORE.map{1}
+         /\ (forall j, 0 <= j < size EagerCORE.map{1} =>
+               nth (b0,c0) EagerCORE.map{1} j \in dom Perm.m{1})
+         /\ Some (EagerCORE.blo,EagerCORE.capa){1} = 
+            Perm.m{2}.[last (b0,c0) EagerCORE.map{1}]
+         /\ (forall j, 0 <= j < size EagerCORE.map{1} - 1 =>
+               let v = nth (b0,c0) EagerCORE.map{1} j in
+               let (e,f) = nth (b0,c0) EagerCORE.map{1} (j+1) in
+               let ej = nth witness EagerCORE.order{1} (j+1) in
+               Perm.m{1}.[v] = Some (e +^ ej, f)));last first.
+  + inline*.
+    splitwhile{2}7:i0 < size EagerCORE.order - 1.
+    rcondt{2}8;2:rcondf{2}16;progress.
+    + by while(i0 < size EagerCORE.order);1:(sp;if);auto;smt(size_rcons size_ge0).
+    + wp;conseq(:_==> i0 = size EagerCORE.order-1);1:progress=>/#.
+      seq 7:(i0 = size EagerCORE.order-1);2:(sp;if;auto=>/#).
+      by while(i0 <= size EagerCORE.order - 1);1:(sp;if);auto;smt(size_rcons size_ge0).
+    sim.
+    swap{1}-3;sim;sp 1 2;wp.
+    conseq(:_==> ={Perm.m, Perm.mi, EagerCORE.blo, EagerCORE.capa}
+              /\ i0{2} = size EagerCORE.order{2} - 1);progress.
+    + by rewrite nth_rcons size_rcons-addzA/=Block.WRing.addr0/#.
+    while{2}( ={Perm.m, Perm.mi, EagerCORE.order}
+        /\ 0 <= i0{2} <= size EagerCORE.order{2} - 1
+        /\ take i0{2} EagerCORE.map{1} = EagerCORE.map{2}
+        /\ m{2} = EagerCORE.map{1}
+        /\ (EagerCORE.blo{2} +^ nth witness EagerCORE.order{2} i0{2},
+             EagerCORE.capa{2}) = nth (b0,c0) m{2} i0{2}
+        /\ size EagerCORE.order{2} = size EagerCORE.map{1}
+        /\ (forall j, 0 <= j < size EagerCORE.map{1} =>
+             nth (b0,c0) EagerCORE.map{1} j \in dom Perm.m{2})
+        /\ (forall j, 0 <= j < size EagerCORE.map{1} - 1 =>
+             let v = nth (b0,c0) EagerCORE.map{1} j in
+             let e = nth (b0,c0) EagerCORE.map{1} (j+1) in
+             let ej = nth witness EagerCORE.order{1} (j+1) in
+             Perm.m{2}.[v] = Some (e.`1 +^ ej, e.`2))
+          )(size EagerCORE.order{2} - 1 - i0{2});progress;auto.
+     + rcondf 4;auto;progress;..4,6:smt(take_nth).
+       + by rewrite H1;cut->/=:=H4 i0{hr} _;1:rewrite/#;
+           rewrite oget_some/= -Block.WRing.addrA Block.WRing.addrN Block.WRing.addr0/#. 
+     progress.
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+     + smt(size_rcons size_ge0).
+       
+  qed.
+
   equiv core_blocksponge :
       Low.Indif(DFCn(CORE(P)),DPC(P),D).main ~
       Indif(DFC1(BlockSponge(P)),DPC(P),HiDist(D)).main :
@@ -334,11 +505,7 @@ section PROOF.
     (={glob D, glob P} ==> ={res, C.c})
     (={glob D, glob P} ==> ={res, C.c} /\ ={c}(C,HiDist));progress;1:rewrite/#.
   + proc=>/=;call (_: ={glob P, C.c}); first 2 by sim.
-    + proc=> /=;inline*;sp;if;auto;sp;if;auto;sim.
-      conseq(:_==> sc{1} = EagerCORE.capa{2} /\ sa{1} = EagerCORE.blo{2}
-                /\ ={glob P});progress.
-      by while( ={i,p0,glob P} /\ sc{1} = EagerCORE.capa{2}
-          /\ sa{1} = EagerCORE.blo{2});auto;call(:true);auto.
+    + by proc=> /=;inline*;sp;if;auto;sp;if;auto;sim.
 
     by inline*;auto;call(:true);auto. 
 
@@ -354,21 +521,72 @@ section PROOF.
           EagerCORE(P).ewhile();
           rest;
         }
-        (={glob P, EagerCORE.order, r0, n0} /\ i{1} = 0
+        (={glob P, EagerCORE.order, r0, p0, n0} /\ i{1} = 0
           /\ (EagerCORE.blo,EagerCORE.capa,EagerCORE.order){1} = (b0,c0,p0{1})
           ==> ={r0, glob P})
-        (={glob P,glob EagerCORE, n0,r0} ==> ={r0, glob P});
+        (={glob P,glob EagerCORE, n0, p0, r0} ==> ={r0, glob P});
         progress;1:rewrite/#;first inline*;sim;auto;progress.
     
       (* eager part *)
-      admit.
+      replace{2} {| (<@ as ewhile); rest } by {
+          rest;
+          EagerCORE.order <- take (size EagerCORE.order - 1) EagerCORE.order;
+          ewhile;
+        }
+        (={glob P, glob EagerCORE, n0, p0, r0} ==> ={r0, glob P})
+        (={glob P, glob EagerCORE, n0, p0, r0} ==> ={r0, glob P});
+        progress;1:rewrite/#;last first.
+      + 
+
+
+      replace{2} { begin ; while } by {
+          begin;
+          while(i < n0) {
+            EagerCORE(Perm).ewhile();
+            EagerCORE.order <- rcons EagerCORE.order b0;
+            i <- i + 1;
+            (EagerCORE.blo, EagerCORE.capa) <@ 
+              Perm.f(EagerCORE.blo, EagerCORE.capa);
+            r0 <- rcons r0 EagerCORE.blo;
+          }
+        }
+        (={glob P, glob EagerCORE, n0, p0, r0} ==> ={r0, glob P})
+        (={glob P, glob EagerCORE, n0, p0, r0} ==> ={r0, glob P});
+        progress;1:rewrite/#;last first.
+      + while(={r0, p0, n0, i, glob P, glob EagerCORE});
+        last by conseq(:_==> ={r0, p0, n0, i, glob P, glob EagerCORE});progress;sim.
+        inline*;sp. swap{1}3 2;wp=>//=.
+        splitwhile{2}1: i0 < size EagerCORE.order - 1.
+        rcondt{2}2;progress.
+        + by while(i0 < size EagerCORE.order);1:(sp;if);auto;smt(size_ge0).
+        rcondf{2}6;progress.
+        + seq 1 : (i0 = size EagerCORE.order - 1);last by sp;if;auto=>/#.
+          by while(0 <= i0 < size EagerCORE.order);1:(sp;if);auto;smt(size_ge0 size_rcons).
+        wp=>/=.
+        conseq(:_==> ={glob P, glob EagerCORE, r0, x});progress;sim.
+        wp.
+        conseq(:_==> ={glob P, EagerCORE.blo, EagerCORE.capa, r0}
+                  /\ i0{2} = size EagerCORE.order{2} - 1
+                  /\ rcons EagerCORE.order{1} b0 = EagerCORE.order{2});progress.
+        + by rewrite nth_rcons size_rcons-addzA/=Block.WRing.addr0.
+        conseq(:_==> ={glob P, EagerCORE.blo, EagerCORE.capa, r0}
+                  /\ i0{2} = size EagerCORE.order{1});progress.
+        + smt(size_rcons).
+        while( ={glob P, EagerCORE.blo, EagerCORE.capa, r0, i0}
+            /\ rcons EagerCORE.order{1} b0 = EagerCORE.order{2}
+            /\ 0 <= i0{2} <= size EagerCORE.order{1});
+          last auto;smt(size_ge0 size_rcons).
+        wp;conseq(:_==> ={glob P, EagerCORE.blo, EagerCORE.capa, r0, i0}
+                     /\ x0{1} = x{2});1:smt(size_rcons).
+        by sp;sim;smt(nth_rcons size_rcons).        
+      + 
 
     by inline*;auto;call(:true);auto.
 
 
   + proc;inline{2}3;wp;call (_: ={glob P, C.c} /\ ={c}(C,HiDist)). 
-    + by proc;inline*;sp;auto;if;auto;sp;rcondt{2}1;auto;call(:true);auto.
-    + by proc;inline*;sp;auto;if;auto;sp;rcondt{2}1;auto;call(:true);auto.
+    + by proc;inline*;sp;auto;if;auto;sp;rcondt{2}1;auto;sp;if;auto. 
+    + by proc;inline*;sp;auto;if;auto;sp;rcondt{2}1;auto;sp;if;auto.
     proc;inline*;sp;auto.
     if;1:progress=>/#;sp;wp.
     rcondt{1}1;1:auto=>/#;sp.
@@ -411,7 +629,7 @@ section PROOF.
       + rewrite/#.
       while(={glob P} /\
           (i1,EagerCORE.order,EagerCORE.blo,EagerCORE.capa){1} = (i0,p0,sa,sc){2});auto.
-      + by call(:true);auto.
+      + by sp;if;auto.
       progress.
       + by rewrite rcons_cat-nseqSr 1:/# -addzA/=/format-addzA/=.
       + by move:H6;rewrite rcons_cat-nseqSr 1:/# -addzA/=/format-addzA/=.
@@ -427,7 +645,7 @@ section PROOF.
     + rewrite/#.
     while(={glob P} /\
         (i0,EagerCORE.order,EagerCORE.blo,EagerCORE.capa){1} = (i0,p0,sa,sc){2});auto.
-    + by call(:true);auto.
+    + by sp;if;auto.
     progress.
     + by rewrite/format nseq0 cats0/#.
     + by rewrite size_cat nseq0/#.
