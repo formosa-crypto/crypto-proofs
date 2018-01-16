@@ -80,7 +80,7 @@ module (BlockSponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
 
     if (valid x /\ 0 < n) {
       while (i < size p) {
-        (sa,sc) <@ P.f((sa +^ nth witness p i,sc));
+        (sa,sc) <@ P.f((sa +^ nth b0 p i,sc));
         i <- i + 1;
       }
     }
@@ -279,7 +279,7 @@ section PROOF.
       i <- 0;
       if (valid p /\ 0 < n) {
         while(i < size p) {
-          (blo,capa) <@ P.f(blo +^ nth witness p i, capa);
+          (blo,capa) <@ P.f(blo +^ nth b0 p i, capa);
           i <- i + 1;
         }
         i <- 1;
@@ -300,7 +300,7 @@ section PROOF.
       capa <- c0;
       map <- [];
       while(i < size order) {
-        (blo,capa) <@ g(blo +^ nth witness order i,capa);
+        (blo,capa) <@ g(blo +^ nth b0 order i,capa);
         i <- i + 1;
       }
     }
@@ -441,20 +441,24 @@ section PROOF.
     (={glob P, glob EagerCORE} ==> ={result, glob P, glob EagerCORE});
     progress;1:rewrite/#;last by sim;call(Hind);auto.
   
-  sp;sim. (* TODO : reprendre ici *)
-
-
+  sp;sim.
+  
+  inline{2}4.
   seq 1 1 : (={glob P, glob EagerCORE, result}
          /\ size EagerCORE.order{2} = size EagerCORE.map{1}
-         /\ (forall j, 0 <= j < size EagerCORE.map{1} =>
-               nth (b0,c0) EagerCORE.map{1} j \in dom Perm.m{1})
-         /\ Some (EagerCORE.blo,EagerCORE.capa){1} = 
-            Perm.m{2}.[last (b0,c0) EagerCORE.map{1}]
-         /\ (forall j, 0 <= j < size EagerCORE.map{1} - 1 =>
-               let v = nth (b0,c0) EagerCORE.map{1} j in
-               let (e,f) = nth (b0,c0) EagerCORE.map{1} (j+1) in
-               let ej = nth witness EagerCORE.order{1} (j+1) in
-               Perm.m{1}.[v] = Some (e +^ ej, f)));last first.
+         /\ nth (b0,c0) EagerCORE.map{1} 0 = (nth b0 EagerCORE.order{1} 0, c0)
+         /\ (forall y, y \in EagerCORE.map{1} => y \in dom Perm.m{1})
+         /\ (0 = size EagerCORE.map{1} =>
+              (EagerCORE.blo,EagerCORE.capa){1} = (b0,c0))
+         /\ (0 < size EagerCORE.map{1} =>
+              (EagerCORE.blo,EagerCORE.capa){1} =
+              oget Perm.m{1}.[last (b0,c0) EagerCORE.map{1}])
+         /\ (forall j, 0 < j < size EagerCORE.map{1} =>
+              let ej = nth (b0,c0) EagerCORE.map{1} j in
+              let ej1 = nth (b0,c0) EagerCORE.map{1} (j-1) in
+              let mj = nth b0 EagerCORE.order{1} j in
+              Perm.m{1}.[ej1] = Some (ej.`1 +^ mj, ej.`2)));last first.
+
   + inline*.
     splitwhile{2}7:i0 < size EagerCORE.order - 1.
     rcondt{2}8;2:rcondf{2}16;progress.
@@ -467,33 +471,232 @@ section PROOF.
     conseq(:_==> ={Perm.m, Perm.mi, EagerCORE.blo, EagerCORE.capa}
               /\ i0{2} = size EagerCORE.order{2} - 1);progress.
     + by rewrite nth_rcons size_rcons-addzA/=Block.WRing.addr0/#.
-    while{2}( ={Perm.m, Perm.mi, EagerCORE.order}
+    alias{2}1 permm = Perm.m.
+    alias{2}1 permmi = Perm.mi.
+    sp 0 2;conseq(:_==> m{2} = rcons EagerCORE.map{1} (EagerCORE.blo{1}, EagerCORE.capa{1})
+                /\ (EagerCORE.blo{2}, EagerCORE.capa{2}) = last (b0, c0) m{2}
+                /\ i0{2} = size EagerCORE.order{2} - 1
+                /\ (Perm.m = permm /\ Perm.mi = permmi){2});1:smt(last_rcons).
+
+    while{2}(={glob P, EagerCORE.order}
+        /\ (i0 = 0 => (EagerCORE.blo,EagerCORE.capa)=(b0,c0)){2}
         /\ 0 <= i0{2} <= size EagerCORE.order{2} - 1
-        /\ take i0{2} EagerCORE.map{1} = EagerCORE.map{2}
-        /\ m{2} = EagerCORE.map{1}
-        /\ (EagerCORE.blo{2} +^ nth witness EagerCORE.order{2} i0{2},
-             EagerCORE.capa{2}) = nth (b0,c0) m{2} i0{2}
-        /\ size EagerCORE.order{2} = size EagerCORE.map{1}
-        /\ (forall j, 0 <= j < size EagerCORE.map{1} =>
-             nth (b0,c0) EagerCORE.map{1} j \in dom Perm.m{2})
-        /\ (forall j, 0 <= j < size EagerCORE.map{1} - 1 =>
-             let v = nth (b0,c0) EagerCORE.map{1} j in
-             let e = nth (b0,c0) EagerCORE.map{1} (j+1) in
-             let ej = nth witness EagerCORE.order{1} (j+1) in
-             Perm.m{2}.[v] = Some (e.`1 +^ ej, e.`2))
-          )(size EagerCORE.order{2} - 1 - i0{2});progress;auto.
-     + rcondf 4;auto;progress;..4,6:smt(take_nth).
-       + by rewrite H1;cut->/=:=H4 i0{hr} _;1:rewrite/#;
-           rewrite oget_some/= -Block.WRing.addrA Block.WRing.addrN Block.WRing.addr0/#. 
-     progress.
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-     + smt(size_rcons size_ge0).
-       
+        /\ i0{2} = size EagerCORE.map{2}
+        /\ size EagerCORE.order{2}-1 = size EagerCORE.map{1}
+        /\ rcons EagerCORE.map{1} (last (b0,c0) m{2}) = m{2}
+        /\ nth (b0,c0) EagerCORE.map{1} 0 = (nth b0 EagerCORE.order{1} 0, c0)
+        /\ (0 < i0{2} => (EagerCORE.blo,EagerCORE.capa){2} =
+            oget Perm.m{1}.[last (b0,c0) EagerCORE.map{2}])
+        /\ EagerCORE.map{2} = take i0{2} m{2}
+        /\ (Perm.m = permm /\ Perm.mi = permmi){2}
+        /\ (forall y, y \in EagerCORE.map{1} => y \in dom Perm.m{1})
+        /\ (forall j, 0 < j < size EagerCORE.map{1} =>
+             let ej = nth (b0,c0) EagerCORE.map{1} j in
+             let ej1 = nth (b0,c0) EagerCORE.map{1} (j-1) in
+             let mj = nth b0 EagerCORE.order{1} j in
+             Perm.m{1}.[ej1] = Some (ej.`1 +^ mj, ej.`2))
+        /\ (EagerCORE.blo{1}, EagerCORE.capa{1}) = last (b0, c0) m{2}
+        /\ 1 <= size EagerCORE.order{1}
+      )
+      (size EagerCORE.order{2} - 1 - i0{2});
+      progress;1:auto.
+    + sp;rcondf 1;auto;progress.
+      + case(0<size EagerCORE.map{hr})=>Hi0;last first.
+        + cut h:EagerCORE.map{hr} = [] by smt(size_eq0).
+          rewrite h/=;cut[->->]:=H _;1:rewrite/#.
+          by rewrite Block.WRing.add0r H7-H4 mem_nth/#.
+        cut:=H5 Hi0;rewrite-nth_last.
+        rewrite {1}H6 nth_take 1,2:/# -H3 nth_rcons-H2. 
+        cut->/=:size EagerCORE.map{hr} - 1 < size EagerCORE.order{hr}-1 by rewrite/#.
+        rewrite H8 1:/# oget_some/==>[[->->]].
+        rewrite -Block.WRing.addrA Block.xorwK Block.WRing.addr0//=.
+        rewrite H7 H6 size_take;1:smt(size_ge0).
+        rewrite-H3 size_rcons-H2-addzA/= H11/=. 
+        by cut/#:=mem_nth (b0,c0)EagerCORE.map{m}(size EagerCORE.map{hr})_;smt(size_ge0).
+      + by rewrite/#.
+      + by rewrite/#.
+      + by rewrite/#.
+      + by rewrite/#.
+      + smt(size_rcons).
+      + by rewrite last_rcons/#.
+      + case(0<size EagerCORE.map{hr})=>Hi0;last first.
+        + cut h:EagerCORE.map{hr} = [] by smt(size_eq0).
+          rewrite h/=;cut[->->]:=H _;1:rewrite/#.
+          rewrite Block.WRing.add0r(take_nth(b0,c0)0)/= 2:/#. 
+          smt(size_rcons size_ge0).
+        rewrite(take_nth(b0,c0));1:smt(size_rcons size_ge0).
+        congr;cut:=H5 Hi0.
+        rewrite-nth_last {1}H6 {2}H6. 
+        rewrite nth_take 1,2:/#.
+        rewrite size_take 1:/#.
+        rewrite-H3 size_rcons-H2-addzA/=H11/=nth_rcons.
+        rewrite-H3-H2/=.
+        cut->/=:size EagerCORE.map{hr} - 1 < size EagerCORE.order{hr} - 1 by rewrite/#.
+        rewrite H8 1:/# oget_some/==>[[->->]].
+        rewrite -Block.WRing.addrA Block.xorwK Block.WRing.addr0//=.
+        rewrite nth_rcons.
+        by rewrite-H3-H2/=H12/=/#.
+      by rewrite/#.
+    
+    sp;auto;progress.
+    + smt(size_ge0 size_rcons).
+    + smt(size_ge0 size_rcons).
+    + smt(last_rcons).
+    + smt(nth_rcons size_ge0). 
+    + smt(take0).
+    + smt(nth_rcons).
+    + smt(last_rcons).
+    + smt(size_ge0 size_rcons).
+    + smt(size_ge0 size_rcons).
+    + case(size map_R = 0)=>HmapR.
+      + cut:=size_eq0 map_R;rewrite HmapR/==>{HmapR}HmapR.
+        cut Hmap1:(size EagerCORE.map{1} = 0) by rewrite/#.
+        cut:=size_eq0 EagerCORE.map{1};rewrite Hmap1/==>{Hmap1}Hmap1.
+        rewrite Hmap1=>/={Hind}.
+        move:H6;rewrite HmapR/==>[[->->]].
+        by move:H2;rewrite Hmap1/==>[[->->]].
+      cut h:size order_R = size map_R by rewrite/#.
+      rewrite last_rcons H12 1:/# -nth_last {1}H13 nth_take 1,2:/#.
+      rewrite nth_rcons-H9 size_rcons-addzA/=h.
+      cut->/=:size map_R - 1 < size map_R by rewrite/#.
+      cut->:size map_R = size EagerCORE.map{1} by rewrite/#.
+      by rewrite nth_last/#.
+    smt(size_ge0 size_rcons).
+
+  inline*;wp.
+  case(size EagerCORE.order{1} = 0).
+  + sp;rcondf{1}1;2:rcondf{2}1;auto;progress;1,2:smt(size_eq0 size_ge0).
+    while(={Perm.mi, Perm.m, k0} /\ i0{1} = i1{2} /\ k0{1} = n /\
+        ={EagerCORE.map, EagerCORE.blo, EagerCORE.capa, EagerCORE.order} /\
+        ={result0} /\
+          size EagerCORE.order{2} = size EagerCORE.map{1} /\
+          nth (b0, c0) EagerCORE.map{1} 0 = (nth b0 EagerCORE.order{1} 0, c0) /\
+      (forall (y1 : block * capacity),
+        y1 \in EagerCORE.map{1} => y1 \in dom Perm.m{1}) /\
+      (0 = size EagerCORE.map{1} =>
+        EagerCORE.blo{1} = b0 && EagerCORE.capa{1} = c0) /\
+      (0 < size EagerCORE.map{1} =>
+        (EagerCORE.blo{1}, EagerCORE.capa{1}) =
+          oget Perm.m{1}.[last (b0, c0) EagerCORE.map{1}]) /\
+          forall (j : int),
+          0 < j < size EagerCORE.map{1} =>
+          Perm.m{1}.[nth (b0, c0) EagerCORE.map{1} (j - 1)] =
+          Some
+      ((nth (b0, c0) EagerCORE.map{1} j).`1 +^
+        nth b0 EagerCORE.order{1} j, (nth (b0, c0) EagerCORE.map{1} j).`2));auto;progress.
+    + sp;if;auto;progress.
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + rewrite getP !nth_rcons. rewrite size_rcons in H11.
+        cut->/=:j - 1 < size EagerCORE.map{2} by rewrite/#.
+        rewrite H.
+        case(j<size EagerCORE.map{2})=>Hj/=.
+        + cut->/=:!nth (b0, c0) EagerCORE.map{2} (j - 1) =
+             (EagerCORE.blo{2}, EagerCORE.capa{2})
+            by cut/#:nth (b0, c0) EagerCORE.map{2} (j - 1) \in dom Perm.m{2};smt(mem_nth). 
+          by rewrite H4//.
+        cut->/=:j=size EagerCORE.map{2} by rewrite/#.
+        cut->/=:!nth (b0, c0) EagerCORE.map{2} (size EagerCORE.map{2} - 1) =
+             (EagerCORE.blo{2}, EagerCORE.capa{2}) by smt(mem_nth).
+        by rewrite Block.WRing.addr0 H3;smt(get_oget mem_nth nth_last).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+      + rewrite !nth_rcons. rewrite size_rcons in H9.
+        cut->/=:j - 1 < size EagerCORE.map{2} by rewrite/#.
+        rewrite H.
+        case(j<size EagerCORE.map{2})=>Hj/=.
+          by rewrite H4//.
+        cut->/=:j=size EagerCORE.map{2} by rewrite/#.
+        by rewrite Block.WRing.addr0 H3;smt(get_oget mem_nth nth_last).
+      smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons size_eq0).
+    smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+
+
+  while(={glob P, glob EagerCORE, result0, k0}
+          /\ size EagerCORE.order{2} = size EagerCORE.map{1}
+          /\ i1{2} <= size EagerCORE.order{2}
+          /\ 1 <= i1{2} <= k0{2} /\ k0{2} = n
+          /\ i1{2} = i0{1}
+          /\ nth (b0, c0) EagerCORE.map{1} 0 = (nth b0 EagerCORE.order{1} 0, c0)
+          /\ (forall (y1 : block * capacity),
+              y1 \in EagerCORE.map{1} => y1 \in dom Perm.m{1})
+          /\ (0 = size EagerCORE.map{1} =>
+               (EagerCORE.blo{1}, EagerCORE.capa{1}) = (b0, c0))
+          /\ (0 < size EagerCORE.order{1} =>
+               (EagerCORE.blo{1}, EagerCORE.capa{1}) =
+                oget Perm.m{1}.[last (b0, c0) EagerCORE.map{1}])
+          /\ (forall (j : int), 0 < j < size EagerCORE.map{1} =>
+              let ej = nth (b0, c0) EagerCORE.map{1} j in
+              let ej1 = nth (b0, c0) EagerCORE.map{1} (j - 1) in
+              let mj = nth b0 EagerCORE.order{1} j in
+              Perm.m{1}.[ej1] = Some (ej.`1 +^ mj, ej.`2))).
+  + sp;if;auto;progress.
+    + smt(size_rcons size_ge0).
+    + smt(size_rcons size_ge0).
+    + smt(size_rcons size_ge0).
+    + smt(size_rcons size_ge0).
+    + smt(size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + rewrite getP !nth_rcons. rewrite size_rcons in H14.
+      cut->/=:j - 1 < size EagerCORE.map{2} by rewrite/#.
+      rewrite H.
+      case(j<size EagerCORE.map{2})=>Hj/=.
+      + cut->/=:!nth (b0, c0) EagerCORE.map{2} (j - 1) =
+           (EagerCORE.blo{2}, EagerCORE.capa{2})
+          by cut/#:nth (b0, c0) EagerCORE.map{2} (j - 1) \in dom Perm.m{2};smt(mem_nth). 
+        by rewrite H7//.
+      cut->/=:j=size EagerCORE.map{2} by rewrite/#.
+      cut->/=:!nth (b0, c0) EagerCORE.map{2} (size EagerCORE.map{2} - 1) =
+           (EagerCORE.blo{2}, EagerCORE.capa{2}) by smt(mem_nth).
+      by rewrite Block.WRing.addr0 H6;smt(get_oget mem_nth nth_last).
+
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + smt(mem_rcons dom_set in_fsetU1 last_rcons size_rcons size_ge0 nth_rcons).
+    + rewrite !nth_rcons. rewrite size_rcons in H12.
+      cut->/=:j - 1 < size EagerCORE.map{2} by rewrite/#.
+      rewrite H.
+      case(j<size EagerCORE.map{2})=>Hj/=.
+        by rewrite H7//.
+      cut->/=:j=size EagerCORE.map{2} by rewrite/#.
+      by rewrite Block.WRing.addr0 H6;smt(get_oget mem_nth nth_last).
+    wp;sp.
+
+    conseq(:_==> ={glob P, glob EagerCORE, result0, k0}
+          /\ size EagerCORE.order{2} = size EagerCORE.map{1}
+          /\ nth (b0, c0) EagerCORE.map{1} 0 = (nth b0 EagerCORE.order{1} 0, c0)
+          /\ (forall (y1 : block * capacity),
+              y1 \in EagerCORE.map{1} => y1 \in dom Perm.m{1})
+          /\ (0 = size EagerCORE.map{1} =>
+               (EagerCORE.blo{1}, EagerCORE.capa{1}) = (b0, c0))
+          /\ (0 < size EagerCORE.order{1} =>
+               (EagerCORE.blo{1}, EagerCORE.capa{1}) =
+                oget Perm.m{1}.[last (b0, c0) EagerCORE.map{1}])
+          /\ (forall (j : int), 0 < j < size EagerCORE.map{1} =>
+              let ej = nth (b0, c0) EagerCORE.map{1} j in
+              let ej1 = nth (b0, c0) EagerCORE.map{1} (j - 1) in
+              let mj = nth b0 EagerCORE.order{1} j in
+              Perm.m{1}.[ej1] = Some (ej.`1 +^ mj, ej.`2)));1:smt(size_ge0).
+
+    (* TODO : reprendre ici *)
+    admit.
   qed.
 
   equiv core_blocksponge :
