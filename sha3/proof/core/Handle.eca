@@ -2,7 +2,7 @@ pragma -oldip. pragma +implicits.
 require import Core Int Real StdOrder Ring IntExtra.
 require import List FSet NewFMap Utils Common SLCommon RndO.
 require import DProd Dexcepted.
-(*...*) import Capacity IntOrder.
+(*...*) import Capacity IntOrder DCapacity.
 
 require ConcreteF.
 
@@ -10,7 +10,7 @@ clone import GenEager as ROhandle with
   type from   <- handle,
   type to     <- capacity,
   op sampleto <- fun (_:int) => cdistr
-  proof sampleto_ll by apply DWord.dunifin_ll.
+  proof sampleto_ll by apply DCapacity.dunifin_ll.
 
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
@@ -1289,7 +1289,7 @@ case @[ambient]: {-1}(Gmi.[(xa,xc)]) (eq_refl Gmi.[(xa,xc)])=> [|[ya' yc'] ^] Gm
     move=> [? ? ? ?] [#]; rewrite hs_hx hs_hy=> /= [#] <<*> [#] <<*>.
     case: fx hs_hx=> hs_hx /= => [_|[#]]; first by exists hx.
     by have /invG_of_INV [] -> := inv0; rewrite Gmi_xaxc. print Block.DBlock.
-  smt (@Block.DBlock @Capacity.DWord).
+  smt (@Block.DBlock @Capacity.DCapacity).
 have /incli_of_INV <- := inv0; 1:by rewrite Gmi_xaxc.
 rewrite Pmi_xaxc=> /= [#] <<*>.
 rcondf{2} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Gmi_xaxc.
@@ -1364,7 +1364,7 @@ proof.
     by have := size_drop (i{m2} + 1) p{m2};case (drop (i{m2} + 1) p{m2}) => //= [/#| ];smt w=size_ge0.
   case ((G1.bcol{2} \/ G1.bext{2})).
   + wp;conseq (_: _ ==>  (G1.bcol{2} \/ G1.bext{2}))=> //.
-    by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DBlock.dunifin_ll DWord.dunifin_ll).
+    by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DBlock.dunifin_ll DCapacity.dunifin_ll).
   conseq (_: (x{1} = (sa{1} +^ head witness p{1}, sc{1}) /\
              (p{1} = drop i{2} p{2} /\
              0 <= i{2} <= size p{2} /\
@@ -1782,7 +1782,7 @@ section AUX.
       + by have /hs_of_INV []:= inv0.
       by rewrite /in_dom_with in_dom hs_hy2.
     rcondt{2} 14; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite in_dom pi_x2.
-    auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DBlock.dunifin_ll Capacity.DWord.dunifin_ll /=.
+    auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DBlock.dunifin_ll Capacity.DCapacity.dunifin_ll /=.
     move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
@@ -1790,22 +1790,22 @@ section AUX.
     exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
   (* lossless PF.f *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
-    smt (@Block.DBlock @Capacity.DWord).
+    smt (@Block.DBlock @Capacity.DCapacity).
   (* lossless and do not reset bad G1.S.f *)
   + move=> _; proc; if; auto.
     conseq (_: _ ==> G1.bcol \/ G1.bext); 1:smt ().
     inline *; if=> //=; wp; rnd predT; wp; rnd predT; auto.
-    + smt (@Block.DBlock @Capacity.DWord).
-    smt (@Block.DBlock @Capacity.DWord).
+    + smt (@Block.DBlock @Capacity.DCapacity).
+    smt (@Block.DBlock @Capacity.DCapacity).
   (** proofs for G1.S.fi *)
   (* equiv PF.P.fi G1.S.fi *)
   + by conseq (eq_fi D)=> /#.
   (* lossless PF.P.fi *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
-    smt (@Block.DBlock @Capacity.DWord).
+    smt (@Block.DBlock @Capacity.DCapacity).
   (* lossless and do not reset bad G1.S.fi *)
   + move=> _; proc; if; 2:by auto.
-    by wp; do 2!rnd predT; auto => &hr [#]; smt (@Block.DBlock @Capacity.DWord).
+    by wp; do 2!rnd predT; auto => &hr [#]; smt (@Block.DBlock @Capacity.DCapacity).
   (** proofs for G1.C.f *)
   (* equiv PF.C.f G1.C.f *)
   + proc.
@@ -1813,15 +1813,15 @@ section AUX.
   (* lossless PF.C.f *)
   + move=> &2 _; proc; inline *; while (true) (size p); auto.
     + sp; if; 2:by auto; smt (size_behead).
-      by wp; do 2!rnd predT; auto; smt (size_behead @Block.DBlock @Capacity.DWord).
+      by wp; do 2!rnd predT; auto; smt (size_behead @Block.DBlock @Capacity.DCapacity).
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
   + move=> _; proc; inline *; wp; rnd predT; auto.
     while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
     + if; 1:by auto=> /#.
       wp; rnd predT; wp; rnd predT; auto.
-      smt (@Block.DBlock @Capacity.DWord).
-    by auto; smt (@Block.DBlock @Capacity.DWord).
+      smt (@Block.DBlock @Capacity.DCapacity).
+    by auto; smt (@Block.DBlock @Capacity.DCapacity).
   (* Init ok *)
   inline *; auto=> />; split=> [|/#].
   (do !split; last 3 smt (getP map0P build_hpath_map0)); last 5 by move=> ? ? ? ?; rewrite map0P.

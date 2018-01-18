@@ -33,14 +33,14 @@ lemma ge0_r: 0 <= r.
 proof. by apply/ltrW/gt0_r. qed.
 
 (* -------------------------------------------------------------------- *)
-clone BitWord as Capacity with
+clone export BitWord as Capacity with
   type word <- capacity,
     op n    <- c
   proof gt0_n by apply/gt0_c
 
   rename "word"     as "capacity"
-         "dunifin"  as "cdistr"
          "Word"     as "Capacity"
+         (* "dunifin"  as "cdistr" *)
          "zerow"    as "c0".
 export Capacity DCapacity.
 
@@ -51,10 +51,13 @@ clone export BitWord as Block with
 
   rename "word"     as "block"
          "Word"     as "Block"
-         "zerow"    as "b0"
-         "dunifin"  as "bdistr".
+         (* "dunifin"  as "bdistr" *)
+         "zerow"    as "b0".
 export DBlock.
 
+
+op cdistr = DCapacity.dunifin.
+op bdistr = DBlock.dunifin.
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
 
