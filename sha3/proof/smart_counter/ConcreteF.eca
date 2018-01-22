@@ -1,0 +1,186 @@
+require import Core Int Real StdOrder Ring Distr IntExtra.
+require import List FSet NewFMap Utils Common SLCommon DProd Dexcepted.
+
+(*...*) import Capacity IntOrder RealOrder.
+
+require (*..*) Strong_RP_RF_C.
+
+module PF = {
+  var m, mi: (state,state) fmap
+
+  proc init(): unit = {
+    m  <- map0;
+    mi <- map0;
+  }
+
+  proc f(x : state): state = {
+    var y1, y2;
+
+    if (!mem (dom m) x) {
+      y1           <$ bdistr;
+      y2           <$ cdistr;
+      m.[x]        <- (y1,y2);
+      mi.[(y1,y2)] <- x;
+    }
+    return oget m.[x];
+  }
+
+  proc fi(x : state): state = {
+    var y1, y2;
+
+    if (!mem (dom mi) x) {
+      y1          <$ bdistr;
+      y2          <$ cdistr;
+      mi.[x]      <- (y1,y2);
+      m.[(y1,y2)] <- x;
+    }
+    return oget mi.[x];
+  }
+
+}.
+
+module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
+     
+section.
+  declare module D : DISTINGUISHER {Perm, C, PF}.
+
+  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+    islossless P.f => islossless P.fi => islossless F.f => 
+    islossless D(F, P).distinguish.
+
+  local module GReal' = Indif(FC(SqueezelessSponge(Perm)), PC(Perm), D).
+
+  local clone import Strong_RP_RF_C as Switching with
+    type D  <- state,
+      op uD <- dstate,
+    type K  <- unit,
+      op dK <- (MUnit.dunit<:unit> tt),
+      op q  <- max_size
+  proof *.
+  realize ge0_q by smt w=max_ge0.
+  realize uD_uf_fu.
+  split.
+    case=> [x y]; rewrite supp_dprod /=.
+    rewrite Block.DBlock.supp_dunifin Capacity.DCapacity.supp_dunifin/=. 
+      smt(dprod1E Block.DBlock.dunifin_funi Capacity.DCapacity.dunifin_funi).
+  split. 
+    smt(dprod_ll  Block.DBlock.dunifin_ll Capacity.DCapacity.dunifin_ll).
+  apply/dprod_fu.
+    rewrite Block.DBlock.dunifin_fu.
+  by rewrite Capacity.DCapacity.dunifin_fu.
+  qed.
+  realize dK_ll.
+  by rewrite /is_lossless MUnit.dunit_ll.
+  qed.
+
+  (* TODO move this *)
+  lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
+  proof. by case l=> // ?? /=; ring. qed.
+
+  local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
+    proc distinguish = DRestr(D,SqueezelessSponge(P'),P').distinguish
+  }.
+
+  local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder}) &m:
+    Pr[PRPt.IND(P,D').main() @ &m: res]
+    = Pr[PRPt.IND(P,DBounder(D')).main() @ &m: res].
+  proof.
+  byequiv=> //=; proc; inline *.
+  wp.
+  call (_: ={glob C, glob P} /\ DBounder.FBounder.c{2} = C.c{2}).
+  + proc; sp; if=> //=; inline *.
+    rcondt{2} 4; 1: by auto=> /#.
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *.
+    rcondt{2} 4; 1: by auto=> /#.
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *.
+    wp; while (   ={glob C, glob P, p, sa, sc}
+               /\ C.c{2} <= max_size
+               /\ DBounder.FBounder.c{2} = C.c{2} - size p{2}).
+      rcondt{2} 3; 1: by auto; smt w=size_ge0.
+      by wp; call (_: true); auto=> /#.
+    by auto; progress; ring.
+  by wp; call (_: true).
+  qed.
+
+  local clone import ProdSampling with
+    type t1 <- block,
+      op d1 <- bdistr,
+    type t2 <- capacity,
+      op d2 <- cdistr.
+
+  lemma Real_Concrete &m : 
+    Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
+    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * mu dstate (pred1 witness).
+  proof.
+    cut->:
+      Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:
+         res /\ C.c <= max_size] = Pr[GReal'.main()@ &m: res/\ C.c <= max_size].
+    + byequiv=>//;proc;inline *;call (_: ={C.c,glob Perm});last by auto.
+      + by sim. + by sim.
+      proc; inline *; wp.
+      while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
+      by sp; if=> //=; auto=> /> &2 cL /size_behead=> ->; progress; ring.
+    have p_ll := P_f_ll _ _.
+    + apply/dprod_ll; split.
+      + exact/Block.DBlock.dunifin_ll.
+      exact/Capacity.DCapacity.dunifin_ll.
+    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
+      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu. 
+    have pi_ll := P_fi_ll _ _.
+    + apply/dprod_ll; split.
+      + exact/Block.DBlock.dunifin_ll.
+      exact/Capacity.DCapacity.dunifin_ll.
+    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
+      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu. 
+    have f_ll : islossless SqueezelessSponge(Perm).f.
+    + proc; while true (size p)=> //=.
+      * by move=> z; wp; call p_ll; skip=> /> &hr /size_behead /#.
+      by auto; smt w=size_ge0.
+    apply (ler_trans _ _ _ 
+             (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
+    have ->: Pr[Indif(SqueezelessSponge(Perm), Perm, DRestr(D)).main() @ &m: res]
+             = Pr[PRPt.IND(PRPi.PRPi,DBounder(D')).main() @ &m: res].
+    + rewrite -(DoubleBounding PRPi.PRPi &m).
+      byequiv=> //=; proc; inline *; sim (_: ={m,mi}(Perm,PRPi.PRPi) /\ ={glob C}).
+      * by proc; if=> //=; auto.
+      by proc; if=> //=; auto.
+    have ->: Pr[CF(DRestr(D)).main() @ &m: res]
+             = Pr[PRPt.IND(ARP,DBounder(D')).main() @ &m: res].
+    + rewrite -(DoubleBounding ARP &m).
+      byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
+      * proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = x{2})=> //=.
+        transitivity{1} { (y1,y2) <@ S.sample2(); }
+                        (true ==> ={y1,y2})
+                        (true ==> (y1,y2){1} = x{2})=> //=.
+        - by inline *; auto.
+        transitivity{2} { x <@ S.sample(); }
+                        (true ==> (y1,y2){1} = x{2})
+                        (true ==> ={x})=> //=.
+        - by symmetry; call sample_sample2; skip=> /> [].
+        by inline *; auto.
+      proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = y{2})=> //=.
+      transitivity{1} { (y1,y2) <@ S.sample2(); }
+                      (true ==> ={y1,y2})
+                      (true ==> (y1,y2){1} = y{2})=> //=.
+      - by inline *; auto.
+      transitivity{2} { y <@ S.sample(); }
+                      (true ==> (y1,y2){1} = y{2})
+                      (true ==> ={y})=> //=.
+      - by symmetry; call sample_sample2; skip=> /> [].
+      by inline *; auto.
+    have /#:= Conclusion D' &m _.
+    move=> O O_f_ll O_fi_ll.
+    proc; call (_: true)=> //=.
+    + apply D_ll.
+    + by proc; sp; if=> //=; call O_f_ll; auto.
+    + by proc; sp; if=> //=; call O_fi_ll; auto.
+    + proc; inline *; sp; if=> //=; auto.
+      while true (size p).
+      * by auto; call O_f_ll; auto=> /#.
+      by auto; smt w=size_ge0.
+    by inline *; auto.
+  qed.
+
+end section.
