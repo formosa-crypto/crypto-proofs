@@ -56,8 +56,8 @@ section.
     type K  <- unit,
       op dK <- (MUnit.dunit<:unit> tt),
       op q  <- max_size
-  proof *.
-  realize ge0_q by smt w=max_ge0.
+  proof *. 
+  realize ge0_q by rewrite max_ge0.
   realize uD_uf_fu.
   split.
     case=> [x y]; rewrite supp_dprod /=.
@@ -77,24 +77,56 @@ section.
   lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
   proof. by case l=> // ?? /=; ring. qed.
 
-  local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
-    proc distinguish = DRestr(D,SqueezelessSponge(P'),P').distinguish
+  local module CP' (P' : PRPt.Oracles) = {
+    proc f (x : state) = {
+      var y <- (b0,c0);
+      if (!x \in dom C.m) {
+        y <@ P'.f(x);
+        C.m.[x]  <- y;
+        C.mi.[y] <- x;
+      } else {
+        y <- oget C.m.[x];
+      }
+      return y;
+    }
+    proc fi (x : state) = {
+      var y <- (b0,c0);
+      if (!x \in dom C.mi) {
+        y <@ P'.f(x);
+        C.mi.[x] <- y;
+        C.m.[y]  <- x;
+      } else {
+        y <- oget C.mi.[x];
+      }
+      return y;
+    }
   }.
+
+  local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
+    proc distinguish = DRestr(D,SqueezelessSponge(CP'(P')),P').distinguish
+  }.
+
+
 
   local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder}) &m:
     Pr[PRPt.IND(P,D').main() @ &m: res]
     = Pr[PRPt.IND(P,DBounder(D')).main() @ &m: res].
   proof.
   byequiv=> //=; proc; inline *.
-  wp.
-  call (_: ={glob C, glob P} /\ DBounder.FBounder.c{2} = C.c{2}).
-  + proc; sp; if=> //=; inline *.
-    rcondt{2} 4; 1: by auto=> /#.
-    by wp; call (_: true); auto.
-  + proc; sp; if=> //=; inline *.
-    rcondt{2} 4; 1: by auto=> /#.
-    by wp; call (_: true); auto.
-  + proc; sp; if=> //=; inline *.
+  wp. print prefixe_inv.
+  call (_: ={glob C, glob P}
+        /\ prefixe_inv C.queries{1} C.m{1}
+        /\ ={m,mi}(C,DBounder.FBounder)
+        /\ DBounder.FBounder.c{2} <= C.c{2}).
+  + proc; sp; if;auto;if=> //=; inline *.
+    rcondt{2} 3; 1: by auto=> /#.
+    rcondt{2} 4;first by auto;call(:true);auto.
+    by wp; call (_: true); auto;smt(prefixe_inv_set).
+  + proc; sp; if; auto; if=> //=; inline *.
+    rcondt{2} 3; 1: by auto=> /#.
+    rcondt{2} 4;first by auto;call(:true);auto.
+    wp; call (_: true); auto;progress. smt. admit. admit. 
+  + proc; sp; if; auto; if=> //=; inline *.
     wp; while (   ={glob C, glob P, p, sa, sc}
                /\ C.c{2} <= max_size
                /\ DBounder.FBounder.c{2} = C.c{2} - size p{2}).
@@ -112,7 +144,7 @@ section.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
-    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * mu dstate (pred1 witness).
+    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness).
   proof.
     cut->:
       Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:

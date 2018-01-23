@@ -223,8 +223,143 @@ op get_max_prefixe (l : 'a list) (ll : 'a list list) =
   with ll = (::) l' ll' => max_prefixe l l' ll'.
 
 
+pred invm (m mi : ('a * 'b, 'a * 'b) fmap) =
+  forall x y, m.[x] = Some y <=> mi.[y] = Some x.
+print foldl.
+
+
+op blocksponge (l : block list) (m : (state, state) fmap) (bc : state) =
+  with l = "[]" => (l,bc)
+  with l = (::) b' l' =>
+    let (b,c) = (bc.`1,bc.`2) in
+    if ((b +^ b', c) \in dom m) then blocksponge l' m (oget m.[(b +^ b', c)])
+    else (l,(b,c)).
+  
+op s0 : state = (b0,c0).
+
+lemma blocksponge_size_leq l m bc : 
+    size (blocksponge l m bc).`1 <= size l.
+proof.
+move:m bc;elim l=>//=.
+move=>e l Hind m bc/#.
+qed.
+
+
+lemma blocksponge_set l m bc x y :
+    (x \in dom m => y = oget m.[x]) =>
+    let bs1 = blocksponge l m bc in
+    let bs2 = blocksponge l m.[x <- y] bc in
+    let l1 = bs1.`1 in let l2 = bs2.`1 in let bc1 = bs1.`2 in let bc2 = bs2.`2 in
+    size l2 <= size l1 /\ (size l1 = size l2 => (l1 = l2 /\ bc1 = bc2)).
+proof.
+move=>Hxy/=;split.
++ move:m bc x y Hxy;elim l=>//=.
+  move=>/=e l Hind m bc x y Hxy/=;rewrite dom_set in_fsetU1.
+  case((bc.`1 +^ e, bc.`2) = x)=>//=[->//=|hx]. 
+  + rewrite getP/=oget_some;case(x\in dom m)=>//=[/#|].
+    smt(blocksponge_size_leq getP).
+  rewrite getP hx/=.
+  case((bc.`1 +^ e, bc.`2) \in dom m)=>//=Hdom.
+  by cut//:=Hind m (oget m.[(bc.`1 +^ e, bc.`2)]) x y Hxy.
+move:m bc x y Hxy;elim l=>//=.
+move=>e l Hind m bx x y Hxy.
+rewrite!dom_set !in_fsetU1 !getP.
+case((bx.`1 +^ e, bx.`2) \in dom m)=>//=Hdom.
++ case(((bx.`1 +^ e, bx.`2) = x))=>//=Hx.
+  + move:Hdom;rewrite Hx=>Hdom. 
+    cut:=Hxy;rewrite Hdom/==>Hxy2.
+    rewrite oget_some -Hxy2/=.
+    by cut:=Hind m y x y Hxy.
+  by cut:=Hind m (oget m.[(bx.`1 +^ e, bx.`2)]) x y Hxy.
+case(((bx.`1 +^ e, bx.`2) = x))=>//=;smt(blocksponge_size_leq).
+qed.
+
+
+lemma blocksponge_cat m l1 l2 bc :
+    blocksponge (l1 ++ l2) m bc =
+    let lbc = blocksponge l1 m bc in
+    blocksponge (lbc.`1 ++ l2) m (lbc.`2).
+proof.
+rewrite/=. 
+move:m bc l2;elim l1=>//= e1 l1 Hind m bc b.
+case((bc.`1 +^ e1, bc.`2) \in dom m)=>//=[|->//=]Hdom.
+by cut//:=Hind m (oget m.[(bc.`1 +^ e1, bc.`2)]) b.
+qed.
+
+
+lemma blocksponge_rcons m l bc b :
+    blocksponge (rcons l b) m bc = 
+    let lbc = blocksponge l m bc in
+    blocksponge (rcons lbc.`1 b) m (lbc.`2).
+proof.
+by rewrite/=-2!cats1 blocksponge_cat/=. 
+qed.
+
+
+pred prefixe_inv (queries : (block list, block) fmap)
+               (m : (state, state) fmap) =
+  forall (bs : block list),
+    bs \in dom queries =>
+    forall i, 0 <= i < size bs =>
+      let bc  = (blocksponge (take i bs) m s0).`2 in
+      (bc.`1 +^ nth b0 bs i, bc.`2) \in dom m.
+
+
+
+lemma prefixe_inv_bs_fst_nil queries m :
+    prefixe_inv queries m =>
+    forall l, l \in dom queries =>
+    forall i, 0 <= i <= size l =>
+    (blocksponge (take i l) m s0).`1 = [].
+proof.
+move=>Hinv l Hdom i [Hi0 Hisize];move:i Hi0 l Hisize Hdom;apply intind=>//=.
++ by move=>l;rewrite take0/=.
+move=>i Hi0 Hind l Hil Hldom.
+rewrite(take_nth b0)1:/#.
+rewrite blocksponge_rcons/=.
+cut->/=:=Hind l _ Hldom;1:rewrite/#.
+by cut/=->/=:=Hinv _ Hldom i _;1:rewrite/#.
+qed.
+
+
+lemma prefixe_inv_set queries m x y :
+    !x \in dom m =>
+    prefixe_inv queries m =>
+    prefixe_inv queries m.[x <- y].
+proof.
+move=>Hxdom Hpref bs/=Hbsdom i [Hi0 Hisize].
+cut->:blocksponge (take i bs) m.[x <- y] s0 = blocksponge (take i bs) m s0.
++ move:i Hi0 bs Hisize Hbsdom;apply intind=>//=i;first by rewrite take0//=.
+  move=>Hi0 Hind bs Hsize Hbsdom.
+  rewrite (take_nth b0)1:/#.
+  rewrite 2!blocksponge_rcons/=.
+  cut->/=:=prefixe_inv_bs_fst_nil _ _ Hpref _ Hbsdom i _;1:rewrite/#.
+  cut/=->/=:=Hpref _ Hbsdom i _;1:rewrite/#.
+  cut->/=:=Hind bs _ Hbsdom;1:rewrite/#.
+  cut->/=:=prefixe_inv_bs_fst_nil _ _ Hpref _ Hbsdom i _;1:rewrite/#.
+  rewrite dom_set in_fsetU1.
+  cut/=->/=:=Hpref _ Hbsdom i _;1:rewrite/#.
+  rewrite getP.
+  cut/#:=Hpref _ Hbsdom i _;1:rewrite/#.
+rewrite dom_set in_fsetU1.
+cut/#:=Hpref _ Hbsdom i _;1:rewrite/#.
+qed.
+
+
+lemma size_blocksponge queries m l :
+    prefixe_inv queries m =>
+    size (blocksponge l m s0).`1 <= size l - prefixe l (get_max_prefixe l (elems (dom queries))).
+proof.
+move=>Hinv.
+pose l2:=get_max_prefixe _ _;pose p:=prefixe _ _. search take drop.
+rewrite-{1}(cat_take_drop p l)blocksponge_cat/=.
+rewrite(prefixe_take).
+
+qed.
+
 
 end Prefixe.
+export Prefixe.
 
 (* -------------------------------------------------------------------------- *)
 
@@ -232,10 +367,12 @@ module C = {
   var c  : int
   var m  : (state, state) fmap
   var mi : (state, state) fmap
+  var queries : (block list, block) fmap
   proc init () = { 
-    c  <- 0;
-    m  <- map0;
-    mi <- map0;
+    c       <- 0;
+    m       <- map0;
+    mi      <- map0;
+    queries <- map0;
   }
 }.
 
@@ -247,23 +384,27 @@ module PC (P:PRIMITIVE) = {
   }
 
   proc f (x:state) = {  
-    var y;
-    y     <@ P.f(x);
+    var y <- (b0,c0);
     if (!x \in dom C.m) {
+      y        <@ P.f(x);
       C.c      <- C.c + 1;
       C.m.[x]  <- y;
       C.mi.[y] <- x;
+    } else {
+      y        <- oget C.m.[x];
     }
     return y;
   }
 
   proc fi(x:state) = {
-    var y;
-    y     <@ P.fi(x);
+    var y <- (b0,c0);
     if (!x \in dom C.mi) {
+      y        <@ P.fi(x);
       C.c      <- C.c + 1;
       C.mi.[x] <- y;
       C.m.[y]  <- x;
+    } else {
+      y        <- oget C.mi.[x];
     }
     return y;
   } 
@@ -273,27 +414,31 @@ module PC (P:PRIMITIVE) = {
 module DPRestr (P:DPRIMITIVE) = {
 
   proc f (x:state) = {  
-    var y=(b0,c0);
-    if (C.c + 1 <= max_size) {
-      y     <@ P.f(x);
-      if (!x \in dom C.m) {
+    var y <- (b0,c0);
+    if (!x \in dom C.m) {
+      if (C.c + 1 <= max_size) {
+        y        <@ P.f(x);
         C.c      <- C.c + 1;
         C.m.[x]  <- y;
         C.mi.[y] <- x;
       }
+    } else {
+      y          <- oget C.m.[x];
     }
     return y;
   }
 
   proc fi(x:state) = {
-    var y=(b0,c0);
-    if (C.c + 1 <= max_size) {
-      y     <@ P.fi(x);
-      if (!x \in dom C.mi) {
+    var y <- (b0,c0);
+    if (!x \in dom C.mi) {
+      if (C.c + 1 <= max_size) {
+        y        <@ P.fi(x);
         C.c      <- C.c + 1;
         C.mi.[x] <- y;
         C.m.[y]  <- x;
       }
+    } else {
+      y          <- oget C.mi.[x];
     }
     return y;
   } 
@@ -318,9 +463,14 @@ module FC(F:FUNCTIONALITY) = {
   proc init = F.init
 
   proc f (bs:block list) = {
-    var b= b0;
-    C.c <- C.c + size bs;
-    b <@ F.f(bs);
+    var b <- b0;
+    if (!bs \in dom C.queries) {
+      C.c <- C.c + size bs - prefixe bs (get_max_prefixe bs (elems (dom C.queries)));
+      b <@ F.f(bs);
+      C.queries.[bs] <- b;
+    } else {
+      b <- oget C.queries.[bs];
+    }
     return b;
   }
 }.
@@ -329,9 +479,14 @@ module DFRestr(F:DFUNCTIONALITY) = {
 
   proc f (bs:block list) = {
     var b= b0;
-    if (C.c + size bs <= max_size) {
-      C.c <- C.c + size bs;
-      b <@ F.f(bs);
+    if (!bs \in dom C.queries) {
+      if (C.c + size bs - prefixe bs (get_max_prefixe bs (elems (dom C.queries))) <= max_size) {
+        C.c <- C.c + size bs - prefixe bs (get_max_prefixe bs (elems (dom C.queries)));
+        b <@ F.f(bs);
+        C.queries.[bs] <- b;
+      }
+    } else {
+      b <- oget C.queries.[bs];
     }
     return b;
   }
@@ -356,14 +511,14 @@ module DRestr(D:DISTINGUISHER, F:DFUNCTIONALITY, P:DPRIMITIVE) = {
   }
 }.
 
-lemma rp_ll (P<:DPRIMITIVE): islossless P.f => islossless DPRestr(P).f.
-proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+lemma rp_ll (P<:DPRIMITIVE{C}): islossless P.f => islossless DPRestr(P).f.
+proof. move=>Hll;proc;sp;if;auto;if;auto;call Hll;auto. qed.
 
-lemma rpi_ll (P<:DPRIMITIVE): islossless P.fi => islossless DPRestr(P).fi.
-proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+lemma rpi_ll (P<:DPRIMITIVE{C}): islossless P.fi => islossless DPRestr(P).fi.
+proof. move=>Hll;proc;sp;if;auto;if;auto;call Hll;auto. qed.
 
-lemma rf_ll (F<:DFUNCTIONALITY): islossless F.f => islossless DFRestr(F).f.
-proof. move=>Hll;proc;sp;if=>//;call Hll;auto. qed.
+lemma rf_ll (F<:DFUNCTIONALITY{C}): islossless F.f => islossless DFRestr(F).f.
+proof. move=>Hll;proc;sp;if;auto;if=>//;auto;call Hll;auto. qed.
 
 lemma DRestr_ll (D<:DISTINGUISHER{C}): 
   (forall (F<:DFUNCTIONALITY{D})(P<:DPRIMITIVE{D}),
@@ -390,7 +545,7 @@ section RESTR.
     Pr[Indif(F,P,DRestr(D)).main()@ &m: res].
   proof.
     byequiv=>//.
-    proc;inline *;wp;swap{1}1 2;sim. 
+    proc;inline *;wp;swap{1}1 2;sim;auto;call(:true);auto;call(:true);auto. 
   qed.
 
 end section RESTR.
@@ -419,18 +574,18 @@ section COUNT.
     symmetry;proc;inline *;wp;swap{2}1 2.
     call (_: max_size < C.c, ={glob P, glob CO, glob C}).
     + apply D_ll.
-    + proc; sp 1 0;if{1};1:by call(_:true);auto. 
+    + proc; sp;if;auto;if{1};1:by auto;call(_:true);auto. 
       by call{2} f_ll;auto=>/#. 
-    + by move=> ?_;proc;sp;if;auto;call f_ll;auto.
-    + by move=> _;proc;call f_ll;auto=>/#.
-    + proc;sp 1 0;if{1};1:by call(_:true);auto.
+    + by move=> ?_;proc;sp;if;auto;if;auto;call f_ll;auto.
+    + by move=> _;proc;sp;if;auto;call f_ll;auto=>/#.
+    + proc;sp;if;auto;if{1};1:by auto;call(_:true);auto.
       by call{2} fi_ll;auto=>/#. 
-    + by move=> ?_;proc;sp;if;auto;call fi_ll;auto.
-    + by move=> _;proc;call fi_ll;auto=>/#.
-    + proc;sp 1 0;if{1};1:by call(_: ={glob P});auto;sim.
+    + by move=> ?_;proc;sp;if;auto;if;auto;call fi_ll;auto.
+    + by move=> _;proc;sp;if;auto;call fi_ll;auto=>/#.
+    + proc;inline*;sp 1 1;if;auto;if{1};auto;1:by call(_: ={glob P});auto;sim.
       by call{2} CO_ll;auto=>/#.
-    + by move=> ?_;proc;sp;if;auto;call CO_ll;auto.
-    + move=> _;proc;call CO_ll;auto;smt ml=0 w=size_ge0. 
+    + by move=> ?_;proc;sp;if;auto;if;auto;call CO_ll;auto.
+    + by move=> _;proc;sp;if;auto;call CO_ll;auto;smt(prefixe_sizel).
     wp;call (_:true);call(_:true);auto=>/#.
   qed.
 

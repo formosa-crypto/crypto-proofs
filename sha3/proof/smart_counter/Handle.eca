@@ -1846,7 +1846,7 @@ section.
 
   lemma Real_G1 &m: 
     Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
-    Pr[G1(DRestr(D)).main() @ &m: res] +  (max_size ^ 2)%r * mu dstate (pred1 witness) + 
+    Pr[G1(DRestr(D)).main() @ &m: res] +  (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness) + 
     Pr[G1(DRestr(D)).main() @&m: G1.bcol] + Pr[G1(DRestr(D)).main() @&m: G1.bext].
   proof. 
     apply (@RealOrder.ler_trans _ _ _ (Real_Concrete D D_ll &m)).
