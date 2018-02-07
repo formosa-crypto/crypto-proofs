@@ -225,8 +225,18 @@ op get_max_prefixe (l : 'a list) (ll : 'a list list) =
 
 pred invm (m mi : ('a * 'b, 'a * 'b) fmap) =
   forall x y, m.[x] = Some y <=> mi.[y] = Some x.
-print foldl.
 
+lemma invm_set (m mi : ('a * 'b, 'a * 'b) fmap) x y :
+    ! x \in dom m => ! y \in rng m => invm m mi => invm m.[x <- y] mi.[y <- x].
+proof.
+move=>Hxdom Hyrng Hinv a b;rewrite!getP;split.
++ case(a=x)=>//=hax hab;cut->/#:b<>y.
+  by cut/#:b\in rng m;rewrite in_rng/#.
+case(a=x)=>//=hax.
++ case(b=y)=>//=hby.
+  by rewrite (eq_sym y b)hby/=-Hinv hax;rewrite in_dom/=/# in Hxdom.
+by rewrite Hinv/#.
+qed.
 
 op blocksponge (l : block list) (m : (state, state) fmap) (bc : state) =
   with l = "[]" => (l,bc)
@@ -346,16 +356,29 @@ cut/#:=Hpref _ Hbsdom i _;1:rewrite/#.
 qed.
 
 
-lemma size_blocksponge queries m l :
-    prefixe_inv queries m =>
-    size (blocksponge l m s0).`1 <= size l - prefixe l (get_max_prefixe l (elems (dom queries))).
+lemma blocksponge_set_nil l m bc x y :
+    !x \in dom m =>
+    let bs1 = blocksponge l m bc in
+    let bs2 = blocksponge l m.[x <- y] bc in
+    bs1.`1 = [] =>
+    bs2 = ([], bs1.`2).
 proof.
-move=>Hinv.
-pose l2:=get_max_prefixe _ _;pose p:=prefixe _ _. search take drop.
-rewrite-{1}(cat_take_drop p l)blocksponge_cat/=.
-rewrite(prefixe_take).
-
+rewrite/==>hdom bs1.
+cut/=:=blocksponge_set l m bc x y.
+smt(size_ge0 size_eq0).
 qed.
+
+(* lemma size_blocksponge queries m l : *)
+(*     prefixe_inv queries m => *)
+(*     size (blocksponge l m s0).`1 <= size l - prefixe l (get_max_prefixe l (elems (dom queries))). *)
+(* proof. *)
+(* move=>Hinv. *)
+(* pose l2:=get_max_prefixe _ _;pose p:=prefixe _ _. search take drop. *)
+(* rewrite-{1}(cat_take_drop p l)blocksponge_cat/=. *)
+(* rewrite(prefixe_take). *)
+(* qed. *)
+
+
 
 
 end Prefixe.
@@ -389,7 +412,9 @@ module PC (P:PRIMITIVE) = {
       y        <@ P.f(x);
       C.c      <- C.c + 1;
       C.m.[x]  <- y;
-      C.mi.[y] <- x;
+      if (! y \in dom C.mi) {
+        C.mi.[y] <- x;
+      }
     } else {
       y        <- oget C.m.[x];
     }
@@ -402,7 +427,9 @@ module PC (P:PRIMITIVE) = {
       y        <@ P.fi(x);
       C.c      <- C.c + 1;
       C.mi.[x] <- y;
-      C.m.[y]  <- x;
+      if (! y \in dom C.m) {
+        C.m.[y]  <- x;
+      }
     } else {
       y        <- oget C.mi.[x];
     }
@@ -420,7 +447,9 @@ module DPRestr (P:DPRIMITIVE) = {
         y        <@ P.f(x);
         C.c      <- C.c + 1;
         C.m.[x]  <- y;
-        C.mi.[y] <- x;
+        if (! y \in dom C.mi) {
+          C.mi.[y] <- x;
+        }
       }
     } else {
       y          <- oget C.m.[x];
@@ -435,7 +464,9 @@ module DPRestr (P:DPRIMITIVE) = {
         y        <@ P.fi(x);
         C.c      <- C.c + 1;
         C.mi.[x] <- y;
-        C.m.[y]  <- x;
+        if (! y \in dom C.m) {
+          C.m.[y]  <- x;
+        }
       }
     } else {
       y          <- oget C.mi.[x];

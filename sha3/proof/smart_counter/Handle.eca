@@ -4,7 +4,7 @@ require import List FSet NewFMap Utils Common SLCommon RndO.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder DCapacity.
 
-require ConcreteF.
+(* require ConcreteF. *)
 
 clone import GenEager as ROhandle with
   type from   <- handle,
@@ -12,7 +12,7 @@ clone import GenEager as ROhandle with
   op sampleto <- fun (_:int) => cdistr
   proof sampleto_ll by apply DCapacity.dunifin_ll.
 
-print FRO.
+
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap
   var mh, mhi             : hsmap
@@ -1119,7 +1119,7 @@ move: pi_xc; have /pi_of_INV [] -> [h] [#] + hs_h:= HINV.
 by have /hs_of_INV [] + _ _ - /(_ _ _ _ _ hs_hx hs_h _) := HINV.
 qed.
 
-clone export ConcreteF as ConcreteF1.
+(* clone export ConcreteF as ConcreteF1. *)
 
 lemma m_mh_None hs0 PFm G1mh hx2 x2 k x1:
   m_mh hs0 PFm G1mh =>
@@ -1203,6 +1203,8 @@ qed.
   
   
 (* we should do a lemma to have the equivalence *)
+
+
 
 equiv eq_fi (D <: DISTINGUISHER {PF, RO, G1}): PF.fi ~ G1(D).S.fi:
          !G1.bcol{2}
