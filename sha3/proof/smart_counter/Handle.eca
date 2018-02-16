@@ -1327,7 +1327,7 @@ equiv PFf_Cf (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f :
   ! (G1.bcol{2} \/ G1.bext{2}) =>
   ={res} /\ INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2}.
 proof.
-  proc; seq 2 4: 
+  proc. ; seq 2 4: 
     ((!(G1.bcol{2} \/ G1.bext{2}) =>
       (INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} /\
       F.RO.m.[p]{2} = Some sa{1})));last first.

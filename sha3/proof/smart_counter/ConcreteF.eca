@@ -3,7 +3,7 @@ require import List FSet NewFMap Utils Common SLCommon DProd Dexcepted.
 
 (*...*) import Capacity IntOrder RealOrder.
 
-require (*..*) Strong_RP_RF_C.
+require (*..*) Strong_RP_RF.
 
 module PF = {
   var m, mi: (state,state) fmap
@@ -19,10 +19,8 @@ module PF = {
     if (!mem (dom m) x) {
       y1           <$ bdistr;
       y2           <$ cdistr;
-      if (!(y1,y2) \in dom mi) {
-        mi.[(y1,y2)] <- x;
-      }
       m.[x]        <- (y1,y2);
+      mi.[(y1,y2)] <- x;
     }
     return oget m.[x];
   }
@@ -33,10 +31,8 @@ module PF = {
     if (!mem (dom mi) x) {
       y1          <$ bdistr;
       y2          <$ cdistr;
-      if (!(y1,y2) \in dom m) {
-        m.[(y1,y2)] <- x;
-      }
       mi.[x]      <- (y1,y2);
+      m.[(y1,y2)] <- x;
     }
     return oget mi.[x];
   }
@@ -46,7 +42,7 @@ module PF = {
 module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
      
 section.
-  declare module D : DISTINGUISHER {Perm, C, PF}.
+  declare module D : DISTINGUISHER {Perm, C, PF, Redo}.
 
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
@@ -54,14 +50,14 @@ section.
 
   local module GReal' = Indif(FC(SqueezelessSponge(Perm)), PC(Perm), D).
 
-  local clone import Strong_RP_RF_C as Switching with
+  local clone import Strong_RP_RF as Switching with
     type D  <- state,
       op uD <- dstate,
     type K  <- unit,
       op dK <- (MUnit.dunit<:unit> tt),
       op q  <- max_size
-  proof *. 
-  realize ge0_q by rewrite max_ge0.
+  proof *.
+  realize ge0_q by smt w=max_ge0.
   realize uD_uf_fu.
   split.
     case=> [x y]; rewrite supp_dprod /=.
@@ -81,283 +77,124 @@ section.
   lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
   proof. by case l=> // ?? /=; ring. qed.
 
-  local module CP' (P' : PRPt.Oracles) = {
-    proc f (x : state) = {
-      var y <- (b0,c0);
-      if (!x \in dom C.m) {
-        y <@ P'.f(x);
-        if (!y \in dom C.mi) {
-          C.mi.[y] <- x;
-        }
-        C.m.[x]  <- y;
-      } else {
-        y <- oget C.m.[x];
-      }
-      return y;
-    }
-    proc fi (x : state) = {
-      var y <- (b0,c0);
-      if (!x \in dom C.mi) {
-        y <@ P'.f(x);
-        if (!y \in dom C.m) {
-          C.m.[y]  <- x;
-        }
-        C.mi.[x] <- y;
-      } else {
-        y <- oget C.mi.[x];
-      }
-      return y;
-    }
-  }.
-
   local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
-    proc distinguish = DRestr(D,SqueezelessSponge(CP'(P')),P').distinguish
+    proc distinguish () : bool = {
+      var b : bool;
+      Redo.init();
+      b <@ DRestr(D,SqueezelessSponge(P'),P').distinguish();
+      return b;
+    }
   }.
 
-print DRestr.
-
-  local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder}) &m:
+  local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder, Redo}) &m:
     Pr[PRPt.IND(P,D').main() @ &m: res]
     = Pr[PRPt.IND(P,DBounder(D')).main() @ &m: res].
   proof.
   byequiv=> //=; proc; inline *.
   wp.
-  call (_: ={glob C, glob P}
-        /\ prefixe_inv C.queries{1} C.m{1}
-        /\ ={m,mi}(C,DBounder.FBounder)
-        /\ DBounder.FBounder.c{2} <= C.c{2}).
-  + proc; sp; if;auto;if=> //=; inline *.
+  call (_: ={glob C, glob P, glob Redo}
+    /\ all_prefixes Redo.prefixes{2}
+    /\ Redo.prefixes{2}.[[]] = Some (b0,c0)
+    /\ dom C.queries{2} <= dom Redo.prefixes{2}
+    /\ prefixe_inv C.queries{2} Redo.prefixes{2}
+    /\ DBounder.FBounder.c{2} = C.c{2}).
+  + proc; sp; if=> //=; inline *.
     rcondt{2} 3; 1: by auto=> /#.
-    rcondt{2} 4;first by auto;call(:true);auto.
-    by wp; call (_: true); auto;smt(prefixe_inv_set).
-  + proc; sp; if; auto; if=> //=; inline *.
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *.
     rcondt{2} 3; 1: by auto=> /#.
-    rcondt{2} 4;first by auto;call(:true);auto.
-    wp; call (_: true); auto;progress. 
-    + smt(prefixe_inv_set). 
-    + rewrite/#.
-    + rewrite/#.
-  + proc; sp; if; auto; if=> //=; inline *.
-    splitwhile{1} 4 : (sa +^ head witness p, sc) \in dom C.m.
-    splitwhile{2} 4 : (sa +^ head witness p, sc) \in dom C.m.
-    wp=>//=;swap 1 4;wp=>//=.
-    conseq(:_==> ={sa, C.mi, C.m, glob P} /\ C.m{1} = DBounder.FBounder.m{2}
-        /\ C.mi{1} = DBounder.FBounder.mi{2}
-        /\ prefixe_inv C.queries{1} C.m{1}
-        /\ DBounder.FBounder.c{2} <= C.c{2} + size bs{2} -
-             prefixe bs{2} (get_max_prefixe bs{2} (elems (dom C.queries{2})))
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} =>
-             let bc = (blocksponge (take i bs{2}) C.m{1} s0).`2 in
-             (bc.`1 +^ nth b0 bs{2} i, bc.`2) \in dom C.m{1}));
-      1:smt(dom_set in_fsetU1).
+    by wp; call (_: true); auto.
+  + proc; sp; if=> //=; inline *;1:if;auto.
 
-    while(={sa, sc, C.mi, C.m, glob P, p, bs, C.c, C.queries}
-        /\ C.m{1} = DBounder.FBounder.m{2}
-        /\ C.mi{1} = DBounder.FBounder.mi{2}
-        /\ (exists i, p{2} = drop i bs{2} /\ 0 <= i <= size bs{2}
-             /\ blocksponge (take i bs{2}) C.m{1} s0 = ([], (sa{1},sc{1})))
-        /\ prefixe_inv C.queries{1} C.m{1}
-        /\ C.c{1} + size bs{1} - prefixe bs{1}
-             (get_max_prefixe bs{1} (elems (dom C.queries{1}))) <= max_size
-        /\ DBounder.FBounder.c{2} <= C.c{2} + size bs{2} - size p{2} -
-             prefixe bs{2} (get_max_prefixe bs{2} (elems (dom C.queries{2})))
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             let bc = (blocksponge (take i bs{2}) C.m{1} s0).`2 in
-             (bc.`1 +^ nth b0 bs{2} i, bc.`2) \in dom C.m{1})
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             (blocksponge (take i bs{2}) C.m{1} s0).`1 = [])).
-    + sp;if;1,3:auto;last first;progress.
-      - exists (i+1);rewrite(drop_nth witness)//=;2:split;1,2:smt(drop_oversize).
-        rewrite (take_nth witness);1:smt(drop_oversize).
-        move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>?.
-        rewrite blocksponge_rcons H1/=H9/=/#.
-      - rewrite size_behead//=/#.
-      - move:H11;rewrite size_behead//=.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[/#|]h h1.
-        cut->:i0 = size bs{2} - size (drop i bs{2}) by rewrite/#.
-        rewrite size_drop//=max_ler 1:/#/=.
-        cut->:(size bs{2} - (size bs{2} - i)) = i by ring.
-        rewrite H1/=.
-        by move:H9;rewrite (drop_nth b0)/=;1:smt(drop_oversize).
-      - move:H11;rewrite size_behead//=.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[/#|]h h1.
-        cut->:i0 = size bs{2} - size (drop i bs{2}) by rewrite/#.
-        rewrite size_drop//=max_ler 1:/#/=.
-        cut->:(size bs{2} - (size bs{2} - i)) = i by ring.
-        by rewrite H1/=.
-        
-      rcondt{2}3;1:(auto;smt(size_ge0 size_eq0)).
-      rcondt{2}4;1:by auto;call(:true);auto. 
-      wp;call(:true);auto;progress.
-      - exists (i+1);rewrite(drop_nth witness)//=;2:split;1,2:smt(drop_oversize).
-        rewrite (take_nth witness);1:smt(drop_oversize).
-        move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        rewrite blocksponge_rcons/=.
-        cut/=:=blocksponge_set_nil (take i bs{2}) DBounder.FBounder.m{2} s0 
-         (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h.
-        rewrite H1/=/==>->/=;rewrite dom_set in_fsetU1/=getP/=oget_some/#.
-      - smt(prefixe_inv_set).
-      - smt(size_ge0 size_eq0).
-      - move:H12;rewrite size_behead//==>?. 
-        move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[|]?.
-        + cut//=->/=:=blocksponge_set_nil (take i0 bs{2}) DBounder.FBounder.m{2} s0 
-              (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h (H6 i0 _);1:rewrite/#.
-          by rewrite dom_set in_fsetU1/#.
-        cut hii0:i0=i by move:H9 H12;rewrite!size_drop//=max_ler /#.
-        rewrite hii0.
-        cut//=:=blocksponge_set_nil (take i bs{2}) DBounder.FBounder.m{2} s0 
-              (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h.
-        rewrite H1/==>->/=;rewrite dom_set in_fsetU1//=;right;congr.
-        by rewrite nth_onth (onth_nth witness)//=;smt(size_ge0 size_eq0).
-      + move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[|]?.
-        + smt(blocksponge_set_nil).
-        cut hii0:i0=i by move:H12;rewrite size_behead//==>?;
-          move:H9 H12;rewrite!size_drop//=max_ler /#.
-        rewrite hii0;smt(blocksponge_set_nil).
-      + exists (i+1);rewrite(drop_nth witness)//=;2:split;1,2:smt(drop_oversize).
-        rewrite (take_nth witness);1:smt(drop_oversize).
-        move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        rewrite blocksponge_rcons/=.
-        cut/=:=blocksponge_set_nil (take i bs{2}) DBounder.FBounder.m{2} s0 
-         (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h.
-        rewrite H1/=/==>->/=;rewrite dom_set in_fsetU1/=getP/=oget_some/#.
-      - smt(prefixe_inv_set).
-      - smt(size_ge0 size_eq0).
-      - move:H12;rewrite size_behead//==>?. 
-        move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[|]?.
-        + cut//=->/=:=blocksponge_set_nil (take i0 bs{2}) DBounder.FBounder.m{2} s0 
-              (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h (H6 i0 _);1:rewrite/#.
-          by rewrite dom_set in_fsetU1/#.
-        cut hii0:i0=i by move:H9 H12;rewrite!size_drop//=max_ler /#.
-        rewrite hii0.
-        cut//=:=blocksponge_set_nil (take i bs{2}) DBounder.FBounder.m{2} s0 
-              (sa{2} +^ nth witness bs{2} i, sc{2}) result_R h.
-        rewrite H1/==>->/=;rewrite dom_set in_fsetU1//=;right;congr.
-        by rewrite nth_onth (onth_nth witness)//=;smt(size_ge0 size_eq0).
-      + move:H9;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-        move=>h.
-        case(i0 < size bs{2} - size (drop i bs{2}))=>[|]?.
-        + smt(blocksponge_set_nil).
-        cut hii0:i0=i by move:H12;rewrite size_behead//==>?;
-          move:H9 H12;rewrite!size_drop//=max_ler /#.
-        rewrite hii0;smt(blocksponge_set_nil).
+    splitwhile{1}5:take (i+1) p \in dom Redo.prefixes.
+    splitwhile{2}5:take (i+1) p \in dom Redo.prefixes.
 
-    conseq(:_==> ={sa, sc, C.mi, C.m, glob P, p, bs, C.c, C.queries}
-        /\ C.m{1} = DBounder.FBounder.m{2}
-        /\ C.mi{1} = DBounder.FBounder.mi{2}
-        /\ (exists i, p{2} = drop i bs{2} /\ 0 <= i <= size bs{2}
-             /\ blocksponge (take i bs{2}) C.m{1} s0 = ([], (sa{1},sc{1})))
-        /\ prefixe_inv C.queries{1} C.m{1}
-        /\ C.c{1} + size bs{1} - prefixe bs{1}
-             (get_max_prefixe bs{1} (elems (dom C.queries{1}))) <= max_size
-        /\ DBounder.FBounder.c{2} <= C.c{2} + size bs{2} - size p{2} -
-             prefixe bs{2} (get_max_prefixe bs{2} (elems (dom C.queries{2})))
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             let bc = (blocksponge (take i bs{2}) C.m{1} s0).`2 in
-             (bc.`1 +^ nth b0 bs{2} i, bc.`2) \in dom C.m{1})
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             (blocksponge (take i bs{2}) C.m{1} s0).`1 = []));1:rewrite/#. 
-
-    alias{2} 1 k = DBounder.FBounder.c;sp 0 1.
-    alias{2} 1 dm = DBounder.FBounder.m;sp 0 1.
-    alias{2} 1 dmi = DBounder.FBounder.mi;sp 0 1.
-    alias{2} 1 cm = C.m;sp 0 1.
-    alias{2} 1 cmi = C.mi;sp 0 1.
-    conseq(:_==> ={sa, sc, C.mi, C.m, glob P, p, bs, C.c}
-        /\ C.m{1} = cm{2}
-        /\ DBounder.FBounder.m{2} = dm{2}
-        /\ C.mi{1} = cmi{2}
-        /\ DBounder.FBounder.mi{2} = dmi{2}
-        /\ (exists i, p{2} = drop i bs{2} /\ 0 <= i <= size bs{2}
-             /\ blocksponge (take i bs{2}) C.m{1} s0 = ([], (sa{1},sc{1})))
-        /\ prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1}))) <= size bs{1} - size p{1}
-        /\ DBounder.FBounder.c{2} = k{2}
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             let bc = (blocksponge (take i bs{2}) C.m{1} s0).`2 in
-             (bc.`1 +^ nth b0 bs{2} i, bc.`2) \in dom C.m{1})
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             (blocksponge (take i bs{2}) C.m{1} s0).`1 = []));progress. 
-    + rewrite/#.
-    + smt(size_ge0 size_drop).
-
-    while(={sa, sc, C.mi, C.m, glob P, p, bs, C.c}
-        /\ prefixe_inv C.queries{1} C.m{1}
-        /\ C.m{1} = cm{2}
-        /\ DBounder.FBounder.m{2} = dm{2}
-        /\ C.mi{1} = cmi{2}
-        /\ DBounder.FBounder.mi{2} = dmi{2}
-        /\ (exists i, p{2} = drop i bs{2} /\ 0 <= i <= size bs{2}
-             /\ blocksponge (take i bs{2}) C.m{1} s0 = ([], (sa{1},sc{1})))
-        /\ DBounder.FBounder.c{2} = k{2}
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             let bc = (blocksponge (take i bs{2}) C.m{1} s0).`2 in
-             (bc.`1 +^ nth b0 bs{2} i, bc.`2) \in dom C.m{1})
-        /\ (forall (i : int), 
-             0 <= i < size bs{2} - size p{2} =>
-             (blocksponge (take i bs{2}) C.m{1} s0).`1 = []));last first.
-    + auto;progress.
-         smt(drop0 size_ge0).
-         smt(drop0 size_ge0).
-         smt(drop0 size_ge0).
-         smt(drop0 size_ge0).
-         move:H4;rewrite negb_and/==>[]. 
-         case(drop i bs{2} = [])=>[hdropi|hdropi]//=.
-         + rewrite hdropi/=;smt(prefixe_sizel).
-         rewrite size_drop//=max_ler 1:/#.
-         cut->:size bs{2} - (size bs{2} - i) = i by rewrite/#.
-         rewrite(drop_nth b0)//=;1:smt(size_ge0 size_eq0 size_drop). print prefixe_inv.
-         apply absurd=>//=hi.
-         cut->:nth b0 bs{2} i = nth b0 (get_max_prefixe bs{2} (elems (dom C.queries{2}))) i.
-         + rewrite 2!nth_onth (onth_nth witness);1:smt(size_drop size_eq0).
-           cut/=h:=prefixe_nth bs{2} (get_max_prefixe bs{2} (elems (dom C.queries{2}))).
-           cut->:=h i _;1:smt(size_drop size_eq0).
-           by rewrite (onth_nth witness)/=;1:smt(size_drop size_eq0 prefixe_sizer).
-         cut:=H (get_max_prefixe bs{2} (elems (dom C.queries{2}))) _;last first. 
-         + move=>h;cut:=h i _;1:smt(prefixe_sizer).
-           cut:=H8;cut->/#:(take i bs{2}) = (take i (get_max_prefixe bs{2} (elems (dom C.queries{2})))).
-           by apply (eq_from_nth b0 _ _ _ _);
-             smt(size_take prefixe_sizer prefixe_sizel nth_take prefixe_nth nth_onth onth_nth).
-         cut h:forall (l1 l2:block list) ll, max_prefixe l1 l2 ll = l2 \/ max_prefixe l1 l2 ll \in ll.
-         + clear P &m &1 &2 H H0 H H1 H2 P_R sa_R sc_R H5 i H3 H6 H7 H8 H9 H10 hdropi hi.
-           by move=>l1 l2 ll;move:ll l1 l2;move=>ll;elim:ll=>//=/#.
-         cut h1:forall (l : block list) ll, get_max_prefixe l ll <> [] => ll <> [].
-         + clear P &m &1 &2 H H0 H H1 H2 P_R sa_R sc_R H5 i H3 H6 H7 H8 H9 H10 hdropi hi.
-           by move=>l ll;move:ll l=>ll;elim:ll=>//=.
-         rewrite memE;smt(prefixe_sizer).
-    sp;rcondf{1}1;2:rcondf{2}1;auto;progress.
-    - exists (i+1);rewrite(drop_nth witness)//=;2:split;1,2:smt(drop_oversize).
-      rewrite (take_nth witness);1:smt(drop_oversize).
-      move:H8;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-      move=>h.
-      rewrite blocksponge_rcons/=H2/=h/=/#.
-    - move:H10;rewrite size_behead//=.
-      case(i0 < size bs{2} - size (drop i bs{2}))=>??;1:rewrite/#.
-      cut hii0:i0=i by smt(size_drop).
-      rewrite hii0 H2/=.
-      move:H8;rewrite (drop_nth witness)/=;1:smt(drop_oversize).
-      by rewrite nth_onth (onth_nth b0)/=;1:smt(size_eq0).
-    - move:H10;rewrite size_behead//=.
-      case(i0 < size bs{2} - size (drop i bs{2}))=>??;1:rewrite/#.
-      cut hii0:i0=i by smt(size_drop).
-      by rewrite hii0 H2/=.
-  auto;progress;call(:true);auto;smt(dom0 in_fset0).
+    alias{1}1 pref = Redo.prefixes;alias{2}1 pref = Redo.prefixes;sp 1 1=>/=.
+    alias{1}1 query = C.queries;alias{2}1 query = C.queries;sp 1 1=>/=.
+    conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c}
+        /\ all_prefixes Redo.prefixes{2}
+        /\ dom query{2} <= dom Redo.prefixes{2}
+        /\ i{1} = size bs{1}
+        /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
+        /\ (forall y, y \in dom pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
+        /\ (forall y, y \in dom Redo.prefixes{1} <=> (y \in dom pref{1} \/
+             (exists j, 0 <= j <= i{1} /\ y = take j bs{1})))
+        /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1});
+    progress;..-2:smt(in_dom dom_set in_fsetU1 getP oget_some take_size cat_take_drop).
+    while( ={sa, Redo.prefixes, glob P, i, C.c, p, sc} /\ p{1} = bs{1}
+        /\ all_prefixes Redo.prefixes{2}
+        /\ Redo.prefixes{2}.[[]] = Some (b0, c0)
+        /\ dom query{2} <= dom Redo.prefixes{2}
+        /\ (i{1} < size p{1} => ! take (i{1} + 1) p{1} \in dom Redo.prefixes{1})
+        /\ 0 <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1}))) <= i{1} <= size bs{1}
+        /\ C.c{1} <= max_size
+        /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
+        /\ (forall y, y \in dom pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
+        /\ (forall y, y \in dom Redo.prefixes{1} <=> (y \in dom pref{1} \/
+             (exists j, 0 <= j <= i{1} /\ y = take j bs{1})))
+        /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1}).
+    + if;auto;1:smt(get_oget in_dom).
+      sp;rcondt{2}1;1:auto=>/#;auto;1:call(:true);auto;progress.
+      * move=>x;rewrite dom_set in_fsetU1=>[][|-> j];1:smt(in_fsetU1).
+        case(0 <= j)=>hj0;last first.
+        + by rewrite (take_le0 j)1:/# in_fsetU1 in_dom H0//=.
+        rewrite take_take in_fsetU1/min/#.
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * rewrite dom_set in_fsetU1 negb_or H9 negb_or/=negb_exists/=.
+        cut htake:take (i{2} + 1) bs{1} = take (i{2} + 1) (take (i{2} + 1 + 1) bs{1});
+          smt(take_take size_take).
+      * rewrite/#.
+      * rewrite/#.
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+    sp;
+    conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs} /\ p{1} = bs{1}
+        /\ Redo.prefixes{2} = pref{2}
+        /\ dom query{2} <= dom Redo.prefixes{2}
+        /\ C.c{1} <= max_size
+        /\ i{1} = prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+        /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
+        /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} +
+               prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1}))));
+       progress;..4,6..-2:
+       smt(prefixe_ge0 prefixe_lt_size prefixe_sizel prefixe_exchange prefixe_lt_size memE). 
+    + move:H8=>[]//=[]j [[hj0 hjsize] htake].
+      rewrite htake. 
+      apply take_get_max_prefixe2=>//=;1:smt(in_dom memE).
+      by rewrite-(prefixe_exchange _ _ _ H2 H).
+    alias{2} 1 k = DBounder.FBounder.c;sp;
+    conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs} /\ p{1} = bs{1}
+        /\ Redo.prefixes{2} = pref{2}
+        /\ dom query{2} <= dom Redo.prefixes{2}
+        /\ C.c{2} <= max_size
+        /\ i{1} = prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+        /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
+        /\ DBounder.FBounder.c{2} = k{2});1:progress=>/#.
+    while( ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs, C.queries} /\ p{1} = bs{1}
+        /\ Redo.prefixes{2} = pref{2}
+        /\ dom query{2} <= dom Redo.prefixes{2}
+        /\ prefixe_inv C.queries{2} Redo.prefixes{2}
+        /\ all_prefixes Redo.prefixes{2}
+        /\ C.c{2} <= max_size
+        /\ 0 <= i{1} <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+        /\ (forall j, 0 <= j <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+            => take j bs{2} \in dom Redo.prefixes{1})
+        /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
+        /\ DBounder.FBounder.c{2} = k{2}).
+    + rcondt{1}1;2:rcondt{2}1;auto;progress.
+      * by rewrite/#. 
+      * by rewrite(prefixe_exchange _ _ bs{2} H0 H1)all_take_in//=/#.
+      * smt(get_oget in_dom).
+    auto;progress. smt(prefixe_ge0). 
+    * apply take_get_max_prefixe2=>//=;1:smt(in_dom memE).
+      by rewrite-(prefixe_exchange _ _ _ H2 H).
+    * smt(get_oget in_dom).
+    * smt(@Prefixe).
+  auto;call(:true);auto;smt(dom0 in_fset0 dom_set in_fsetU1 getP oget_some).
   qed.
 
   local clone import ProdSampling with
@@ -368,30 +205,142 @@ print DRestr.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
-    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness).
+    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * mu dstate (pred1 witness).
   proof.
     cut->:
       Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:
          res /\ C.c <= max_size] = Pr[GReal'.main()@ &m: res/\ C.c <= max_size].
-    + byequiv=>//;proc;inline *;call (_: ={glob C,glob Perm}
-        /\ prefixe_inv C.queries{1} Perm.m{1} /\ inv Perm.m{1} Perm.mi{1});
-        last by auto;smt(dom0 in_fset0 map0P).
-      + proc;inline*;sp;if;auto;sp;if;auto;progress. 
-        - smt(getP oget_some prefixe_inv_set). 
-        - smt(in_dom inv_dom_rng invC getP oget_some supp_dexcepted).
-        - smt(getP oget_some prefixe_inv_set).
-        - smt(in_dom inv_dom_rng invC getP oget_some supp_dexcepted).
-      + proc;inline*;sp;if;auto;sp;if;auto;progress. 
-        - smt(getP oget_some prefixe_inv_set invC inv_dom_rng supp_dexcepted). 
-        - smt(in_dom inv_dom_rng invC getP oget_some supp_dexcepted).
-        - smt(getP oget_some prefixe_inv_set invC inv_dom_rng supp_dexcepted). 
-        - smt(in_dom inv_dom_rng invC getP oget_some supp_dexcepted).
-      proc; inline *; wp.
-      sp;if{2}.
-      (* TODO : reprendre ici *)
-      + 
-      while (={glob Perm,sc,sa,p} /\ (C.c + size p){1} = C.c{2});2:by auto.
-      by sp; if=> //=; auto=> /> &2 cL /size_behead=> ->; progress; ring.
+    + byequiv=>//;proc;inline *;
+      call (_: ={C.c, glob Perm, Redo.prefixes}
+          /\ prefixe_inv C.queries{2} Redo.prefixes{1}
+          /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
+          /\ all_prefixes Redo.prefixes{1});
+        last first.
+      + auto;smt(dom0 in_fset0 dom_set in_fsetU1 getP oget_some).
+      + by proc; inline*; sp; if; auto. 
+      + by proc; inline*; sp; if; auto. 
+      proc; inline *; wp; sp.
+      if{2};sp;wp;last first.
+      + conseq(:_==> sa{1} = (oget Redo.prefixes{1}.[take i{1} p{1}]).`1
+          /\ i{1} = size p{1}
+          /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
+          /\ ={Perm.m, Perm.mi, Redo.prefixes, C.c});1:smt(take_size).
+      + while{1}( ={Perm.m, Perm.mi, Redo.prefixes, C.c}
+          /\ p{1} \in dom C.queries{2}
+          /\ prefixe_inv C.queries{2} Redo.prefixes{1}
+          /\ 0 <= i{1} <= size p{1}
+          /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
+          /\ (sa{1},sc{1}) = oget Redo.prefixes{1}.[take i{1} p{1}]
+          /\ all_prefixes Redo.prefixes{1})(size p{1} - i{1}).
+        + auto;sp;rcondt 1;auto;smt(excepted_lossless).
+        by auto;smt(size_ge0 take0 take_size).
+
+      splitwhile{1} 1 : take (i+1) p \in dom Redo.prefixes;
+      splitwhile{2} 1 : take (i+1) p \in dom Redo.prefixes.
+
+      alias{1}1 pref = Redo.prefixes;alias{2}1 pref = Redo.prefixes;sp 1 1=>/=.
+      alias{2}1 query = C.queries;sp 0 1=>/=.
+
+      conseq(:_==> ={sa,Perm.m,Perm.mi,Redo.prefixes,i,p}
+          /\ C.c{1} = C.c{2} - size p{2} + i{2}
+          /\ i{2} = size p{2}
+          /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})
+          /\ (forall l, l \in dom pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
+          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in dom Redo.prefixes{2})
+          /\ (forall l, l \in dom Redo.prefixes{2} => 
+               l \in dom pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2})));
+        progress.
+      * by rewrite/#.
+      * move:H3 H7;rewrite take_size dom_set in_fsetU1 getP;case(bs0 = bs{2})=>//=[->|]h.
+        * by rewrite h oget_some/=.
+        * move:H=>[?[??]];move=>? ?.
+          by rewrite -H4;1:smt(take_size);rewrite H//=.
+      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0).
+      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+      while(={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
+          /\ C.c{1} = C.c{2} - size p{2} + i{2}
+          /\ all_prefixes Redo.prefixes{2}
+          /\ all_prefixes pref{2}
+          /\ prefixe_inv C.queries{2} pref{2}
+          /\ prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2}))) <= i{2} <= size p{2}
+          /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})
+          /\ (forall l, l \in dom pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
+          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in dom Redo.prefixes{2})
+          /\ (forall l, l \in dom Redo.prefixes{2} => 
+               l \in dom pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2}))).
+      + rcondf{1}1;2:rcondf{2}1;..2:auto;progress.
+         * cut:=H7 (take (i{m0}+1) p{m0}).
+           case((take (i{m0} + 1) p{m0} \in dom Redo.prefixes{m0}))=>//=_.
+           rewrite negb_or negb_exists/=;progress. 
+           + by rewrite memE prefixe_lt_size//=-(prefixe_exchange _ _ p{m0} H1 H0)//=/#.
+           case(0<=a<=i{m0})=>//=ha;smt(size_take).
+         * cut:=H7 (take (i{hr}+1) p{hr}).
+           case((take (i{hr} + 1) p{hr} \in dom Redo.prefixes{hr}))=>//=_.
+           rewrite negb_or negb_exists/=;progress. 
+           + by rewrite memE prefixe_lt_size//=-(prefixe_exchange _ _ p{hr} H1 H0)//=/#.
+           case(0<=a<=i{hr})=>//=ha;smt(size_take).
+           
+        sp;auto;if;auto;progress.
+        * rewrite/#.
+        * move=>x;rewrite dom_set in_fsetU1=>[][|h];1:
+            smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+          rewrite h=>j;rewrite take_take in_fsetU1/min.
+          case(j<i{2}+1)=>//=hij.
+          cut->:take j p{2} = take j (take i{2} p{2});smt(take_take take_le0).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * rewrite!getP/=.
+          cut/#: !take (i{2} + 1) p{2} \in dom pref{2}.
+          by rewrite memE prefixe_lt_size//=-(prefixe_exchange _ _ _ H1 H0)//=/#.
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * move=>x;rewrite dom_set in_fsetU1=>[][|h];1:
+            smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+          rewrite h=>j;rewrite take_take in_fsetU1/min.
+          case(j<i{2}+1)=>//=hij.
+          cut->:take j p{2} = take j (take i{2} p{2});smt(take_take take_le0).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * rewrite!getP/=.
+          cut/#: !take (i{2} + 1) p{2} \in dom pref{2}.
+          by rewrite memE prefixe_lt_size//=-(prefixe_exchange _ _ _ H1 H0)//=/#.
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+      conseq(:_==> ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
+          /\ C.c{1} = C.c{2} - size p{2} + i{2}
+          /\ pref{2} = Redo.prefixes{2}
+          /\ all_prefixes pref{2}
+          /\ prefixe_inv C.queries{2} pref{2}
+          /\ prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2}))) = i{2}
+          /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2}));1:
+        smt(prefixe_sizel take_get_max_prefixe2 in_dom prefixe_exchange).
+
+      while( ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
+          /\ C.c{1} = C.c{2} - size p{2} + prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2})))
+          /\ pref{2} = Redo.prefixes{2}
+          /\ all_prefixes pref{2}
+          /\ prefixe_inv C.queries{2} pref{2}
+          /\ 0 <= i{2} <= prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2})))
+          /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})).
+      + rcondt{1}1;2:rcondt{2}1;auto;progress.
+        * rewrite/#. search get_max_prefixe (<=) take mem.
+        * rewrite(prefixe_inv_leq _ _ _ _ _ _ H H7 H0)//= 1:/#.
+          cut:=H0=>[][h1 [h2 h3]].
+          cut:=h3 _ _ _ H7;last smt(memE).
+          smt(size_eq0 size_take).
+        * smt(get_oget in_dom).
+      auto;progress.
+      * rewrite/#.
+      * smt(prefixe_ge0).
+      * smt(take0).
+      * smt(prefixe_sizel @Prefixe memE).
+      * smt(prefixe_sizel @Prefixe memE).
+
     have p_ll := P_f_ll _ _.
     + apply/dprod_ll; split.
       + exact/Block.DBlock.dunifin_ll.
@@ -405,8 +354,8 @@ print DRestr.
     + apply/fun_ext=>- [] a b; rewrite supp_dprod.
       by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu. 
     have f_ll : islossless SqueezelessSponge(Perm).f.
-    + proc; while true (size p)=> //=.
-      * by move=> z; wp; call p_ll; skip=> /> &hr /size_behead /#.
+    + proc; while true (size p - i)=> //=.
+      * move=> z; wp;if;auto; 2:call p_ll; auto=>/#. 
       by auto; smt w=size_ge0.
     apply (ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
@@ -442,15 +391,14 @@ print DRestr.
       by inline *; auto.
     have /#:= Conclusion D' &m _.
     move=> O O_f_ll O_fi_ll.
-    proc; call (_: true)=> //=.
+    proc;inline*;sp;wp; call (_: true)=> //=. 
     + apply D_ll.
-    + by proc; sp; if=> //=; call O_f_ll; auto.
-    + by proc; sp; if=> //=; call O_fi_ll; auto.
-    + proc; inline *; sp; if=> //=; auto.
-      while true (size p).
-      * by auto; call O_f_ll; auto=> /#.
+    + by proc; inline*; sp; if=> //=; auto; call O_f_ll; auto.
+    + by proc; inline*; sp; if=> //=; auto; call O_fi_ll; auto.
+    + proc; inline *; sp; if=> //=; auto; if; auto.
+      while true (size p - i);auto.
+      * sp; if; auto; 2:call O_f_ll; auto=> /#.
       by auto; smt w=size_ge0.
-    by inline *; auto.
   qed.
 
 end section.
