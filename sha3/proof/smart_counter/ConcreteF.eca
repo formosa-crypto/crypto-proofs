@@ -205,7 +205,7 @@ section.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
-    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r * mu dstate (pred1 witness).
+    Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2)%r / 2%r * mu dstate (pred1 witness).
   proof.
     cut->:
       Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:
