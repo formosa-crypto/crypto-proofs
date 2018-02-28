@@ -44,7 +44,9 @@ module G1(D:DISTINGUISHER) = {
         }
         i        <- i + 1;
       }
-      sa <- F.RO.get(p);
+      if (p <> []) {
+        sa <- F.RO.get(p);
+      }
       return sa;
     }
   }
@@ -1446,7 +1448,7 @@ qed.
 
 
 
-equiv PFf_Cf (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f : 
+equiv PFf_Cf_not_nil (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f : 
   ! (G1.bcol{2} \/ G1.bext{2}) /\
   ={p} /\ p{1} <> [] /\
   INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
@@ -1459,13 +1461,18 @@ proof.
   seq 1 1: 
     ((!(G1.bcol{2} \/ G1.bext{2}) =>
       (INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
-        G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1} /\
+        G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1} /\ ={sa} /\
       F.RO.m.[p]{2} = Some sa{1})));last first.
   + case : (! (G1.bcol{2} \/ G1.bext{2}));
-      2: by conseq (_:_ ==> true)=> //; inline *;auto;rewrite Block.DBlock.dunifin_ll.
-    inline *; rcondf{2} 3.
-    + by move=> &m;auto=> &hr [#] H /H[_ H1] ??;rewrite in_dom H1.
-    by auto=> /> &m1 &m2;rewrite Block.DBlock.dunifin_ll /= => H /H [-> ->];rewrite oget_some.
+      2: conseq (_:_ ==> true)=> //; inline *;auto;progress. 
+    + if{2};1:rcondf{2} 3;auto;progress.
+      + smt(in_dom).
+      + smt(Block.DBlock.dunifin_ll).
+      + rewrite/#.
+      + rewrite/#.
+      + rewrite/#.
+      + rewrite/#.
+    if{2};auto;progress;smt(Block.DBlock.dunifin_ll).
   while ( ={p, i} /\ (0 <= i <= size p){2} /\ 
         (Redo.prefixes.[take i p]{1} = Some (sa,sc){1}) /\
         (take i p \in dom Redo.prefixes){1} /\
@@ -1485,11 +1492,11 @@ proof.
     progress.
     + rewrite/#.
     + smt(size_eq0 size_ge0 take_size).
+    + smt(size_eq0 size_ge0 take_size).
   if{1}.
   + case : (! (G1.bcol{2} \/ G1.bext{2}));last first. 
     + wp;conseq(:_==>  (G1.bcol{2} \/ G1.bext{2}));1:smt(get_oget).
       by inline*;if{2};auto;smt(DCapacity.dunifin_ll DBlock.dunifin_ll).
-
     conseq(: ={p, i, sa}
         /\ 0 <= i{2} < size p{2}
         /\ Redo.prefixes{1}.[take i{1} p{1}] = Some (sa{1}, sc{1})
@@ -1572,8 +1579,7 @@ proof.
          Redo.prefixes{1}.[take (i{1} + 1) p{1} <-
            ((oget PF.m{1}.[x{1}]).`1, (oget PF.m{1}.[x{1}]).`2)]));
     progress;..-2:smt(getP dom_set in_fsetU1).
-    
-  case ((G1.bcol{2} \/ G1.bext{2})).
+      case ((G1.bcol{2} \/ G1.bext{2})).
   + wp;conseq (_: _ ==>  (G1.bcol{2} \/ G1.bext{2}))=> //;progress.
     by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DBlock.dunifin_ll DCapacity.dunifin_ll).
   conseq(:INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
@@ -1601,7 +1607,6 @@ proof.
     move=> [ya yc] Hpf/(_ ya yc) [hx fx hy fy [#]] Hhx Hhy ^ /HG1 [xc fx0 yc0 fy0].
     rewrite Hhx => /= [#] 2!<<-;rewrite Hhy Hpf /= => -[] !->> _;progress. print huniq.
     by cut/=->>:=Hu h{2} hx(sc{1}, f)(sc{1}, fx)H8 Hhx;rewrite H11.
-
   if{1};2:(rcondt{2}1; first by auto=>/#);1:(rcondf{2}1;first by auto=>/#);last first.
   + auto;progress.  
     * move:H9 H10;pose sa' := sa{2} +^ nth witness p{2} i{2};move=>H9 H10.
@@ -1648,7 +1653,6 @@ proof.
       cut->/=:!take (i0 + 1) p{2} = take (i{2} + 1) p{2} by smt(size_take).
       cut:=h _ H6 i0 _;1:smt(size_take).
       by rewrite!take_take!min_lel 1,2:/# nth_take 1,2:/#.
-
   rcondt{2}5;progress;1:auto;progress.
   + cut[]hh1 hh2 hh3 :=mh_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
     rewrite(@take_nth witness)1:/#in_dom/=.
@@ -1663,7 +1667,6 @@ proof.
     rewrite negb_exists=>hy/=.
     case(sa{hr} = v)=>//=->>.
     by case(h{hr} = hx)=>//=->>;rewrite h2.
-
   swap{2}4-3;wp;progress=>/=.
   conseq(:_==> hinv FRO.m{2} sc{2} = None
       => y1{1} = r{2}
@@ -1808,10 +1811,6 @@ proof.
       cut<<-:take i{2} p{2}=p0 by rewrite/#.
       cut hbex:b +^ x = nth witness p{2} i{2} by rewrite/#.
       by cut:=hb;rewrite hpath/==>[][->>->>]/=;rewrite-hbex Block.WRing.addKr/=.
-    (* move=>hh1;split. *)
-    (* - progress. search build_hpath Some. *)
-      
-
     - progress. search build_hpath.
       * move:H;rewrite getP/=.
         case(p0 = (take i{2} p{2}))=>[->>|hpp0]. search build_hpath None.
@@ -1859,7 +1858,6 @@ proof.
             by cut->//=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag. search build_hpath.
           * by apply build_hpath_up=>//=.
           move=>[]->>->>/=;smt(@Block.WRing). 
-
         cut[]hh1 hh2 hh3:=H_mh_spec.
         cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b p0 v h{2}.
         rewrite h_build_hpath_set/=h_g1/=.
@@ -1871,7 +1869,6 @@ proof.
         exists v h{2}=>//=. 
         rewrite eq_xor h_g1/=;move:h_neq;apply absurd=>//=.
         by cut:=hh3 _ _ _ _ _ hpath h_build_hpath_p0;smt(@Block.WRing).
-
       move=>help;cut h_neq:! (v +^ bn = sa{2} +^ nth witness p{2} i{2} && hx = h{2}) by rewrite/#.
       move:help;rewrite h_neq/==>h_g1_v_bn_hx.
       cut[]hh1 hh2 hh3:=H_mh_spec.
@@ -1879,7 +1876,6 @@ proof.
       rewrite h_build_hpath_set/=h_g1/=.
       cut->/=:=ch_neq0 _ _ H_hs_spec.
       by cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag;smt(dom_hs_neq_ch).
-
     progress.
     + cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v hx.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p' v' hx.
@@ -1888,7 +1884,6 @@ proof.
       cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
       rewrite h_g1/=.
       by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
-  
     cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v hx.
     cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p' v' hx.
     rewrite H H0/=.
@@ -1896,7 +1891,6 @@ proof.
     cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
     rewrite h_g1/=.
     by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
-
   move=>H2_mh_spec;split;progress.
   + by cut[]:=H_m_p;smt(getP size_rcons size_eq0 size_ge0).
   move:H;rewrite dom_set in_fsetU1.
@@ -1935,6 +1929,22 @@ proof.
   cut->:take (i0 + 1) p{2} = take (i0 + 1) (take i{2} p{2});1:smt(take_take). 
   smt(in_dom take_oversize).
 qed.
+
+
+equiv PFf_Cf (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f : 
+  ! (G1.bcol{2} \/ G1.bext{2}) /\
+  ={p} /\ 
+  INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
+    G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1} ==>
+  ! (G1.bcol{2} \/ G1.bext{2}) =>
+  ={res} /\ INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2}
+    G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1}.
+proof.
+exists*p{1};elim* =>input;case(input = [])=>input_nil;1:rewrite input_nil;2:conseq(PFf_Cf_not_nil D);progress.
+proc;inline*;auto;sp.
+by rcondf{1}1;auto;rcondf{2}1;auto;rcondf{2}1;auto.
+qed.
+
 
 section AUX.
 
@@ -2258,9 +2268,8 @@ section AUX.
   + move=> _; proc; if; 2:by auto.
     by wp; do 2!rnd predT; auto => &hr [#]; smt (@Block.DBlock @Capacity.DCapacity).
   (** proofs for G1.C.f *)
-  (* equiv PF.C.f G1.C.f *)
-  + proc.
-    inline*;sp. admit. (* this is false *)
+  (* equiv PF.C.f G1.C.f *) 
+  + conseq(PFf_Cf D);auto;progress.
   (* lossless PF.C.f *)
   + move=> &2 _; proc; inline *; while (true) (size p - i); auto.
     + if; 1:auto=>/#.
@@ -2268,7 +2277,11 @@ section AUX.
       by wp; do 2!rnd predT; auto; smt (size_behead @Block.DBlock @Capacity.DCapacity).
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
-  + move=> _; proc; inline *; wp; rnd predT; auto.
+  + move=> _; proc; inline *; wp. 
+    case(p = [])=>//=.
+    - by sp;rcondf 1;auto;sp;rcondf 1;auto.
+    rcondt 6;first by auto;while(p <> []);auto;sp;if;auto.
+    wp;rnd predT; auto.
     while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
     + if; 1:by auto=> /#.
       wp; rnd predT; wp; rnd predT; auto.
