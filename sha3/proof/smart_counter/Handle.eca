@@ -1311,7 +1311,6 @@ cut:=hh2 (take i p) (nth witness p i) (oget prefixes.[take (i + 1) p]).`1.
 rewrite h1/==>[][] v hx hy;rewrite build_hpath_i_p/==>[][][?<-];smt(in_dom).
 qed.
 
-
 (* we should do a lemma to have the equivalence *)
 
 
@@ -1612,7 +1611,7 @@ proof.
       case: {-1}(PF.m{1}.[(sa',sc{1})]) (eq_refl (PF.m{1}.[(sa',sc{1})])) Hpf Hmh=>//=. 
       move=> [ya yc] Hpf/(_ ya yc) [hx fx hy fy [#]] Hhx Hhy ^ /HG1 [xc fx0 yc0 fy0].
       rewrite Hhx => /= [#] 2!<<-;rewrite Hhy Hpf /= => -[] !->> _;progress.
-      by cut/=->>:=Hu h{2} hx(sc{1}, f)(sc{1}, fx) H0 Hhx;rewrite H15 !oget_some/=.
+      by cut/=->>:=Hu h{2} hx(sc{1}, f)(sc{1}, fx) H0 Hhx;rewrite H14 !oget_some/=.
     * cut->:=take_nth witness i{2} p{2};1:smt(size_take).
       rewrite build_hpath_prefix H4/=;smt(get_oget).
     *  move:H9 H10;pose sa' := sa{2} +^ nth witness p{2} i{2};move=>H9 H10.
@@ -1622,188 +1621,324 @@ proof.
       case: {-1}(PF.m{1}.[(sa',sc{1})]) (eq_refl (PF.m{1}.[(sa',sc{1})])) Hpf Hmh=>//=. 
       move=> [ya yc] Hpf/(_ ya yc) [hx fx hy fy [#]] Hhx Hhy ^ /HG1 [xc fx0 yc0 fy0].
       rewrite Hhx => /= [#] 2!<<-;rewrite Hhy Hpf /= => -[] !->> _;progress.
-      by cut/=->>:=Hu h{2} hx(sc{1}, f)(sc{1}, fx) H0 Hhx;rewrite H15 !oget_some/=Hhy/#.
-    * do !split=>//=.
-      * by cut[]:=.
-      * by cut[]:=Hhs.
-      * by cut[]:=Hhs.
-      * by cut[]:=Hinv.
-      * by cut[]:=Hinvi.
-      * by cut[]:=Hmmh.
-      * by cut[]:=Hmmh.
-      * by cut[]:=Hmmhi.
-      * by cut[]:=Hmmhi.
-      * by cut[]:=Hmh.
-      * by cut[]:=Hmh.
-      * by cut[]:=Hmh.
-      * by cut[]:=Hpi.
-      * by cut[]:=H.
+      by cut/=->>:=Hu h{2} hx(sc{1}, f)(sc{1}, fx) H0 Hhx;rewrite H14 !oget_some/=Hhy/#.
+    * cut[] a b hab:exists a b, PF.m{1}.[(sa{2} +^ nth witness p{2} i{2}, sc{1})] = Some (a,b) by
+        move:H10;rewrite in_dom/#.
+      cut[]h1 h2 h3:=mh_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
+      cut->:=take_nth witness i{2} p{2};1:smt(size_take).
+      rewrite h2 H4/=;exists sa{2} h{2}=>/=;rewrite hab oget_some/=.
+      cut[]hh1 hh2:=m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
+      cut[]c d e i[]hcd[]hei hG1:=hh1 _ _ _ _ hab. 
+      cut[]hu _ _:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
+      by cut/=<<-/#:=hu _ _ _ _ H0 hcd.
+    * split;..-2:case:H=>//=;progress.
+      split;first cut[]:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ H;smt(size_take getP size_eq0). 
+      progress;cut[]_ h:=m_p_of_INV  _ _ _ _ _ _ _ _ _ _ _ H. 
+      rewrite !getP.
+      move:H12;rewrite dom_set in_fsetU1.
+      case(l=take (i{2}+1) p{2})=>//=;last first.
+      + cut all_pref l_diff l_in_dom:=all_prefixes_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
+        cut->/=:take i0 l <> take (i{2} + 1) p{2} by rewrite/#.
+        cut->/=/#:take (i0+1) l <> take (i{2} + 1) p{2} by rewrite/#.
+      move=>->>;rewrite!take_take.
+      cut hii0:i0 <= i{2} by move:H14;rewrite size_take /#.
+      rewrite!min_lel //1,2:/# nth_take 1,2:/#.
+      cut->/=:take i0 p{2} <> take (i{2} + 1) p{2} by smt(size_take).
+      case(i0=i{2})=>//=[->>|i_neq_i0]/=;1: by rewrite H3/=;smt(get_oget).
+      cut->/=:!take (i0 + 1) p{2} = take (i{2} + 1) p{2} by smt(size_take).
+      cut:=h _ H6 i0 _;1:smt(size_take).
+      by rewrite!take_take!min_lel 1,2:/# nth_take 1,2:/#.
 
-    rewrite head_nth nth_drop // addz0 => Heq Hbu ????.
-    rewrite !in_dom. 
-    have -> /= : i{m2} + 1 <> 0 by smt ().
-    pose sa' := sa{m2} +^ nth witness p{m2} i{m2}.
-    case (Hmmh) => /(_ sa' sc{m1});case (PF.m{m1}.[(sa', sc{m1})])=> //= -[ya yc] /(_ ya yc) /=.
-    move=> [hx fx hy fy]; case (Hhs) => Hu _ _ [#] Heq'.
-    have /= <<- /= Hhy ^? ->:= Hu _ _ _ _ Heq Heq'. 
-    rewrite !oget_some /= => _;split;1: by exists fy.
-    rewrite (@take_nth witness) 1://.
-    case (Hmh) => _ -> _;rewrite build_hpath_prefix Hbu /#.
-  * auto;progress.
-move:H3;rewrite H7/=;progress.
-    rewrite in_dom/=;rewrite in_dom/= in H8.
-search None.
-    cut H_m_mh:=m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ H3.
-    apply(notin_hs_notin_dom2_mh _ _ H_m_mh).
-  * smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
-  * smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
-  * rewrite getP/=oget_some.
+  rcondt{2}5;progress;1:auto;progress.
+  + cut[]hh1 hh2 hh3 :=mh_of_INV _ _ _ _ _ _ _ _ _ _ _ H.
+    rewrite(@take_nth witness)1:/#in_dom/=.
+    cut:=hh2 (take i{hr} p{hr}) (nth witness p{hr} i{hr});rewrite H4/=.
+    cut:=H10;rewrite H9 in_dom/=.
+    case(F.RO.m{hr}.[rcons (take i{hr} p{hr}) (nth witness p{hr} i{hr})] = None)=>//=h.
+    cut[]b hb:exists b, F.RO.m{hr}.[rcons (take i{hr} p{hr}) (nth witness p{hr} i{hr})] = Some b
+      by move:h;case:(F.RO.m{hr}.[rcons (take i{hr} p{hr}) (nth witness p{hr} i{hr})])=>//=/#.
+    rewrite negb_forall/==>h2;rewrite hb/=;exists b=>//=.
+    rewrite negb_exists=>v/=.
+    rewrite negb_exists=>hx/=.
+    rewrite negb_exists=>hy/=.
+    case(sa{hr} = v)=>//=->>.
+    by case(h{hr} = hx)=>//=->>;rewrite h2.
 
-  conseq (_: _ ==> (! (G1.bcol{2} \/ G1.bext{2}) =>
-    INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
-      G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} /\
-    (oget PF.m{1}.[x{1}]).`1 = sa{2} /\
-    (exists (f : flag), FRO.m{2}.[h{2}] = Some ((oget PF.m{1}.[x{1}]).`2, f)) /\
-    (build_hpath G1.mh (take (i + 1) p) = Some (sa,h)){2} /\ 
-    if i{2} + 1 = 0 then sa{2} = b0 && h{2} = 0
-    else F.RO.m{2}.[take (i{2} + 1) p{2}] = Some (oget PF.m{1}.[x{1}]).`1)).
-  + move=> &m1 &m2 [#] 2!->> ?? H ?? ?????????? H'.
-    rewrite behead_drop -drop_add //=;split=>[/#|]. 
-    by have := size_drop (i{m2} + 1) p{m2};case (drop (i{m2} + 1) p{m2}) => //= [/#| ];smt w=size_ge0.
-  case ((G1.bcol{2} \/ G1.bext{2})).
-  + wp;conseq (_: _ ==>  (G1.bcol{2} \/ G1.bext{2}))=> //.
-    by if{1};if{2};auto;2:(swap{2} 4 -3;auto); smt w=(Block.DBlock.dunifin_ll DCapacity.dunifin_ll).
-  conseq (_: (x{1} = (sa{1} +^ head witness p{1}, sc{1}) /\
-             (p{1} = drop i{2} p{2} /\
-             0 <= i{2} <= size p{2} /\
-             (INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
-                 G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} /\
-              ={sa} /\
-             (exists (f : flag), FRO.m{2}.[h{2}] = Some (sc{1}, f)) /\
-             (build_hpath G1.mh (take i p) = Some (sa,h)){2} /\ 
-             if i{2} = 0 then (sa{2}, h{2}) = (b0, 0)
-             else F.RO.m{2}.[take i{2} p{2}] = Some sa{1})) /\
-             p{1} <> [] /\ i{2} < size p{2}) /\
-             ! (G1.bcol{2} \/ G1.bext{2}) /\
-             (mem (dom PF.m) x){1} = (mem (dom G1.mh) (sa +^ nth witness p i, h)){2} ==> _).
-  + move=> &m1 &m2 [#] 2!->> ?? H ?? ^ /H [#] /= Hinv ->> Hf -> -> ? /= />.
-    case: Hf=> f Hm; rewrite head_nth nth_drop // addz0 !in_dom. 
-    pose X := sa{m2} +^ nth witness p{m2} i{m2}.
-    case (Hinv)=> -[Hu _ _] _ _ [] /(_ X sc{m1}) Hpf ^ HG1 /(_ X h{m2}) Hmh _ _ _ _ _.
-    case: {-1}(PF.m{m1}.[(X,sc{m1})]) (eq_refl (PF.m{m1}.[(X,sc{m1})])) Hpf Hmh. 
-    + case (G1.mh{m2}.[(X, h{m2})]) => //= -[ya hy] Hpf.
-      by rewrite -negP => /(_ ya hy) [] ????[#];rewrite Hm /= => -[<-];rewrite Hpf.
-    move=> [ya yc] Hpf/(_ ya yc) [hx fx hy fy [#]] Hhx Hhy ^ /HG1 [xc fx0 yc0 fy0].
-    rewrite Hhx => /= [#] 2!<<-;rewrite Hhy Hpf /= => -[] !->> _.
-    by have /= <<- -> := Hu _ _ _ _ Hm Hhx.
-  if{1};[rcondf{2} 1| rcondt{2} 1];1,3:(by auto;smt ());last first.
-  + auto => /> /= &m1 &m2 ?? [] Hhs Hinv Hinvi Hmmh Hmmhi Hincl Hincli Hmh Hpi f.
-    rewrite head_nth nth_drop // addz0 => Heq Hbu ????.
-    rewrite !in_dom. 
-    have -> /= : i{m2} + 1 <> 0 by smt ().
-    pose sa' := sa{m2} +^ nth witness p{m2} i{m2}.
-    case (Hmmh) => /(_ sa' sc{m1});case (PF.m{m1}.[(sa', sc{m1})])=> //= -[ya yc] /(_ ya yc) /=.
-    move=> [hx fx hy fy]; case (Hhs) => Hu _ _ [#] Heq'.
-    have /= <<- /= Hhy ^? ->:= Hu _ _ _ _ Heq Heq'. 
-    rewrite !oget_some /= => _;split;1: by exists fy.
-    rewrite (@take_nth witness) 1://.
-    case (Hmh) => _ -> _;rewrite build_hpath_prefix Hbu /#.
-  rcondt{2} 5.
-  + move=> &m;auto=> &hr /> ?? Hinv f.
-    rewrite head_nth nth_drop // addz0; pose sa' := sa{hr} +^ nth witness p{hr} i{hr}.
-    move=> ?Hbu????->Hmem ????.
-    case (Hinv) => ??????? [] H1 H2 H3 ?.
-    rewrite (@take_nth witness) 1:// -negP in_dom.
-    pose p' := (take i{hr} p{hr}); pose w:= (nth witness p{hr} i{hr}).
-    case {-1}(F.RO.m{hr}.[rcons p' w]) (eq_refl (F.RO.m{hr}.[rcons p' w]))=> //.
-    move=> ? /H2 [???];rewrite Hbu => -[] [!<<-] HG1. 
-    by move: Hmem;rewrite in_dom HG1.      
-  swap{2} 4 -3;auto => &m1 &m2 [#] 2!->?? [] Hhs Hinv Hinvi Hmmh Hmmhi Hincl Hincli Hmh Hpi -> /=.
-  move=> Hsc Hpa Hif Hdrop Hlt Hbad.
-  rewrite head_nth nth_drop // addz0; pose sa' := sa{m2} +^ nth witness p{m2} i{m2}.
-  move=> Heq Hdom  y1L-> /= y2L-> /=.
-  have -> /= : i{m2} + 1 <> 0 by smt ().
-  rewrite !getP_eq !oget_some /=.
-  pose p' := (take (i{m2} + 1) p{m2});rewrite/==> [#] ? /=.
-  split;last first. 
-  + split;1: by exists Unknown.
-    rewrite /p' (@take_nth witness) 1:// build_hpath_prefix.
-    exists sa{m2} h{m2}.
-    rewrite /sa' getP_eq /=;apply build_hpath_up => //.
-    by move: Hdom;rewrite Heq /sa' in_dom.
-  have Hy1L := ch_notin_dom2_mh _ _ _ y1L G1.chandle{m2} Hmmhi Hhs.
-  have := hinvP FRO.m{m2} y2L;rewrite /= => Hy2L.      
-  have g1_sa' : G1.mh{m2}.[(sa', h{m2})] = None by move: Hdom;rewrite Heq in_dom.
-  case :Hsc => f Hsc; have Hh := dom_hs_neq_ch _ _ _ _ _ Hhs Hsc.
-  have Hch : FRO.m{m2}.[G1.chandle{m2}] = None.
-  + case Hhs => _ _ H. 
-    by case {-1}(FRO.m{m2}.[G1.chandle{m2}]) (eq_refl (FRO.m{m2}.[G1.chandle{m2}])) => // ? /H.
-  have Hy2_mi: ! mem (dom PF.mi{m1}) (y1L, y2L).
-  + rewrite in_dom;case {-1}( PF.mi{m1}.[(y1L, y2L)]) (eq_refl (PF.mi{m1}.[(y1L, y2L)])) => //.
-    by move=> [] ??;case Hmmhi=> H _ /H [] ????/#.
-  have ch_0 :=  ch_neq0 _ _ Hhs.
-  have ch_None : 
-    forall xa xb ha hb, G1.mh{m2}.[(xa,ha)] = Some(xb, hb) => 
-       ha <> G1.chandle{m2} /\ hb <> G1.chandle{m2}.
-  + move=> xa xb ha hb;case Hmmh=> _ H /H [xc fx yc fy [#]].
-    by move=> /(dom_hs_neq_ch _ _ _ _ _ Hhs) -> /(dom_hs_neq_ch _ _ _ _ _ Hhs).
-  split=> //.
-  + by apply hs_addh => // ??/#. 
-  + by apply inv_addm. 
-  + by apply (m_mh_addh_addm f) => //;case Hhs. 
-  + by apply (mi_mhi_addh_addmi f)=> // ??/#. 
-  + by apply incl_upd_nin. 
-  + by apply incl_upd_nin.
-  + case (Hmh)=> H1 H2 H3;split.
-    + move=> xa hx ya hy;rewrite getP;case((xa, hx) = (sa', h{m2}))=> [[2!->>] [2!<<-] | Hdiff].
-      + exists sc{m1} f y2L Unknown.
-        rewrite getP_eq getP_neq 1:eq_sym //= Hsc /=.
-        exists (take i{m2} p{m2}) sa{m2}.
-        rewrite /p' (@take_nth witness) 1:// /sa' xorwA xorwK xorwC xorw0 getP_eq /=.
-        by apply build_hpath_up_None.
-      move=> /H1 [xc fx yc fy] [#] Hhx Hhy Hfy; exists xc fx yc fy.
-      rewrite !getP_neq. 
-      + by rewrite eq_sym;apply (dom_hs_neq_ch _ _ _ Hhs Hhx).
-      + by rewrite eq_sym;apply (dom_hs_neq_ch _ _ _ Hhs Hhy).
-      rewrite Hhx Hhy /=;case: fy Hhy Hfy => //= Hhy [p v [Hro Hpath]].
-      exists p v;rewrite getP_neq 1:-negP 1:/p' 1:(@take_nth witness) 1://.
-      + move => ^ /rconssI <<-;move: Hpath;rewrite Hpa=> -[!<<-] /rconsIs Heq'.
-        by move:Hdiff=> /=;rewrite /sa' Heq' xorwA xorwK xorwC xorw0.
-      by rewrite Hro /=;apply build_hpath_up_None.
-    + move=> p1 bn b; rewrite getP /p' (@take_nth witness) //.
-      case (rcons p1 bn = rcons (take i{m2} p{m2}) (nth witness p{m2} i{m2})).
-      + move=> ^ /rconssI ->> /rconsIs ->> /=; split => [<<- | ].
-        + exists sa{m2} h{m2} G1.chandle{m2}.
-          by rewrite /sa' getP_eq /= (build_hpath_up Hpa) //.
-        move=> [v hx hy []] Heq1;rewrite getP /sa'.
-        case ((v +^ nth witness p{m2} i{m2}, hx) = (sa{m2} +^ nth witness p{m2} i{m2}, h{m2})) => //.
-        have := build_hpath_up_None G1.mh{m2} (sa', h{m2}) (y1L, G1.chandle{m2}) _ _ g1_sa' Hpa.
-        by rewrite Heq1 => -[!->>].
-      move=> Hdiff;rewrite H2. 
-      apply exists_iff=> v /= ;apply exists_iff => hx /=;apply exists_iff => hy /=.
-      have Hhx2 := dom_hs_neq_ch _ _ _ _ _ Hhs Hsc.
-      rewrite build_hpath_upd_ch_iff //.
-      case (hx = G1.chandle{m2}) => [->>|?].
-      + split;1: by move=> [] _ /ch_None.
-        move=> [[p0' x [Hhx2']]].
-        have [!<<-] [!->>]:= H3 _ _ _ _ _ Hpa Hhx2'.
-        by rewrite getP_neq /= ?Hhx2 // => /ch_None. 
-      rewrite getP; case ((v +^ bn, hx) = (sa', h{m2})) => //= -[Hsa' ->>].
-      rewrite Hsa' g1_sa' /= -negP => [#] Hbu !<<-.   
-      have [!<<-]:= H3 _ _ _ _ _ Hpa Hbu.
-      move: Hsa'=> /Block.WRing.addrI /#.
-    move=> p1 v p2 v' hx.
-    rewrite !build_hpath_upd_ch_iff //.
-    case (hx = G1.chandle{m2})=> [->> | Hdiff ];2:by apply H3.
-    by move=> /> ?? Hp1 ?? Hp2;have [!->>] := H3 _ _ _ _ _ Hp1 Hp2.
-  case (Hpi) => H1;split=> c p1 v1;rewrite H1 => {H1}.
-  apply exists_iff => h1 /=. rewrite getP build_hpath_upd_ch_iff //.
-  by case (h1 = G1.chandle{m2}) => [->> /#|].
+  swap{2}4-3;wp;progress=>/=.
+  conseq(:_==> hinv FRO.m{2} sc{2} = None
+      => y1{1} = r{2}
+      && build_hpath G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <-
+          (r{2}, G1.chandle{2})] (take (i{2} + 1) p{2}) = Some (r{2}, G1.chandle{2})
+      && sc{2} = y2{1}
+      && INV_CF_G1 FRO.m{2}.[G1.chandle{2} <- (sc{2}, Unknown)] (G1.chandle{2} + 1)
+    PF.m{1}.[x{1} <- (y1{1}, y2{1})] PF.mi{1}.[(y1{1}, y2{1}) <- x{1}]
+    G1.m{2} G1.mi{2}
+    G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (r{2}, G1.chandle{2})]
+    G1.mhi{2}.[(r{2}, G1.chandle{2}) <- (sa{2} +^ nth witness p{2} i{2}, h{2})]
+    F.RO.m{2}.[take (i{2} + 1) p{2} <- r{2}] G1.paths{2}
+    Redo.prefixes{1}.[take (i{1} + 1) p{1} <- (y1{1}, y2{1})]);1:smt(getP oget_some).
+  conseq(:_==> (y1,y2){1} = (r,sc){2});-1:by sim.
+  move=> &1 &2[][]inv0[][]flag h_flag[]->>[]->>[][]->>->>[]Hi[].
+  move=>prefixe_p_i[] hpath[]ro_p_i[];rewrite in_dom prefixe_p_i/==>[][]preifxe_p_i1.
+  rewrite!negb_or !in_dom/==>[][][]bcol bext h_pf_g1 h_pf b1 c1 b2 c2 []->>->> hinv_none/=.
+  move:preifxe_p_i1;cut->:=take_nth witness i{2} p{2};1:smt(size_take).
+  move=>prefixe_p_i1.
+  split;1:rewrite build_hpath_prefix/=.
+  * by exists sa{2} h{2};rewrite getP/=;apply build_hpath_up=>//=;smt(in_dom).
+  cut:=inv0;case.
+  move=>H_hs_spec H_inv_spec H_inv_spech H_m_mh H_mi_mhi H_incl_m H_incl_mi H_mh_spec H_pi_spec H_m_p h_build_hpath_rcons.
+  cut:hs_spec FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)] (G1.chandle{2}+1)
+      && inv_spec G1.m{2} G1.mi{2}
+      && inv_spec G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})]
+          G1.mhi{2}.[(b2, G1.chandle{2}) <- (sa{2} +^ nth witness p{2} i{2}, h{2})]
+      && m_mh FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)] 
+          PF.m{1}.[(sa{2} +^ nth witness p{2} i{2}, sc{1}) <- (b2, c2)]
+          G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})]
+      && m_mh FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)]
+          PF.mi{1}.[(b2, c2) <- (sa{2} +^ nth witness p{2} i{2}, sc{1})]
+          G1.mhi{2}.[(b2, G1.chandle{2}) <- (sa{2} +^ nth witness p{2} i{2}, h{2})]
+      && incl G1.m{2} PF.m{1}.[(sa{2} +^ nth witness p{2} i{2}, sc{1}) <- (b2, c2)]
+      && incl G1.mi{2} PF.mi{1}.[(b2, c2) <- (sa{2} +^ nth witness p{2} i{2}, sc{1})]
+      && pi_spec FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)]
+          G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})] G1.paths{2}
+      && mh_spec FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)] G1.m{2}
+          G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})]
+          F.RO.m{2}.[rcons (take i{2} p{2}) (nth witness p{2} i{2}) <- b2]
+      && m_p PF.m{1}.[(sa{2} +^ nth witness p{2} i{2}, sc{1}) <- (b2, c2)] 
+          Redo.prefixes{1}.[rcons (take i{2} p{2}) (nth witness p{2} i{2}) <- (b2, c2)];last by progress;split=>//.
+  split.
+  + apply hs_addh;1:cut//:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ inv0.
+    by cut:=hinvP FRO.m{2} c2;rewrite hinv_none/=/#.
+  move=>H2_hs_spec;split.
+  + by cut:=invG_of_INV _ _ _ _ _ _ _ _ _ _ _ inv0.
+  move=>H2_inv_spec;split.
+  + apply inv_addm=>//;1:cut//:=inv_of_INV _ _ _ _ _ _ _ _ _ _ _ inv0.
+    - rewrite/#.
+    cut hj:=mi_mhi_of_INV _ _ _ _ _ _ _ _ _ _ _ inv0.
+    cut hs_sp:=hs_of_INV  _ _ _ _ _ _ _ _ _ _ _ inv0.
+    apply (notin_hs_notin_dom2_mh FRO.m{2} PF.mi{1})=>//=.
+    by apply ch_notin_dom_hs=>//=.
+  move=>H2_inv_spech;split.
+  + cut//=:=(m_mh_addh_addm  FRO.m{2} PF.m{1} G1.mh{2} h{2} (sa{2} +^ nth witness p{2} i{2}) sc{1} G1.chandle{2} b2 c2 flag Unknown _ _ _ _);rewrite//.
+    - by cut[]:=H_hs_spec.
+    by rewrite ch_notin_dom_hs.
+  move=>H2_m_mh;split.
+  + cut->//=:=(mi_mhi_addh_addmi FRO.m{2} PF.mi{1} G1.mhi{2} h{2} (sa{2} +^ nth witness p{2} i{2}) sc{1} G1.chandle{2} b2 c2 flag Unknown _ _ _ _);rewrite//.
+    - by cut/#:=hinvP FRO.m{2} c2.
+    by rewrite ch_notin_dom_hs. 
+  move=>H2_mi_mhi;split.
+  + move=>x;rewrite getP/=.
+    by cut:=H_incl_m (sa{2} +^ nth witness p{2} i{2}, sc{1});smt(in_dom). 
+  move=>H2_incl_m;split.
+  + move=>x;rewrite getP/=.
+    cut/#:G1.mi{2}.[(b2, c2)] = None;move=>{x}.
+    cut help//=:=hinvP FRO.m{2} c2.
+    rewrite hinv_none/= in help.
+    cut->//=:=notin_m_notin_Gm _ _ (b2,c2) H_incl_mi.
+    cut/#:forall a b, PF.mi{1}.[(b2,c2)] <> Some (a,b).
+    move=>a b;move:help;apply absurd=>//=;rewrite negb_forall//=.
+    cut[] inv1 inv2 hab:=H_mi_mhi.
+    by cut/#:=inv1 _ _ _ _ hab.
+  cut :=h_pf_g1;rewrite h_pf/=eq_sym neqF/==>h_g1.
+  move=>H2_incl_mi;split. print mh_spec. search pi_spec.
+  + (* pi_spec *)
+    split;progress.
+    - cut[]h:=H_pi_spec;cut:=h c p0 v;rewrite H/==>[][]h1[] h'1 h'2.
+      exists h1;rewrite -h'2 getP/=.
+      cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h'2.
+      by apply build_hpath_up=>//=.
+    move:H0;rewrite getP/==>hh0.
+    cut h0_neq_ch:h0 <> G1.chandle{2} by rewrite/#.
+    cut[]->:=H_pi_spec;rewrite-hh0 h0_neq_ch/=;exists h0=>/=. search build_hpath None.
+    cut:=H;cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v h0.
+    rewrite h_g1/=H/=h0_neq_ch/=.
+    cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag. 
+    by cut->/=->//=:=ch_neq0 _ _ H_hs_spec;progress;cut[]hh1 hh2 hh3:=H_mh_spec;smt(dom_hs_neq_ch).
+  move=>H2_pi_spec;split.
+  + (* mh_spec *) 
+    (* cut: *)
+    (*   (forall (xa : block) (hx : handle) (ya : block) (hy : handle), *)
+    (*     G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})].[( *)
+    (*       xa, hx)] = Some (ya, hy) => *)
+    (*    exists (xc : capacity) (fx : flag) (yc : capacity) (fy : flag), *)
+    (*      FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)].[hx] = Some (xc, fx) /\ *)
+    (*      FRO.m{2}.[G1.chandle{2} <- (c2, Unknown)].[hy] = Some (yc, fy) /\ *)
+    (*      if fy = Known then G1.m{2}.[(xa, xc)] = Some (ya, yc) /\ fx = Known *)
+    (*      else *)
+    (*        exists (p1 : block list) (v : block), *)
+    (*          F.RO.m{2}.[rcons (take i{2} p{2}) (nth witness p{2} i{2}) <- b2].[ *)
+    (*          rcons p1 (v +^ xa)] = Some ya /\ build_hpath *)
+    (*          G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- *)
+    (*          (b2, G1.chandle{2})] p1 = Some (v, hx)) *)
+    (*   && *)
+    (*   (forall (p1 : block list) (v : block) (p2 : block list) (v' : block) (hx : handle), *)
+    (*     build_hpath *)
+    (*     G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})] *)
+    (*     p1 = Some (v, hx) => *)
+    (*     build_hpath *)
+    (*     G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})] *)
+    (*     p2 = Some (v', hx) => p1 = p2 /\ v = v') *)
+    (*   && *)
+    (*   (forall (p1 : block list) (bn b : block), *)
+    (*     F.RO.m{2}.[rcons (take i{2} p{2}) (nth witness p{2} i{2}) <- b2].[rcons p1 bn] = *)
+    (*     Some b <=> *)
+    (*     exists (v : block) (hx hy : handle), build_hpath *)
+    (*     G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})] p1 = *)
+    (*     Some (v, hx) /\ *)
+    (*     G1.mh{2}.[(sa{2} +^ nth witness p{2} i{2}, h{2}) <- (b2, G1.chandle{2})].[(v +^ bn, hx)] = Some (b, hy)); *)
+    (*   last by progress;split=>/#.  *)
+    split=>//=.
+    - move=>x hx y hy;rewrite !getP.
+      case((x, hx) = (sa{2} +^ nth witness p{2} i{2}, h{2}))=>//=.
+      * move=>[->> ->>][<<- <<-]/=.
+        cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
+        rewrite h_flag/=.
+        exists sc{1} flag c2 Unknown=>//=.
+        by exists (take i{2} p{2}) (sa{2})=>//=;rewrite getP Block.WRing.addKr/=;apply build_hpath_up=>//=/#.
+      move=> neq h1.
+      cut[]hh1 hh2 hh3:=H_mh_spec.
+      cut[]xc hxx yc hyc []h2[]h3 h4:=hh1 _ _ _ _ h1.
+      cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h2.
+      cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h3.
+      rewrite h2 h3/=;exists xc hxx yc hyc=>//=.
+      move:h4;case(hyc = Known)=>//=neq2[]p0 b[]hp0 hb.
+      exists p0 b;rewrite getP.
+      cut->/=:=build_hpath_up _ _ _ b2 G1.chandle{2} _ _ _ hb h_g1.
+      cut/#:!rcons p0 (b +^ x) = rcons (take i{2} p{2}) (nth witness p{2} i{2});move:neq;apply absurd=>//=h'.
+      cut<<-:take i{2} p{2}=p0 by rewrite/#.
+      cut hbex:b +^ x = nth witness p{2} i{2} by rewrite/#.
+      by cut:=hb;rewrite hpath/==>[][->>->>]/=;rewrite-hbex Block.WRing.addKr/=.
+    (* move=>hh1;split. *)
+    (* - progress. search build_hpath Some. *)
+      
+
+    - progress. search build_hpath.
+      * move:H;rewrite getP/=.
+        case(p0 = (take i{2} p{2}))=>[->>|hpp0]. search build_hpath None.
+        + cut->/=:=build_hpath_up _ _ _ b2 G1.chandle{2} _ _ _ hpath h_g1.
+          case(bn = (nth witness p{2} i{2}))=>[->>/=->>|hbni]/=.
+          - by exists sa{2} h{2} G1.chandle{2}=>//=;rewrite getP/=.
+          cut->/=:!rcons (take i{2} p{2}) bn = rcons (take i{2} p{2}) (nth witness p{2} i{2}).
+          - move:hbni;apply absurd=>//=h.
+            cut->:bn = nth witness (rcons (take i{2} p{2}) bn) i{2}.
+            * by rewrite nth_rcons size_take /#.
+            by rewrite h nth_rcons size_take /#.
+          move=>h_ro_p_bn.
+          cut[]_ hh4 _:=H_mh_spec.
+          by cut:=hh4 (take i{2} p{2}) bn b;rewrite h_ro_p_bn/=hpath/=;smt(getP @Block.WRing).
+        cut->/=:!rcons p0 bn = rcons (take i{2} p{2}) (nth witness p{2} i{2}).
+        + move:hpp0;apply absurd=>/=h.
+          cut:size p0 = size (take i{2} p{2}) by smt(size_rcons).
+          move:h;pose p' := take i{2} p{2};pose e := nth witness p{2} i{2}.
+          by move=>h h';move:p0 p' h' bn e h;apply seq2_ind=>//=/#.
+        move=>h_ro_p_bn.
+        cut[]_ hh4 _:=H_mh_spec.
+        cut:=hh4 p0 bn b;rewrite h_ro_p_bn/==>[][];progress.
+        cut help:(sa{2} +^ nth witness p{2} i{2}, h{2}) <> (v +^ bn, hx) by rewrite/#.
+        exists v hx hy=>//=;rewrite getP;rewrite eq_sym in help;rewrite help/=H0/=.
+        by apply build_hpath_up=>//=.
+      move:H H0;rewrite!getP=>h_build_hpath_set.
+      case(hy = G1.chandle{2})=>//=[->>|hy_neq_ch]/=.
+      + move=>h;cut h_eq:v +^ bn = sa{2} +^ nth witness p{2} i{2} && hx = h{2}.
+        + cut/#:G1.mh{2}.[(v +^ bn, hx)] <> Some (b, G1.chandle{2}). search hs_spec.
+          cut[]_ hh2:=H_m_mh.
+          cut:=hh2 (v +^ bn) hx b G1.chandle{2}.
+          case(G1.mh{2}.[(v +^ bn, hx)] = Some (b, G1.chandle{2}))=>//=.
+          rewrite negb_exists/=;progress;
+          rewrite negb_exists/=;progress;
+          rewrite negb_exists/=;progress;
+          rewrite negb_exists/=;progress;rewrite !negb_and.
+          by cut[]/#:=H_hs_spec.
+        cut[]eq_xor ->>:=h_eq.
+        move:h;rewrite h_eq/==>->>.
+        cut/#:!(p0 = (take i{2} p{2}) /\ bn = (nth witness p{2} i{2})) =>
+              F.RO.m{2}.[rcons p0 bn] = Some b.
+        move:h_flag;case:flag=>h_flag;last first.
+        - cut:=known_path_uniq _ _ _ sc{1} h{2} p0 v (take i{2} p{2}) sa{2} H2_pi_spec _ h_build_hpath_set _.
+          * rewrite getP/=h_flag.
+            by cut->//=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag. search build_hpath.
+          * by apply build_hpath_up=>//=.
+          move=>[]->>->>/=;smt(@Block.WRing). 
+
+        cut[]hh1 hh2 hh3:=H_mh_spec.
+        cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b p0 v h{2}.
+        rewrite h_build_hpath_set/=h_g1/=.
+        cut->/=:=ch_neq0 _ _ H_hs_spec.
+        cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
+        move=>help;cut:= help _;1:smt(dom_hs_neq_ch).
+        move=>h_build_hpath_p0.
+        rewrite hh2 h_build_hpath_p0/==>h_neq.
+        exists v h{2}=>//=. 
+        rewrite eq_xor h_g1/=;move:h_neq;apply absurd=>//=.
+        by cut:=hh3 _ _ _ _ _ hpath h_build_hpath_p0;smt(@Block.WRing).
+
+      move=>help;cut h_neq:! (v +^ bn = sa{2} +^ nth witness p{2} i{2} && hx = h{2}) by rewrite/#.
+      move:help;rewrite h_neq/==>h_g1_v_bn_hx.
+      cut[]hh1 hh2 hh3:=H_mh_spec.
+      cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v hx.
+      rewrite h_build_hpath_set/=h_g1/=.
+      cut->/=:=ch_neq0 _ _ H_hs_spec.
+      by cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag;smt(dom_hs_neq_ch).
+
+    progress.
+    + cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v hx.
+      cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p' v' hx.
+      rewrite H H0/=.
+      cut->/=:=ch_neq0 _ _ H_hs_spec.
+      cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
+      rewrite h_g1/=.
+      by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
+  
+    cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p0 v hx.
+    cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness p{2} i{2}) b2 p' v' hx.
+    rewrite H H0/=.
+    cut->/=:=ch_neq0 _ _ H_hs_spec.
+    cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h_flag.
+    rewrite h_g1/=.
+    by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
+
+  move=>H2_mh_spec;split;progress.
+  + by cut[]:=H_m_p;smt(getP size_rcons size_eq0 size_ge0).
+  move:H;rewrite dom_set in_fsetU1.
+  case(l \in dom Redo.prefixes{1})=>//=hdom.
+  + cut[]_ h:=H_m_p.
+    cut[]sa' sc'[]h_pref h_pref2:=h _ hdom i0 _;1:rewrite/#.
+    exists sa' sc';rewrite!getP/=.
+    cut->/=:!take i0 l = rcons (take i{2} p{2}) (nth witness p{2} i{2}) by smt(in_dom).
+    rewrite h_pref/=.
+    cut->/=:!take (i0 + 1) l = rcons (take i{2} p{2}) (nth witness p{2} i{2}) by smt(in_dom take_size).
+    rewrite-h_pref2/=.
+    by cut->/=:! (sa' +^ nth witness l i0 = sa{2} +^ nth witness p{2} i{2} && sc' = sc{1}) by smt(in_dom take_size).
+  move=>->>;case(i0=i{2})=>[->>|i0_neq_i]//=.
+  + exists sa{2} sc{1}=>//=;rewrite!getP/=.
+    move:H1;rewrite !size_rcons !size_take//.
+    rewrite!nth_rcons-take_nth// !take_take!size_take 1:/#. 
+    cut->/=hii:i{2}< size p{2} by rewrite/#. 
+    rewrite !min_lel 1,2:/#.
+    by cut->/=:! take i{2} p{2} = take (i{2} + 1) p{2} by smt(size_take).
+  move:H1;rewrite !size_rcons !size_take//1:/#.
+  rewrite!nth_rcons-take_nth// !take_take!size_take 1:/#. 
+  cut->/=hii:i{2}< size p{2} by rewrite/#. 
+  rewrite i0_neq_i/=!min_lel 1,2:/#.
+  cut->/=:i0 < i{2} by rewrite/#.
+  rewrite!getP.
+  cut->/=:! take i0 p{2} = take (i{2} + 1) p{2} by smt(size_take).
+  cut[]_ h_pref:=H_m_p.
+  cut[]:= h_pref (take i{2} p{2}) _ i0 _;1:smt(in_dom);1:smt(size_take).
+  move=>b3 c3;rewrite!take_take!min_lel 1,2:/#=>[][]-> h.
+  cut->/=:!take (i0 + 1) p{2} = take (i{2} + 1) p{2} by smt(size_take).
+  exists b3 c3=>//=;rewrite getP/=. 
+  cut/#:!(b3 +^ nth witness (take i{2} p{2}) i0 = sa{2} +^ nth witness p{2} i{2} &&
+    c3 = sc{1}).
+  cut:(b3 +^ nth witness (take i{2} p{2}) i0, c3) \in dom PF.m{1};2:smt(in_dom).
+  cut:take (i0 + 1) p{2} \in dom Redo.prefixes{1};2:smt(in_dom).
+  cut->:take (i0 + 1) p{2} = take (i0 + 1) (take i{2} p{2});1:smt(take_take). 
+  smt(in_dom take_oversize).
 qed.
 
 section AUX.
 
-  declare module D : DISTINGUISHER {PF, RO, G1}.
+  declare module D : DISTINGUISHER {PF, RO, G1, Redo}.
 
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
@@ -1815,7 +1950,8 @@ section AUX.
   proc.
   call (_: G1.bcol \/ G1.bext,
            INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1}
-                     G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2}).
+                     G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2} F.RO.m{2}
+                     G1.paths{2} Redo.prefixes{1}).
   (* lossless D *)
   + exact/D_ll.
   (** proofs for G1.S.f *)
@@ -1826,14 +1962,14 @@ section AUX.
                /\ INV_CF_G1 FRO.m{2} G1.chandle{2}
                             PF.m{1} PF.mi{1}
                             G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2}
-                            F.RO.m{2} G1.paths{2}
+                            F.RO.m{2} G1.paths{2} Redo.prefixes{1}
            ==>    !G1.bcol{2}
                => !G1.bext{2}
                => ={res}
                /\ INV_CF_G1 FRO.m{2} G1.chandle{2}
                             PF.m{1} PF.mi{1}
                             G1.m{2} G1.mi{2} G1.mh{2} G1.mhi{2}
-                            F.RO.m{2} G1.paths{2}).
+                            F.RO.m{2} G1.paths{2} Redo.prefixes{1}).
     + by move=> &1 &2; rewrite negb_or.
     + by move=> &1 &2 _ ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? [#]; rewrite negb_or.
     (* For now, everything is completely directed by the syntax of
@@ -1844,12 +1980,12 @@ section AUX.
     exists * FRO.m{2}, G1.chandle{2},
              PF.m{1}, PF.mi{1},
              G1.m{2}, G1.mi{2}, G1.mh{2}, G1.mhi{2},
-             F.RO.m{2}, G1.paths{2},
+             F.RO.m{2}, G1.paths{2}, Redo.prefixes{1},
              x{2}.
-    elim * => hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 [] x1 x2.
+    elim * => hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 pref [] x1 x2.
     (* poor man's extraction of a fact from a precondition *)
-    case @[ambient]: {-1}(INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0)
-                     (eq_refl (INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0)); last first.
+    case @[ambient]: {-1}(INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 pref)
+                     (eq_refl (INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 pref)); last first.
     + by move=> h; exfalso=> &1 &2 [#] <*>; rewrite h.
     move=> /eqT inv0; proc; case @[ambient] {-1}(PFm.[(x1,x2)]) (eq_refl (PFm.[(x1,x2)])).
     + move=> PFm_x1x2.
@@ -1871,11 +2007,12 @@ section AUX.
                     /\ G1mhi = G1.mhi{2}
                     /\ ro0 = F.RO.m{2}
                     /\ pi0 = G1.paths{2}
+                    /\ pref = Redo.prefixes{1}
                     /\ (x1,x2) = x{2}
                     /\ !G1.bcol{2}
                     /\ !G1.bext{2}
                     /\ ={x, y1, y2}
-                    /\ INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0).
+                    /\ INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 pref).
         + by auto.
         case @[ambient]: {-1}(getflag hs0 x2) (eq_refl (getflag hs0 x2)).
         + rewrite getflagP_none => x2f_notin_rng_hs0; rcondt{2} 3.
@@ -1928,13 +2065,14 @@ section AUX.
                     /\ G1mhi = G1.mhi{2}
                     /\ ro0 = F.RO.m{2}
                     /\ pi0 = G1.paths{2}
+                    /\ pref = Redo.prefixes{1}
                     /\ (x1,x2) = x{2}
                     /\ !G1.bcol{2}
                     /\ !G1.bext{2}
                     /\ ={x,y1,y2}
                     /\ y{2} = (y1,y2){2}
                     /\ hx2{2} = hx
-                    /\ INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0).
+                    /\ INV_CF_G1 hs0 ch0 PFm PFmi G1m G1mi G1mh G1mhi ro0 pi0 pref).
         + auto=> &1 &2 /> _ -> /= _; split.
           + move: x2_is_K; rewrite in_rng /= => -[hx2] hs_hx2.
             rewrite in_rng negb_exists /==> h; rewrite -negP=> hs_h.
@@ -1983,7 +2121,7 @@ section AUX.
       rewrite !getP_eq pi_x2 !oget_some /=.
       have /hs_of_INV [] Hu _ _:= inv0; have -> := huniq_hinvK_h _ _ _ Hu hs_hx2.
       rewrite oget_some => /=  ? Hy2L .
-      case:inv0=> Hhs Hinv HinvG Hmmh Hmmhi Hincl Hincli Hmh Hpi.
+      case:inv0=> Hhs Hinv HinvG Hmmh Hmmhi Hincl Hincli Hmh Hpi Hmp.
       have Hhx2:= dom_hs_neq_ch _ _ _ _ _ Hhs hs_hx2.
       have mh_hx2: G1mh.[(x1,hx2)] = None.
       + case Hmmh => _ /(_ x1 hx2);case (G1mh.[(x1, hx2)]) => // -[ya hy] /(_ ya hy) /=.
@@ -2060,6 +2198,11 @@ section AUX.
       rewrite build_hpath_upd_ch_iff // getP;case (h = ch0) => [->> | //].
       split;1: by move=> [_ /(dom_hs_neq_ch _ _ _ _ _ Hhs)].
       by move=> /= [_ <<-];move:Hc.
+      split.
+      by cut[]/#:=Hmp.
+      cut[]_ h l hdom i hi:=Hmp.
+      cut[]b c[]->h':=h l hdom i hi.
+      by exists b c=>//=;rewrite getP/=-h';smt(in_dom take_oversize).
 
     move=> [xa xc] PFm_x1x2. rcondf{1} 1; 1:by auto=> &hr [#] !<<- _ _ ->>; rewrite in_dom PFm_x1x2.
     have /m_mh_of_INV [] + _ - /(_ _ _ _ _ PFm_x1x2) := inv0.
@@ -2095,7 +2238,7 @@ section AUX.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // ?oget_some.
     + by have /hs_of_INV []:= inv0.
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //= => _.
-    exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
+    exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
   (* lossless PF.f *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
     smt (@Block.DBlock @Capacity.DCapacity).
@@ -2119,8 +2262,9 @@ section AUX.
   + proc.
     inline*;sp. admit. (* this is false *)
   (* lossless PF.C.f *)
-  + move=> &2 _; proc; inline *; while (true) (size p); auto.
-    + sp; if; 2:by auto; smt (size_behead).
+  + move=> &2 _; proc; inline *; while (true) (size p - i); auto.
+    + if; 1:auto=>/#.
+      sp; if; 2: auto=>/#.
       by wp; do 2!rnd predT; auto; smt (size_behead @Block.DBlock @Capacity.DCapacity).
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
@@ -2132,20 +2276,21 @@ section AUX.
     by auto; smt (@Block.DBlock @Capacity.DCapacity).
   (* Init ok *)
   inline *; auto=> />; split=> [|/#].
-  (do !split; last 3 smt (getP map0P build_hpath_map0)); last 5 by move=> ? ? ? ?; rewrite map0P.
+  (do !split; -5..-2: smt (getP map0P build_hpath_map0)); -6..-2: by move=> ? ? ? ?; rewrite map0P.
   + move=> h1 h2 ? ?; rewrite !getP !map0P.
     by case: (h1 = 0); case: (h2 = 0)=> //=.
   + by rewrite getP.
   + by move=> ? h; rewrite getP map0P; case: (h = 0).
   + by move=> ? ?; rewrite !map0P.
-  by move=> ? ?; rewrite !map0P.
+  + by move=> ? ?; rewrite !map0P.
+  by move=>l;rewrite dom_set in_fsetU1 dom0 in_fset0/==>->>/=/#.
 qed.
 
 end section AUX.
 
 section.
 
-  declare module D: DISTINGUISHER{Perm, C, PF, G1, RO}.
+  declare module D: DISTINGUISHER{Perm, C, PF, G1, RO, Redo}.
   
   axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi =>
