@@ -44,9 +44,7 @@ module G1(D:DISTINGUISHER) = {
         }
         i        <- i + 1;
       }
-      if (p <> []) {
-        sa <- F.RO.get(p);
-      }
+      sa <- F.RO.get(p);
       return sa;
     }
   }
@@ -1448,7 +1446,146 @@ qed.
 
 
 
-equiv PFf_Cf_not_nil (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f : 
+module G1'(D:DISTINGUISHER) = {
+
+  module C = {
+
+    proc f(p : block list): block = {
+      var sa, sa', sc;
+      var h, i <- 0; 
+      sa <- b0;
+      sc <- c0;
+      while (i < size p ) {
+        if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+          (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
+        } else {
+          sc                        <$ cdistr;
+          G1.bcol                   <- G1.bcol \/ hinv FRO.m sc <> None;
+          sa'                       <@ F.RO.get(take (i+1) p);
+          sa                        <- sa +^ nth witness p i;
+          G1.mh.[(sa,h)]            <- (sa', G1.chandle);
+          G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+          (sa,h)                    <- (sa',G1.chandle);
+          FRO.m.[G1.chandle]        <- (sc,Unknown);
+          G1.chandle                <- G1.chandle + 1;
+        }
+        i        <- i + 1;
+      }
+      if (p <> []) {
+        sa <- F.RO.get(p);
+      }
+      return sa;
+    }
+  }
+
+  module S = {
+
+    proc f(x : state): state = {
+      var p, v, y, y1, y2, hy2, hx2;
+
+      if (!mem (dom G1.m) x) {
+        if (mem (dom G1.paths) x.`2) {
+          (p,v) <- oget G1.paths.[x.`2]; 
+          y1    <- F.RO.get (rcons p (v +^ x.`1));
+          y2    <$ cdistr;
+        } else {
+          y1    <$ bdistr;
+          y2    <$ cdistr;
+        }
+        y     <- (y1, y2);
+        G1.bext <- G1.bext \/ mem (rng FRO.m) (x.`2, Unknown);   
+        if (!(mem (rng FRO.m) (x.`2, Known))) {
+          FRO.m.[G1.chandle] <- (x.`2, Known);
+          G1.chandle         <- G1.chandle + 1;
+        }
+        hx2 <- oget (hinvK FRO.m x.`2);
+        if (mem (dom G1.mh) (x.`1, hx2) /\ in_dom_with FRO.m (oget G1.mh.[(x.`1,hx2)]).`2 Unknown) {
+          hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
+          y                    <- (y.`1, (oget FRO.m.[hy2]).`1);
+          FRO.m.[hy2]          <- (y.`2, Known);
+          G1.m.[x]             <- y;
+          G1.mi.[y]            <- x;
+        } else {
+          G1.bcol              <- G1.bcol \/ hinv FRO.m y.`2 <> None;
+          hy2                  <- G1.chandle;
+          G1.chandle           <- G1.chandle + 1;
+          FRO.m.[hy2]          <- (y.`2, Known);
+          G1.m.[x]             <- y;
+          G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
+          G1.mi.[y]            <- x;
+          G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
+        }
+        if (mem (dom G1.paths) x.`2) {
+          (p,v)           <- oget G1.paths.[x.`2]; 
+          G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+        }
+      } else {   
+        y <- oget G1.m.[x];
+      }
+      return y;
+    }
+
+    proc fi(x : state): state = {
+      var y, y1, y2, hx2, hy2;
+
+      if (!mem (dom G1.mi) x) {
+        G1.bext <- G1.bext \/ mem (rng FRO.m) (x.`2, Unknown);   
+        if (!(mem (rng FRO.m) (x.`2, Known))) {
+          FRO.m.[G1.chandle] <- (x.`2, Known);
+          G1.chandle         <- G1.chandle + 1;
+        }
+        hx2 <- oget (hinvK FRO.m x.`2);
+        y1  <$ bdistr;
+        y2  <$ cdistr;
+        y   <- (y1,y2);
+        if (mem (dom G1.mhi) (x.`1,hx2) /\
+            in_dom_with FRO.m (oget G1.mhi.[(x.`1,hx2)]).`2 Unknown) {
+          (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
+          y                    <- (y.`1, (oget FRO.m.[hy2]).`1);
+          FRO.m.[hy2]          <- (y.`2, Known);
+          G1.mi.[x]            <- y;
+          G1.m.[y]             <- x;
+        } else {
+          G1.bcol              <- G1.bcol \/ hinv FRO.m y.`2 <> None;          
+          hy2                  <- G1.chandle;
+          G1.chandle           <- G1.chandle + 1;
+          FRO.m.[hy2]          <- (y.`2, Known);
+          G1.mi.[x]            <- y;
+          G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
+          G1.m.[y]             <- x;
+          G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
+        }
+      } else {
+        y <- oget G1.mi.[x];
+      }
+      return y;
+    }
+
+  }
+
+  proc main(): bool = {
+    var b;
+
+    F.RO.m      <- map0;
+    G1.m        <- map0;
+    G1.mi       <- map0;
+    G1.mh       <- map0;
+    G1.mhi      <- map0;
+    G1.bext     <- false;
+    G1.bcol     <- false;
+
+    (* the empty path is initially known by the adversary to lead to capacity 0^c *)
+    FRO.m       <- map0.[0 <- (c0, Known)];
+    G1.paths    <- map0.[c0 <- ([<:block>],b0)];
+    G1.chandle  <- 1;
+    b           <@ D(C,S).distinguish();
+    return b;
+  }
+}.
+
+
+
+equiv PFf_Cf_not_nil (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1'(D).C.f : 
   ! (G1.bcol{2} \/ G1.bext{2}) /\
   ={p} /\ p{1} <> [] /\
   INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
@@ -1931,7 +2068,7 @@ proof.
 qed.
 
 
-equiv PFf_Cf (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1(D).C.f : 
+equiv PFf_Cf (D<:DISTINGUISHER):  SqueezelessSponge(PF).f ~ G1'(D).C.f : 
   ! (G1.bcol{2} \/ G1.bext{2}) /\
   ={p} /\ 
   INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2}
@@ -1954,7 +2091,7 @@ section AUX.
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
-  equiv CF_G1 : CF(D).main ~ G1(D).main: 
+  equiv CF_G1' : CF(D).main ~ G1'(D).main: 
                  ={glob D} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
   proof.               
   proc.
@@ -2260,7 +2397,16 @@ section AUX.
     smt (@Block.DBlock @Capacity.DCapacity).
   (** proofs for G1.S.fi *)
   (* equiv PF.P.fi G1.S.fi *)
-  + by conseq (eq_fi D)=> /#.
+  + transitivity G1(D).S.fi
+    (! (G1.bcol{2} \/ G1.bext{2}) /\ ={x} /\
+      INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2}
+      G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1}
+      ==> ! (G1.bcol{2} \/ G1.bext{2}) => ={res} /\
+        INV_CF_G1 FRO.m{2} G1.chandle{2} PF.m{1} PF.mi{1} G1.m{2} G1.mi{2} G1.mh{2}
+        G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1})
+    (={glob G1(D).S, x} ==> ={glob G1(D).S, res});progress;1:rewrite/#.
+    - by conseq (eq_fi D)=> /#.
+    by proc;inline*;sim.
   (* lossless PF.P.fi *)
   + move=> &2 _; proc; if=> //=; wp; rnd predT; rnd predT; auto.
     smt (@Block.DBlock @Capacity.DCapacity).
@@ -2297,8 +2443,9 @@ section AUX.
   + by move=> ? ?; rewrite !map0P.
   + by move=> ? ?; rewrite !map0P.
   by move=>l;rewrite dom_set in_fsetU1 dom0 in_fset0/==>->>/=/#.
-qed.
+  qed.
 
+  
 end section AUX.
 
 section.
@@ -2309,6 +2456,25 @@ section.
     islossless P.f => islossless P.fi =>
     islossless F.f => islossless D(F, P).distinguish.
 
+  local equiv CF_G1 : 
+    CF(DRestr(D)).main ~ G1(DRestr(D)).main: 
+    ={glob D, glob C} ==> !(G1.bcol \/ G1.bext){2} => ={res}.
+  proof.
+  transitivity G1'(DRestr(D)).main
+      (={glob D, glob C} ==> !(G1.bcol \/ G1.bext){2} => ={res})
+      (={glob D, glob C} ==> ={res, glob G1(D)});progress;1:rewrite/#.
+  + by conseq(CF_G1' (DRestr(D)) (DRestr_ll D D_ll));progress. 
+  proc;inline*;auto;sp.
+  call(: ={glob G1, glob C} /\ [] \in dom C.queries{1});auto;last first.
+  + smt(dom_set in_fsetU1).
+  + by proc;inline*;sp;if;auto;conseq(:_==> ={y0, glob G1, glob C});progress;sim.
+  + by proc;inline*;sp;if;auto;conseq(:_==> ={y0, glob G1, glob C});progress;sim.
+  proc;inline*;sp;if;auto;if;1,3:auto.
+  rcondt{1}8;first by auto;while(p <> []);auto;1:(sp;if);auto=>/#.
+  by wp 12 12;conseq(:_==> ={b, glob G1, glob C});1:smt(dom_set in_fsetU1);sim.
+  qed.
+
+
   lemma Real_G1 &m: 
     Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
     Pr[G1(DRestr(D)).main() @ &m: res] +  (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness) + 
@@ -2318,12 +2484,12 @@ section.
     cut : Pr[CF(DRestr(D)).main() @ &m : res] <= 
           Pr[G1(DRestr(D)).main() @ &m : res] + 
           Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext].
-    + byequiv (CF_G1 (DRestr(D)) _)=>//;1:by apply (DRestr_ll D D_ll).
+    + byequiv (CF_G1)=>//.
       smt ml=0.
     cut /# : Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext] <= 
              Pr[G1(DRestr(D)).main() @ &m : G1.bcol] + 
              Pr[G1(DRestr(D)).main() @ &m : G1.bext].
-    rewrite Pr [mu_or]; smt.
+    rewrite Pr [mu_or]; smt(Distr.mu_bounded).
   qed.
 
 end section.

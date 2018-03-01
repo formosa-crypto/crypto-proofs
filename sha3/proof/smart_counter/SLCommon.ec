@@ -849,7 +849,7 @@ module C = {
   var queries : (block list, block) fmap
   proc init () = {
     c       <- 0;
-    queries <- map0;
+    queries <- map0.[[] <- b0];
   }
 }.
 
