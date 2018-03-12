@@ -2477,8 +2477,9 @@ section.
 
   lemma Real_G1 &m: 
     Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
-    Pr[G1(DRestr(D)).main() @ &m: res] +  (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness) + 
-    Pr[G1(DRestr(D)).main() @&m: G1.bcol] + Pr[G1(DRestr(D)).main() @&m: G1.bext].
+    Pr[G1(DRestr(D)).main() @ &m: res]
+      + (max_size ^ 2)%r * inv 2%r * mu dstate (pred1 witness)
+      + Pr[G1(DRestr(D)).main() @&m: G1.bcol \/ G1.bext].
   proof. 
     apply (@RealOrder.ler_trans _ _ _ (Real_Concrete D D_ll &m)).
     cut : Pr[CF(DRestr(D)).main() @ &m : res] <= 
@@ -2486,10 +2487,7 @@ section.
           Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext].
     + byequiv (CF_G1)=>//.
       smt ml=0.
-    cut /# : Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext] <= 
-             Pr[G1(DRestr(D)).main() @ &m : G1.bcol] + 
-             Pr[G1(DRestr(D)).main() @ &m : G1.bext].
-    rewrite Pr [mu_or]; smt(Distr.mu_bounded).
+    smt ml=0.
   qed.
 
 end section.

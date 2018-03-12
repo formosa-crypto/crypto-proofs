@@ -38,7 +38,7 @@ section PROOF.
     proc sample_c () = {
       var c=c0;
       if (card (image fst (rng FRO.m)) <= 2*max_size /\
-          count < max_size) {
+          count < max_size /\ ! G1.bcol /\ ! G1.bext) {
         c <$ cdistr;
         G1.bcol <-  G1.bcol \/ mem (image fst (rng FRO.m)) c;
         count <- count + 1;  
@@ -191,38 +191,53 @@ section PROOF.
     by rewrite in_rng;exists (oget (Some h)).
   qed.
 
+  local lemma Pr_col &m : 
+    Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size] <=
+    max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+    fel 10 Gcol.count (fun x=> (2*max_size)%r / (2^c)%r)
+      max_size G1.bcol 
+      [Gcol.sample_c : (card (image fst (rng FRO.m)) <= 2*max_size /\ Gcol.count < max_size)]=>//;2:by auto.
+    + rewrite /felsum Bigreal.sumr_const count_predT size_range.
+      apply ler_wpmul2r;1:by apply eps_ge0.
+      by rewrite le_fromint;smt ml=0 w=max_ge0. 
+    + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
+      wp.
+      rnd (mem (image fst (rng FRO.m)));skip;progress;2:smt ml=0. 
+      cut->:=(Mu_mem.mu_mem (image fst (rng FRO.m{hr})) cdistr (1%r/(2^c)%r) _).
+      + move=>x _; rewrite DCapacity.dunifin1E;do !congr;smt(@Capacity). 
+      apply ler_wpmul2r;2:by rewrite le_fromint.
+      by apply divr_ge0=>//;apply /c_ge0r. 
+    + move=>ci;proc;rcondt 2;auto=>/#.
+    move=> b c;proc;sp;if;auto;smt ml=0.
+  qed.
+
   local equiv G1col : G1(DRestr(D)).main ~ Gcol.main : 
     ={glob D} ==> (G1.bcol{1} => G1.bcol{2}) /\ Gcol.count{2} <= max_size.
   proof.
     proc;inline*;wp.
-    call (_: ={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c}/\
+    call (_: ={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c,C.queries}/\
              (G1.bcol{1} => G1.bcol{2}) /\
              (card (rng FRO.m) <= 2*C.c + 1 /\ 
               Gcol.count <= C.c <= max_size){2}).
-    + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).S.f Gcol.S.f. 
-      seq 2 2 : (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-                   C.c,x0} /\ 
-                 (G1.bcol{1} => G1.bcol{2}) /\
-                 (card(rng FRO.m) + 2 <= 2*C.c + 1/\ 
-                  Gcol.count + 1 <= C.c <= max_size){2});1:by auto=>/#.
-      if=>//;last by auto=>/#.
+    + proc;sp 1 1;if=>//;inline G1(DRestr(D)).S.f Gcol.S.f;swap -3.
+      sp;if;1,3:auto=>/#.
       swap{1}[3..5]-2. 
       seq 3 2:(={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-                 C.c,x0,hx2} /\ 
+                 C.c,C.queries,x0,hx2} /\ 
                (G1.bcol{1} => G1.bcol{2}) /\
-               (card (rng FRO.m) + 1 <= 2 * C.c + 1/\ 
+               (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
                 Gcol.count + 1 <= C.c <= max_size){2}).
       + auto;smt ml=0 w=card_rng_set. 
       seq 2 2: 
         (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-           C.c,x0,hx2,y0} /\ 
+           C.c,C.queries,x0,hx2,y0} /\ 
          ((G1.bcol\/hinv FRO.m y0.`2 <> None){1} => G1.bcol{2}) /\
          (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
-         Gcol.count <= C.c <= max_size){2});last by auto;smt ml=0 w=card_rng_set.
+         Gcol.count  <= C.c <= max_size){2});last by auto;smt ml=0 w=card_rng_set.
       wp;if=>//;inline Gcol.sample_c.
       + rcondt{2}4.
-        + auto;conseq (_:true)=>//;progress;2: smt ml=0.
+        + auto;conseq (_:true)=>//;progress;2: smt ml=0. 
           by cut /#:= fcard_image_leq fst (rng FRO.m{hr}).
         wp;conseq (_: ={p,v,F.RO.m,y1} /\ y2{1}=c{2})=>//;1:smt ml=0 w=hinv_image.
         by sim.
@@ -231,22 +246,22 @@ section PROOF.
       auto;progress;smt w=hinv_image.
 
     + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).S.fi Gcol.S.fi. 
+      inline G1(DRestr(D)).S.fi Gcol.S.fi;swap-3. 
       seq 2 2 : (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-                   C.c,x0} /\ 
+                   C.c,C.queries,x0} /\ 
                  (G1.bcol{1} => G1.bcol{2}) /\
                  (card(rng FRO.m) + 2 <= 2*C.c + 1 /\ 
                   Gcol.count + 1 <= C.c <= max_size){2});1:by auto=>/#.
       if=>//;last by auto=>/#.
       seq 3 2:(={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-                 C.c,x0,hx2} /\ 
+                 C.c,C.queries,x0,hx2} /\ 
                (G1.bcol{1} => G1.bcol{2}) /\
                (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
                 Gcol.count + 1 <= C.c <= max_size){2}).
       + by auto;smt ml=0 w=card_rng_set. 
       seq 3 3: 
         (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
-           C.c,x0,hx2,y0,y1,y2} /\ y0{1} = (y1,y2){1} /\
+           C.c,C.queries,x0,hx2,y0,y1,y2} /\ y0{1} = (y1,y2){1} /\
          ((G1.bcol\/hinv FRO.m y0.`2 <> None){1} => G1.bcol{2}) /\
          (card (rng FRO.m) + 1 <= 2 * C.c + 1 /\ 
          Gcol.count <= C.c <= max_size){2});2:by auto;smt w=card_rng_set.
@@ -256,11 +271,11 @@ section PROOF.
 (* BUG: auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | H].  marche pas ???? *)
       auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | X];right;apply hinv_image=> //.  
 
-    + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).C.f Gcol.C.f. 
+    + proc;sp 1 1;if=>//;2:auto;sp;if=>//.
+      inline G1(DRestr(D)).C.f Gcol.C.f.  sp.
       seq 5 5:
-       (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c,b,
-          p,h,i,sa} /\ i{1}=0 /\
+       (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c,
+         C.queries,b,p,h,i,sa} /\ i{1}=0 /\
         (G1.bcol{1} => G1.bcol{2}) /\
         card (rng FRO.m{2}) + 2*(size p{2}) <= 2 * C.c{2} + 1 /\
         Gcol.count{2} + size p{2} <= C.c{2} <= max_size);1:by auto=>/#.
@@ -281,27 +296,6 @@ section PROOF.
     auto;progress;3:by smt ml=0.
     + by rewrite rng_set rem0 rng0 fset0U fcard1.
     by apply max_ge0. 
-  qed.
-
-  local lemma Pr_col &m : 
-    Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size] <=
-    max_size%r * ((2*max_size)%r / (2^c)%r).
-  proof.
-    fel 10 Gcol.count (fun x=> (2*max_size)%r / (2^c)%r)
-      max_size G1.bcol 
-      [Gcol.sample_c : (card (image fst (rng FRO.m)) <= 2*max_size /\ Gcol.count < max_size)]=>//;2:by auto.
-    + rewrite /felsum Bigreal.sumr_const count_predT size_range.
-      apply ler_wpmul2r;1:by apply eps_ge0.
-      by rewrite le_fromint;smt ml=0 w=max_ge0. 
-    + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
-      wp.
-      rnd (mem (image fst (rng FRO.m)));skip;progress;2:smt ml=0. 
-      cut->:=(Mu_mem.mu_mem (image fst (rng FRO.m{hr})) cdistr (1%r/(2^c)%r) _).
-      + move=>x _; rewrite DWord.dunifin1E;do !congr;exact cap_card. 
-      apply ler_wpmul2r;2:by rewrite le_fromint.
-      by apply divr_ge0=>//;apply /c_ge0r. 
-    + move=>ci;proc;rcondt 2;auto=>/#.
-    move=> b c;proc;sp;if;auto;smt ml=0.
   qed.
 
   lemma Pr_G1col &m: 

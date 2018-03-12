@@ -603,7 +603,7 @@ qed.
 
 lemma prefixe_inv_nil queries prefixes :
     prefixe_inv queries prefixes =>
-    elems (dom queries) = [] => dom prefixes <= fset1 [].
+    elems (dom queries) = [] => dom prefixes \subset fset1 [].
 proof.
 move=>[h1 [h2 h3]] h4 x h5;rewrite in_fset1.
 cut:=h3 x (size x).
@@ -635,7 +635,7 @@ proof.
 move=>[h1[h2 h3]] h5.
 case(elems (dom queries) = [])=>//=h4;2:smt(aux_prefixe_exchange).
 cut h6:=prefixe_inv_nil queries prefixes _ h4;1:rewrite/#.
-rewrite h4/=. search FSet.(<=).
+rewrite h4/=. 
 case(elems (dom prefixes) = [])=>//=[->//=|]h7.
 cut h8:elems (dom prefixes) = [[]].
 + cut [hh1 hh2]:[] \in dom prefixes /\ forall x, x \in elems (dom prefixes) => x = [] by smt(memE).
@@ -649,6 +649,37 @@ cut h8:elems (dom prefixes) = [[]].
 by rewrite h8=>//=.  
 qed.
 
+
+pred all_prefixes_fset (prefixes : block list fset) =
+  forall bs, bs \in prefixes => forall i, take i bs \in prefixes.
+
+pred inv_prefixe_block  (queries : (block list, block) fmap)
+               (prefixes : (block list, block) fmap) =
+  (forall (bs : block list),
+    bs \in dom queries => queries.[bs] = prefixes.[bs]) &&
+  (forall (bs : block list),
+    bs \in dom queries => forall i, take i bs \in dom prefixes).
+
+lemma prefixe_gt0_mem l (ll : 'a list list) : 
+    0 < prefixe l (get_max_prefixe l ll) =>
+    get_max_prefixe l ll \in ll.
+proof.
+move:l;elim:ll=>//=;first by move=>l;elim:l.
+move=>l2 ll hind l1;clear hind;move:l1 l2;elim:ll=>//=l3 ll hind l1 l2.
+by case(prefixe l1 l2 < prefixe l1 l3)=>//=/#.
+qed.
+
+lemma inv_prefixe_block_mem_take queries prefixes l i :
+    inv_prefixe_block queries prefixes =>
+    0 <= i < prefixe l (get_max_prefixe l (elems (dom queries))) =>
+    take i l \in dom prefixes.
+proof.
+move=>[]H_incl H_all_prefixes Hi.
+rewrite (prefixe_take_leq _ (get_max_prefixe l (elems (dom queries))))1:/#.
+rewrite H_all_prefixes.
+cut:get_max_prefixe l (elems (dom queries)) \in dom queries;2:smt(in_dom).
+by rewrite memE;apply prefixe_gt0_mem=>/#.
+qed.
 
 (* lemma prefixe_inv_prefixe queries prefixes l : *)
 (*     prefixe_inv queries prefixes => *)

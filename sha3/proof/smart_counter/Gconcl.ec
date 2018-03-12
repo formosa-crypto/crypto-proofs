@@ -65,7 +65,7 @@ module S(F : DFUNCTIONALITY) = {
 
 section.
 
-declare module D: DISTINGUISHER{C, Perm, F.RO, F.FRO,S }.
+declare module D: DISTINGUISHER{C, Perm, F.RO, F.FRO, S, Redo}.
 local clone import Gext as Gext0.
 
 local module G3(RO:F.RO) = {
@@ -201,19 +201,19 @@ local module G3(RO:F.RO) = {
 local equiv G2_G3: Eager(G2(DRestr(D))).main2 ~ G3(F.LRO).distinguish : ={glob D} ==> ={res}.
 proof.
   proc;wp;call{1} RRO_resample_ll;inline *;wp.
-  call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c}); last by auto.
+  call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}); last by auto.
 
-  + proc;sp;if=> //.
-    call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c});2:by auto.
+  + proc;sp;if=> //;sim.
+    call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
     if=> //;2:by sim.
     swap{1} [3..7] -2;swap{2} [4..8] -3.
-    seq 5 5:(={hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c} /\
+    seq 5 5:(={hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries} /\
              (t = in_dom_with FRO.m (oget G1.mh.[(x.`1, hx2)]).`2 Unknown){1});
       1:by inline *;auto.
-    seq 3 4:(={y,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c});
+    seq 3 4:(={y,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});
       2:by sim.  
     if=>//.
-    + seq 2 2:(={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c}
+    + seq 2 2:(={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}
                /\ (t = in_dom_with FRO.m (oget G1.mh.[(x.`1, hx2)]).`2 Unknown){1}).
       + by inline *;auto=> /> ? _;rewrite Block.DWord.bdistr_ll.
       case ((mem (dom G1.mh) (x.`1, hx2) /\ t){1});
@@ -230,11 +230,11 @@ proof.
     rewrite Block.DBlock.supp_dunifin DCapacity.dunifin_ll /==> ?_?->.
     by rewrite !getP /= oget_some.
     
-  + proc;sp;if=>//.
-    call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c});2:by auto.
+  + proc;sp;if=>//;sim.
+    call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
     if=> //;2:sim. 
     swap{1} 8 -3. 
-    seq 6 6 : (={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c}
+    seq 6 6 : (={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}
                /\ (t = in_dom_with FRO.m (oget G1.mhi.[(x.`1, hx2)]).`2 Unknown){1}).
     + by inline *;auto.
     case ((mem (dom G1.mhi) (x.`1, hx2) /\ t){1});
@@ -244,8 +244,8 @@ proof.
     wp;rnd;auto;progress[-split];rewrite DCapacity.dunifin_ll /= => ?_?->.
     by rewrite !getP /= oget_some.
 
-  proc;sp;if=>//.
-  call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c});2:by auto.
+  proc;sp;if=>//;auto;if;1:auto;sim.
+  call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
   by inline F.LRO.sample;sim.
 qed.
 
@@ -325,21 +325,21 @@ local module G4(RO:F.RO) = {
 local equiv G3_G4 : G3(F.RO).distinguish ~ G4(F.RO).distinguish : ={glob D} ==> ={res}.
 proof.
   proc;inline *;wp.
-  call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
-  + proc;sp;if=>//.
-    call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
+  call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});last by auto.
+  + proc;sp;if=>//;sim.
+    call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});last by auto.
     if => //;2:sim.
-    seq 3 3: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c});1:by sim.
-    sim;seq 5 0: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c});1:by inline *;auto.
+    seq 3 3: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});1:by sim.
+    sim;seq 5 0: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});1:by inline *;auto.
     by if{1};sim;inline *;auto.
-  + proc;sp;if=>//.
-    call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
+  + proc;sp;if=>//;sim.
+    call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});last by auto.
     if => //;2:sim.
-    seq 5 0: (={x,G1.m,G1.mi,G1.paths,F.RO.m,C.c});1:by inline *;auto.
-    seq 3 3: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c});1:by sim.
+    seq 5 0: (={x,G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});1:by inline *;auto.
+    seq 3 3: (={x,y1,y2,y,G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});1:by sim.
     by if{1};sim;inline *;auto.
-  proc;sp;if=>//.
-  call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c});last by auto.
+  proc;sp;if=>//;auto;if=>//;sim.
+  call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});last by auto.
   sp;sim; while(={i,p,F.RO.m})=>//.
   inline F.RO.sample F.RO.get;if{1};1:by auto. 
   by sim;inline *;auto;progress;apply DCapacity.dunifin_ll.
@@ -349,9 +349,9 @@ local equiv G4_Ideal : G4(F.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :
    ={glob D} ==> ={res}.
 proof.
   proc;inline *;wp.
-  call (_: ={C.c,F.RO.m} /\ G1.m{1}=S.m{2} /\ G1.mi{1}=S.mi{2} /\ G1.paths{1}=S.paths{2}).
+  call (_: ={C.c,C.queries,F.RO.m} /\ G1.m{1}=S.m{2} /\ G1.mi{1}=S.mi{2} /\ G1.paths{1}=S.paths{2}).
   + by sim. + by sim.     
-  + proc;sp;if=>//.
+  + proc;sp;if=>//;auto;if=>//;auto.
     call (_: ={F.RO.m});2:by auto.
     inline F.LRO.get F.FRO.sample;wp 7 2;sim.
     by while{1} (true) (size p - i){1};auto;1:inline*;auto=>/#.
@@ -367,7 +367,7 @@ axiom D_ll :
 lemma Real_Ideal &m: 
   Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
   Pr[IdealIndif(IF,S,DRestr(D)).main() @ &m :res] +
-   (max_size ^ 2)%r * mu dstate (pred1 witness) + 
+   (max_size ^ 2)%r / 2%r * mu dstate (pred1 witness) + 
    max_size%r * ((2*max_size)%r / (2^c)%r) + 
    max_size%r * ((2*max_size)%r / (2^c)%r).
 proof.
