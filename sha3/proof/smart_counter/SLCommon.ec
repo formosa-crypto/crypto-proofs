@@ -658,7 +658,7 @@ pred inv_prefixe_block  (queries : (block list, block) fmap)
   (forall (bs : block list),
     bs \in dom queries => queries.[bs] = prefixes.[bs]) &&
   (forall (bs : block list),
-    bs \in dom queries => forall i, take i bs \in dom prefixes).
+    bs \in dom queries => forall i, 0 < i <= size bs => take i bs \in dom prefixes).
 
 lemma prefixe_gt0_mem l (ll : 'a list list) : 
     0 < prefixe l (get_max_prefixe l ll) =>
@@ -671,7 +671,7 @@ qed.
 
 lemma inv_prefixe_block_mem_take queries prefixes l i :
     inv_prefixe_block queries prefixes =>
-    0 <= i < prefixe l (get_max_prefixe l (elems (dom queries))) =>
+    0 < i < prefixe l (get_max_prefixe l (elems (dom queries))) =>
     take i l \in dom prefixes.
 proof.
 move=>[]H_incl H_all_prefixes Hi.
@@ -679,6 +679,7 @@ rewrite (prefixe_take_leq _ (get_max_prefixe l (elems (dom queries))))1:/#.
 rewrite H_all_prefixes.
 cut:get_max_prefixe l (elems (dom queries)) \in dom queries;2:smt(in_dom).
 by rewrite memE;apply prefixe_gt0_mem=>/#.
+smt(prefixe_sizer).
 qed.
 
 (* lemma prefixe_inv_prefixe queries prefixes l : *)

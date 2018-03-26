@@ -4,10 +4,9 @@ require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
-require (*..*) Handle.
+require (*..*) Gcol_ext.
 
-clone export Handle as Handle0.
-      export ROhandle. 
+clone export Gcol_ext as Handle0.
 
 (* -------------------------------------------------------------------------- *)
 
@@ -38,7 +37,7 @@ section PROOF.
     proc sample_c () = {
       var c=c0;
       if (card (image fst (rng FRO.m)) <= 2*max_size /\
-          count < max_size /\ ! G1.bcol /\ ! G1.bext) {
+          count < max_size) {
         c <$ cdistr;
         G1.bcol <-  G1.bcol \/ mem (image fst (rng FRO.m)) c;
         count <- count + 1;  
@@ -57,14 +56,16 @@ section PROOF.
           if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
             (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
           } else {
-            sc                  <@ sample_c();
-            sa'                 <- F.RO.get(take (i+1) p);
-            sa                  <- sa +^ nth witness p i;
-            G1.mh.[(sa,h)]         <- (sa', G1.chandle);
-            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-            (sa,h)              <- (sa',G1.chandle);
-            FRO.m.[G1.chandle]   <- (sc,Unknown);
-            G1.chandle             <- G1.chandle + 1;
+            if (! G1.bcol /\ ! G1.bext) {
+              sc                        <@ sample_c();
+              sa'                       <- F.RO.get(take (i+1) p);
+              sa                        <- sa +^ nth witness p i;
+              G1.mh.[(sa,h)]            <- (sa', G1.chandle);
+              G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+              (sa,h)                    <- (sa',G1.chandle);
+              FRO.m.[G1.chandle]        <- (sc,Unknown);
+              G1.chandle                <- G1.chandle + 1;
+            }
           }
           i        <- i + 1;
         }
@@ -79,40 +80,43 @@ section PROOF.
         var p, v, y, y1, y2, hy2, hx2;
   
         if (!mem (dom G1.m) x) {
-          if (!(mem (rng FRO.m) (x.`2, Known))) {
-            FRO.m.[G1.chandle] <- (x.`2, Known);
-            G1.chandle <- G1.chandle + 1;
-          }
-          hx2 <- oget (hinvK FRO.m x.`2);
-          if (mem (dom G1.paths) x.`2) {
-            (p,v) <- oget G1.paths.[x.`2]; 
-            y1    <- F.RO.get (rcons p (v +^ x.`1));
-            y2    <@ sample_c();
-          } else {
-            y1 <$ bdistr;
-            y2 <@ sample_c();
+          y <- (b0,c0);
+          if (! G1.bcol /\ ! G1.bext) {
+            if (!(mem (rng FRO.m) (x.`2, Known))) {
+              FRO.m.[G1.chandle] <- (x.`2, Known);
+              G1.chandle         <- G1.chandle + 1;
+            }
+            hx2 <- oget (hinvK FRO.m x.`2);
+            if (mem (dom G1.paths) x.`2) {
+              (p,v) <- oget G1.paths.[x.`2]; 
+              y1    <- F.RO.get (rcons p (v +^ x.`1));
+              y2    <@ sample_c();
+            } else {
+              y1 <$ bdistr;
+              y2 <@ sample_c();
 
-          }
-         y  <- (y1,y2);
-          if (mem (dom G1.mh) (x.`1, hx2) /\ 
-              in_dom_with FRO.m (oget G1.mh.[(x.`1,hx2)]).`2 Unknown) {
-            hy2               <- (oget G1.mh.[(x.`1, hx2)]).`2;
-            y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
-            FRO.m.[hy2]     <- (y.`2, Known);
-            G1.m.[x]             <- y;
-            G1.mi.[y]            <- x;
-          } else {
-            hy2               <- G1.chandle;
-            G1.chandle           <- G1.chandle + 1;
-            FRO.m.[hy2]     <- (y.`2, Known);
-            G1.m.[x]             <- y;
-            G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
-            G1.mi.[y]            <- x;
-            G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
-          }
-          if (mem (dom G1.paths) x.`2) {
-            (p,v) <- oget G1.paths.[x.`2]; 
-            G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+            }
+            y  <- (y1,y2);
+            if (mem (dom G1.mh) (x.`1, hx2) /\ 
+                in_dom_with FRO.m (oget G1.mh.[(x.`1,hx2)]).`2 Unknown) {
+              hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
+              y                    <- (y.`1, (oget FRO.m.[hy2]).`1);
+              FRO.m.[hy2]          <- (y.`2, Known);
+              G1.m.[x]             <- y;
+              G1.mi.[y]            <- x;
+            } else {
+              hy2                  <- G1.chandle;
+              G1.chandle           <- G1.chandle + 1;
+              FRO.m.[hy2]          <- (y.`2, Known);
+              G1.m.[x]             <- y;
+              G1.mh.[(x.`1, hx2)]  <- (y.`1, hy2);
+              G1.mi.[y]            <- x;
+              G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
+            }
+            if (mem (dom G1.paths) x.`2) {
+              (p,v) <- oget G1.paths.[x.`2]; 
+              G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
+            }
           }
         } else {   
           y <- oget G1.m.[x];
@@ -124,29 +128,32 @@ section PROOF.
         var y, y1, y2, hx2, hy2;
   
         if (!mem (dom G1.mi) x) {
-          if (!(mem (rng FRO.m) (x.`2, Known))) {
-            FRO.m.[G1.chandle] <- (x.`2, Known);
-            G1.chandle <- G1.chandle + 1;
-          }
-          hx2 <- oget (hinvK FRO.m x.`2);
-          y1  <$ bdistr;
-          y2  <@ sample_c();
-          y   <- (y1,y2);
-          if (mem (dom G1.mhi) (x.`1, hx2) /\ 
-              in_dom_with FRO.m (oget G1.mhi.[(x.`1,hx2)]).`2 Unknown) {
-            (y1,hy2)          <- oget G1.mhi.[(x.`1, hx2)];
-            y                 <- (y.`1, (oget FRO.m.[hy2]).`1);
-            FRO.m.[hy2]     <- (y.`2, Known);
-            G1.mi.[x]            <- y;
-            G1.m.[y]             <- x;
-          } else {
-            hy2               <- G1.chandle;
-            G1.chandle           <- G1.chandle + 1;
-            FRO.m.[hy2]     <- (y.`2, Known);
-            G1.mi.[x]            <- y;
-            G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
-            G1.m.[y]             <- x;
-            G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
+          y <- (b0,c0);
+          if (! G1.bcol /\ !G1.bext) {
+            if (!(mem (rng FRO.m) (x.`2, Known))) {
+              FRO.m.[G1.chandle] <- (x.`2, Known);
+              G1.chandle <- G1.chandle + 1;
+            }
+            hx2 <- oget (hinvK FRO.m x.`2);
+            y1  <$ bdistr;
+            y2  <@ sample_c();
+            y   <- (y1,y2);
+            if (mem (dom G1.mhi) (x.`1, hx2) /\ 
+                in_dom_with FRO.m (oget G1.mhi.[(x.`1,hx2)]).`2 Unknown) {
+              (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
+              y                    <- (y.`1, (oget FRO.m.[hy2]).`1);
+              FRO.m.[hy2]          <- (y.`2, Known);
+              G1.mi.[x]            <- y;
+              G1.m.[y]             <- x;
+            } else {
+              hy2                  <- G1.chandle;
+              G1.chandle           <- G1.chandle + 1;
+              FRO.m.[hy2]          <- (y.`2, Known);
+              G1.mi.[x]            <- y;
+              G1.mhi.[(x.`1, hx2)] <- (y.`1, hy2);
+              G1.m.[y]             <- x;
+              G1.mh.[(y.`1, hy2)]  <- (x.`1, hx2);
+            }
           }
         } else {
           y <- oget G1.mi.[x];
@@ -159,14 +166,14 @@ section PROOF.
     proc main(): bool = {
       var b;
 
-      F.RO.m        <- map0;
+      F.RO.m      <- map0;
       G1.m        <- map0;
       G1.mi       <- map0;
       G1.mh       <- map0;
       G1.mhi      <- map0;
       G1.bcol     <- false;
   
-      FRO.m  <- map0.[0 <- (c0, Known)];
+      FRO.m       <- map0.[0 <- (c0, Known)];
       G1.paths    <- map0.[c0 <- ([<:block>],b0)];
       G1.chandle  <- 1;
       count       <- 0;
@@ -212,16 +219,20 @@ section PROOF.
     move=> b c;proc;sp;if;auto;smt ml=0.
   qed.
 
-  local equiv G1col : G1(DRestr(D)).main ~ Gcol.main : 
+  local equiv Gpr_col : Gpr(DRestr(D)).main ~ Gcol.main : 
     ={glob D} ==> (G1.bcol{1} => G1.bcol{2}) /\ Gcol.count{2} <= max_size.
   proof.
     proc;inline*;wp.
     call (_: ={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c,C.queries}/\
              (G1.bcol{1} => G1.bcol{2}) /\
+             ((!G1.bext /\ !G1.bcol) => mh_spec FRO.m G1.m G1.mh F.RO.m
+               /\ pi_spec FRO.m G1.mh G1.paths
+               /\ hs_spec FRO.m G1.chandle){1} /\ 
              (card (rng FRO.m) <= 2*C.c + 1 /\ 
               Gcol.count <= C.c <= max_size){2}).
-    + proc;sp 1 1;if=>//;inline G1(DRestr(D)).S.f Gcol.S.f;swap -3.
-      sp;if;1,3:auto=>/#.
+    + proc;sp 1 1;if=>//;inline Gpr(DRestr(D)).S.f Gcol.S.f;swap -3.
+      sp;if;1,3:auto=>/#;sp;wp;if;auto;progress.
+      - rewrite/
       swap{1}[3..5]-2. 
       seq 3 2:(={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
                  C.c,C.queries,x0,hx2} /\ 
@@ -246,7 +257,7 @@ section PROOF.
       auto;progress;smt w=hinv_image.
 
     + proc;sp 1 1;if=>//.
-      inline G1(DRestr(D)).S.fi Gcol.S.fi;swap-3. 
+      inline Gpr(DRestr(D)).S.fi Gcol.S.fi;swap-3. 
       seq 2 2 : (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,
                    C.c,C.queries,x0} /\ 
                  (G1.bcol{1} => G1.bcol{2}) /\
@@ -272,7 +283,7 @@ section PROOF.
       auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | X];right;apply hinv_image=> //.  
 
     + proc;sp 1 1;if=>//;2:auto;sp;if=>//.
-      inline G1(DRestr(D)).C.f Gcol.C.f.  sp.
+      inline Gpr(DRestr(D)).C.f Gcol.C.f.  sp.
       seq 5 5:
        (={F.RO.m,G1.mi,G1.paths,G1.m,G1.mhi,G1.chandle,G1.mh,FRO.m,C.c,
          C.queries,b,p,h,i,sa} /\ i{1}=0 /\
@@ -299,7 +310,7 @@ section PROOF.
   qed.
 
   lemma Pr_G1col &m: 
-    Pr[G1(DRestr(D)).main() @ &m : G1.bcol] <= max_size%r * ((2*max_size)%r / (2^c)%r).
+    Pr[Gpr(DRestr(D)).main() @ &m : G1.bcol] <= max_size%r * ((2*max_size)%r / (2^c)%r).
   proof.
     apply (ler_trans Pr[Gcol.main()@&m : G1.bcol /\ Gcol.count <= max_size]).
     + byequiv G1col=> //#.
