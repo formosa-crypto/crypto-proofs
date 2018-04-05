@@ -682,6 +682,81 @@ by rewrite memE;apply prefixe_gt0_mem=>/#.
 smt(prefixe_sizer).
 qed.
 
+lemma prefixe_cat_leq_prefixe_size (l1 l2 l3 : 'a list):
+    prefixe (l1 ++ l2) l3 <= prefixe l1 l3 + size l2.
+proof.
+move:l2 l3;elim:l1=>//=;1:smt(prefixe_sizel).
+move=>e1 l1 hind1 l2 l3;move:e1 l1 l2 hind1;elim:l3=>//=;1:smt(size_ge0).
+by move=>e3 l3 hind3 e1 l1 l2 hind1;case(e1=e3)=>//=[->>/#|h];exact size_ge0.
+qed.
+
+
+lemma prefixe_cat1 (l1 l2 l3 : 'a list) :
+    prefixe (l1 ++ l2) l3 = prefixe l1 l3 + 
+    if prefixe l1 l3 = size l1 
+    then prefixe l2 (drop (size l1) l3)
+    else 0.
+proof.
+move:l2 l3;elim:l1=>//=;1:smt(prefixe_sizel).
+move=>e1 l1 hind1 l2 l3;move:e1 l1 l2 hind1;elim:l3=>//=;1:smt(size_ge0).
+by move=>e3 l3 hind3 e1 l1 l2 hind1;case(e1=e3)=>//=[->>|h];smt(size_ge0).
+qed.
+
+
+lemma prefixe_leq_prefixe_cat_size (l1 l2 : 'a list) (ll : 'a list list) :
+    prefixe (l1++l2) (get_max_prefixe (l1++l2) ll) <= 
+    prefixe l1 (get_max_prefixe l1 ll) + 
+    if (prefixe l1 (get_max_prefixe l1 ll) = size l1)
+    then prefixe l2 (get_max_prefixe l2 (map (drop (size l1)) ll))
+    else 0.
+proof.
+move:l1 l2;elim:ll=>//=;1:smt(size_cat size_ge0).
+move=>l3 ll hind{hind};move:l3;elim:ll=>//=;1:smt(prefixe_cat1).
+move=>l4 ll hind l3 l1 l2.
+case(prefixe (l1 ++ l2) l3 < prefixe (l1 ++ l2) l4)=>//=.
++ rewrite 2!prefixe_cat1.
+  case(prefixe l1 l3 = size l1)=>//=H_l1l3;case(prefixe l1 l4 = size l1)=>//=H_l1l4.
+  - rewrite H_l1l4 H_l1l3/=ltz_add2l=>h;rewrite h/=.
+    rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _)).
+    cut->/=:prefixe l1 (max_prefixe l1 l4 ll) = size l1
+      by move:{hind};elim:ll=>//=;smt(prefixe_sizel).
+    by cut->/=:prefixe l1 (max_prefixe l1 l3 ll) = size l1
+      by move:{hind};elim:ll=>//=;smt(prefixe_sizel). 
+  - smt(prefixe_sizel prefixe_ge0).
+  - cut->/=h:prefixe l1 l3 < prefixe l1 l4 by smt(prefixe_sizel).
+    rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _)).
+    cut->/=:prefixe l1 (max_prefixe l1 l4 ll) = size l1
+      by move:{hind};elim:ll=>//=;smt(prefixe_sizel). 
+    smt(prefixe_prefixe_prefixe).
+  move=>H_l3l4;rewrite H_l3l4/=.
+  rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _)).
+  by case(prefixe l1 (max_prefixe l1 l4 ll) = size l1)=>//=->;
+    smt(prefixe_prefixe_prefixe).
+rewrite 2!prefixe_cat1.
+case(prefixe l1 l3 = size l1)=>//=H_l1l3;case(prefixe l1 l4 = size l1)=>//=H_l1l4.
++ by rewrite H_l1l4 H_l1l3/=ltz_add2l=>h;rewrite h/=hind.
++ rewrite H_l1l3.
+  cut->/=:!size l1 < prefixe l1 l4 by smt(prefixe_sizel).
+  rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _))//=.
+  cut->//=:prefixe l1 (max_prefixe l1 l3 ll) = size l1
+    by move:{hind};elim:ll=>//=;smt(prefixe_sizel).
+  smt(prefixe_prefixe_prefixe).
++ smt(prefixe_sizel prefixe_ge0).
+move=>H_l3l4;rewrite H_l3l4/=.
+rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _))//=.
+smt(prefixe_prefixe_prefixe).
+qed.
+
+
+lemma diff_size_prefixe_leq_cat (l1 l2 : 'a list) (ll : 'a list list) :
+    size l1 - prefixe l1 (get_max_prefixe l1 ll) <= 
+    size (l1++l2) - prefixe (l1++l2) (get_max_prefixe (l1++l2) ll).
+proof.
+smt(prefixe_leq_prefixe_cat_size prefixe_sizel prefixe_ge0 size_ge0 prefixe_sizer size_cat).
+qed.
+
+
+
 (* lemma prefixe_inv_prefixe queries prefixes l : *)
 (*     prefixe_inv queries prefixes => *)
 (*     all_prefixes prefixes => *)

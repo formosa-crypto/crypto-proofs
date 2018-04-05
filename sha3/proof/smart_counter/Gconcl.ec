@@ -68,26 +68,32 @@ section.
 declare module D: DISTINGUISHER{C, Perm, F.RO, F.FRO, S, Redo}.
 local clone import Gext as Gext0.
 
+
 local module G3(RO:F.RO) = {
 
-  module C = {
+  module M = {
  
     proc f(p : block list): block = {
       var sa, sa';
-      var h, i <- 0; 
+      var h, i, counter <- 0; 
       sa <- b0;
       while (i < size p ) {
         if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
           RO.sample(take (i+1) p);
           (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
         } else {
-          RRO.sample(G1.chandle);
-          sa'                 <@ RO.get(take (i+1) p);
-          sa                  <- sa +^ nth witness p i;
-          G1.mh.[(sa,h)]      <- (sa', G1.chandle);
-          G1.mhi.[(sa',G1.chandle)] <- (sa, h);
-          (sa,h)              <- (sa',G1.chandle);
-          G1.chandle          <- G1.chandle + 1;
+          if (counter < size p - prefixe p (get_max_prefixe p (elems (dom C.queries)))) {
+            RRO.sample(G1.chandle);
+            sa'                 <@ RO.get(take (i+1) p);
+            sa                  <- sa +^ nth witness p i;
+            G1.mh.[(sa,h)]      <- (sa', G1.chandle);
+            G1.mhi.[(sa',G1.chandle)] <- (sa, h);
+            (sa,h)              <- (sa',G1.chandle);
+            G1.chandle          <- G1.chandle + 1;
+            counter             <- counter + 1;
+          } else {
+            RO.sample(take (i+1) p);
+          }
         }
         i        <- i + 1;
       }
@@ -193,7 +199,7 @@ local module G3(RO:F.RO) = {
     RRO.set(0,c0);
     G1.paths    <- map0.[c0 <- ([<:block>],b0)];
     G1.chandle  <- 1;
-    b        <@ DRestr(D,C,S).distinguish();
+    b        <@ DRestr(D,M,S).distinguish();
     return b;
   }    
 }.
@@ -246,7 +252,7 @@ proof.
 
   proc;sp;if=>//;auto;if;1:auto;sim.
   call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
-  by inline F.LRO.sample;sim.
+  by inline*;sim. 
 qed.
 
 local module G4(RO:F.RO) = {
@@ -342,7 +348,8 @@ proof.
   call (_: ={G1.m,G1.mi,G1.paths,F.RO.m,C.c,C.queries});last by auto.
   sp;sim; while(={i,p,F.RO.m})=>//.
   inline F.RO.sample F.RO.get;if{1};1:by auto. 
-  by sim;inline *;auto;progress;apply DCapacity.dunifin_ll.
+  if{1};2:by auto.
+  by sim;inline *;auto;progress;smt(DCapacity.dunifin_ll).
 qed.
   
 local equiv G4_Ideal : G4(F.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :
