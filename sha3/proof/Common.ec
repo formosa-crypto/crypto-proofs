@@ -111,7 +111,7 @@ by rewrite (@last_nonempty y z).
 qed.
 
 (*------------------------------ Primitive -----------------------------*)
-print Block.
+
 clone export RP as Perm with
   type t <- block * capacity,
   op   dt <- bdistr `*` cdistr
