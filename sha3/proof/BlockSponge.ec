@@ -1,8 +1,8 @@
 (*-------------------- Padded Block Sponge Construction ----------------*)
 
-require import Core Int Real List.
-require (*--*) IRO Indifferentiability.
-require import Common.
+require import AllCore Int Real List.
+require (*--*) IRO Indifferentiability Gconcl.
+require import Common SLCommon.
 
 (*------------------------- Indifferentiability ------------------------*)
 
@@ -23,6 +23,101 @@ clone import IRO as BIRO with
   type to   <- block,
   op valid  <- valid_block,
   op dto    <- bdistr.
+
+
+(*------ Validity and Parsing/Formatting of Functionality Queries ------*)
+
+op format (p : block list) (n : int) = p ++ nseq (n - 1) b0.
+op parse: block list -> (block list * int).
+
+axiom formatK bs: format (parse bs).`1 (parse bs).`2 = bs.
+axiom parseK p n: 0 < n => valid_block p => parse (format p n) = (p,n).
+axiom parse_nil: parse [] = ([],0).
+
+lemma parse_injective: injective parse.
+proof. by move=> bs1 bs2 eq_format; rewrite -formatK eq_format (@formatK bs2). qed.
+
+lemma parse_valid p: valid_block p => parse p = (p,1).
+proof.
+move=>h;cut{1}->:p=format p 1;2:smt(parseK).
+by rewrite/format/=nseq0 cats0.
+qed.
+
+
+(*------------------------------ Counter -------------------------------*)
+
+module C = {
+  var c : int
+  proc init() = {
+    c <- 0;
+  }
+}.
+
+(*---------------------------- Restrictions ----------------------------*)
+
+(** The counter for the functionnality counts the number of times the
+    underlying primitive is called inside the functionality. This
+    number is equal to the sum of the number of blocks the input
+    message contains and the number of additional blocks the squeezing
+    phase has to output.
+  *)
+module FC (F : DFUNCTIONALITY) = {
+  proc init () : unit = {}
+  proc f (bl : block list, nb : int) = {
+    var r : block list <- [];
+    if (0 < nb) {
+      if (C.c + size bl + nb - 1 <= max_size) {
+        C.c <- C.c + size bl + nb - 1;
+        r <@ F.f(bl,nb);
+      }
+    }
+    return r;
+  }
+}.
+  
+
+module PC (P : DPRIMITIVE) = {
+  proc init() = {}
+  proc f (a : state) = {
+    var z : state <- (b0,c0);
+    if (C.c + 1 <= max_size) {
+      z <@ P.f(a);
+      C.c <- C.c + 1;
+    }
+    return z;
+  }
+  proc fi (a : state) = {
+    var z : state <- (b0,c0);
+    if (C.c + 1 <= max_size) {
+      z <@ P.fi(a);
+      C.c <- C.c + 1;
+    }
+    return z;
+  }
+}.
+
+module DRestr (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+  proc distinguish () : bool = {
+    var b : bool;
+    C.init();
+    b <@ D(FC(F),PC(P)).distinguish();
+    return b;
+  }
+}.
+
+
+(*----------------------------- Simulator ------------------------------*)
+
+module Last (F : DFUNCTIONALITY) : SLCommon.DFUNCTIONALITY = {
+  proc init() = {}
+  proc f (p : block list) : block = {
+    var r : block list <- [];
+    r <@ F.f(parse p);
+    return last b0 r;
+  }
+}.
+
+module (S : SIMULATOR) (F : DFUNCTIONALITY) = Gconcl.S(Last(F)).
 
 (*------------------------- Sponge Construction ------------------------*)
 
@@ -57,14 +152,13 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
 
 (* this is just for typechecking, right now: *)
 
-op eps : real.
-
 lemma conclusion :
-  exists (S <: SIMULATOR),
     forall (D <: DISTINGUISHER) &m,
-      `|  Pr[RealIndif(Sponge, Perm, D).main() @ &m : res]
-        - Pr[IdealIndif(IRO, S, D).main() @ &m : res]|
-       < eps.
+      `|  Pr[RealIndif(Sponge, Perm, DRestr(D)).main() @ &m : res]
+        - Pr[IdealIndif(IRO, S, DRestr(D)).main() @ &m : res]|
+       <= (max_size ^ 2)%r / 2%r * Distr.mu1 dstate witness +
+        max_size%r * ((2 * max_size)%r / (2 ^ c)%r) +
+        max_size%r * ((2 * max_size)%r / (2 ^ c)%r).
 proof. 
 admit.
 qed.
