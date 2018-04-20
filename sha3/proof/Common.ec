@@ -55,7 +55,6 @@ clone export BitWord as Block with
          "zerow"    as "b0".
 export DBlock.
 
-
 op cdistr = DCapacity.dunifin.
 op bdistr = DBlock.dunifin.
 
@@ -481,6 +480,15 @@ qed.
 lemma pad2blocks_inj : injective pad2blocks.
 proof.
 apply /(pcan_inj pad2blocks unpad_blocks) /pad2blocksK.
+qed.
+
+lemma size_pad2blocks s :
+  size (pad2blocks s) = (size s + 1) %/ r + 1.
+proof.
+rewrite /pad2blocks /bits2blocks /(\o) size_map size_chunk size_pad.
+have -> : (size s + 1) %/ r * r + r = ((size s + 1) %/r + 1) * r
+  by rewrite mulzDl mul1r.
+by rewrite mulzK 1:gtr_eqF 1:gt0_r.
 qed.
 
 (*-------------------------- Extending/Stripping -----------------------*)
