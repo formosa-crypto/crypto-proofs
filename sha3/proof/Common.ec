@@ -26,11 +26,14 @@ type capacity. (* ~ bitstrings of size c *)
 
 (* -------------------------------------------------------------------- *)
 
-lemma gt0_r: 0 < r.
+lemma gt0_r : 0 < r.
 proof. by apply/(ltr_le_trans 2)/ge2_r. qed.
 
-lemma ge0_r: 0 <= r.
+lemma ge0_r : 0 <= r.
 proof. by apply/ltrW/gt0_r. qed.
+
+lemma ge0_c : 0 <= c.
+proof. by apply/ltrW/gt0_c. qed.
 
 (* -------------------------------------------------------------------- *)
 clone export BitWord as Capacity with
@@ -57,6 +60,8 @@ export DBlock.
 
 op cdistr = DCapacity.dunifin.
 op bdistr = DBlock.dunifin.
+search c.
+
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)
 

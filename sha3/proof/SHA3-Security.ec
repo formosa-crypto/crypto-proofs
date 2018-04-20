@@ -1,6 +1,9 @@
-(* Top Level *)
+(* Top-level Proof of SHA-3 Security *)
 
-require import AllCore List IntDiv StdOrder Common Sponge. import BIRO.
+require import AllCore List IntDiv StdOrder Distr.
+
+require import Common Sponge. import BIRO.
+
 require SLCommon BlockSponge.
 
 (* FIX: would be nicer to define limit at top-level and then clone
@@ -11,10 +14,6 @@ op limit : {int | 0 < limit} as gt0_max_limit.
 *)
 
 op limit : int = SLCommon.max_size.
-
-(* FIX: don't want this in bound *)
-
-op dstate : (block * capacity) distr = SLCommon.dstate.
 
 (*---------------------------- Restrictions ----------------------------*)
 
@@ -158,15 +157,37 @@ auto; progress; by rewrite blocks2bits_nil.
 auto.
 qed.
 
+op wit_pair : block * capacity = witness.
+
 lemma security &m :
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif
        (IRO, RaiseSim(BlockSponge.Sim),
         DRestr(Dist)).main() @ &m : res]| <=
-  (limit ^ 2)%r / 2%r * Distr.mu1 dstate witness +
-  limit%r * ((2 * limit)%r / (2 ^ c)%r) +
-  limit%r * ((2 * limit)%r / (2 ^ c)%r).
+  (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
+rewrite powS 1:addz_ge0 1:ge0_r 1:ge0_c -pow_add 1:ge0_r 1:ge0_c.
+have -> :
+  (limit ^ 2)%r / (2 * (2 ^ r * 2 ^ c))%r =
+  ((limit ^ 2)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
+  rewrite (fromintM 2) StdRing.RField.invfM StdRing.RField.mulrA
+           -!StdRing.RField.mulrA.
+  congr.
+  rewrite (fromintM (2 ^ r)) StdRing.RField.invfM StdRing.RField.mulrA
+          -!StdRing.RField.mulrA.
+  congr; by rewrite StdRing.RField.mul1r.
+rewrite -{1}block_card -{1}capacity_card
+        -(DBlock.dunifin1E wit_pair.`1) -(DCapacity.dunifin1E wit_pair.`2)
+        -StdRing.RField.mulrA -DProd.dprod1E.
+have -> : (wit_pair.`1, wit_pair.`2) = witness
+  by rewrite /wit_pair // {3}(pairS witness).
+have -> :
+  (4 * limit ^ 2)%r / (2 ^ c)%r =
+  limit%r * ((2 * limit)%r / (2 ^ c)%r) + limit%r * ((2 * limit)%r / (2 ^ c)%r).
+  have -> : 4 = 2 * 2 by trivial.
+  have {3}-> : 2 = 1 + 1 by trivial.
+  rewrite powS // pow1 /#.
+rewrite -/SLCommon.dstate /limit.
 rewrite
   (RealOrder.ler_trans
    (`|Pr[BlockSponge.RealIndif
@@ -176,7 +197,7 @@ rewrite
           LowerDist(DRestr(Dist))).main() @ &m : res]|))
   1:RealOrder.lerr_eq
   1:(conclusion BlockSponge.Sim (DRestr(Dist)) &m) //
-  (drestr_commute1 &m) (drestr_commute2 &m)
+  (drestr_commute1 &m) (drestr_commute2 &m) StdRing.RField.addrA
   (BlockSponge.conclusion (LowerDist(Dist)) &m).
 qed.
 
@@ -189,7 +210,5 @@ lemma SHA3Security
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif
        (IRO, RaiseSim(BlockSponge.Sim), DRestr(Dist)).main() @ &m : res]| <=
-    (limit ^ 2)%r / 2%r * (Distr.mu1 dstate witness)%Distr +
-    limit%r * ((2 * limit)%r / (2 ^ c)%r) +
-    limit%r * ((2 * limit)%r / (2 ^ c)%r).
+  (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof. apply (security Dist &m). qed.
