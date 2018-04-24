@@ -7,6 +7,7 @@ require import DProd Dexcepted BlockSponge.
 require (*--*) Handle.
 
 
+
 (*** THEORY PARAMETERS ***)
 (** Validity of Functionality Queries **)
 op valid: block list -> bool = valid_block.
@@ -15,30 +16,19 @@ axiom valid_spec p: valid p => p <> [].
 
 clone export Handle as Handle0.
 
-
-module NC = {
-  var queries : (block list * int, block list) fmap
-  proc init() = {
-    queries <- map0;
-  }
-}.
-
-
 module DSqueeze (F : SLCommon.DFUNCTIONALITY) = {
   proc init () : unit = {} 
   proc f (p : block list, n : int) : block list = {
     var lres : block list <- [];
     var b : block <- b0;
     var i : int <- 0;
-    if (valid p /\ 0 < n) {
+    if (valid p) {
+      b <@ F.f(p);
       while (i < n) {
         i <- i + 1;
-        if (! (p,i) \in dom NC.queries) {
-          b <@ F.f(format p i);
-          lres <- rcons lres b;
-          NC.queries.[(p,i)] <- lres;
-        } else {
-          lres <- oget NC.queries.[(p,i)];
+        lres <- rcons lres b;
+        if (i < n) {
+          b <@ F.f(format p (i+1));
         }
       }
     }
@@ -49,7 +39,6 @@ module DSqueeze (F : SLCommon.DFUNCTIONALITY) = {
 
 module (Squeeze (F : SLCommon.FUNCTIONALITY) : FUNCTIONALITY) = {
   proc init () : unit = {
-    NC.init();
     C.init();
     F.init();
   }
@@ -61,9 +50,8 @@ module (A (D : DISTINGUISHER) : SLCommon.DISTINGUISHER)
   (F : SLCommon.DFUNCTIONALITY) (P : DPRIMITIVE) = {
   proc distinguish() : bool = {
     var b : bool;
-    NC.init();
     C.init();
-    b <@ D(FC(DSqueeze(F)),PC(P)).distinguish();
+    b <@ DRestr(D,DSqueeze(F),P).distinguish();
     return b;
   }
 }.
@@ -81,16 +69,6 @@ module NIndif (F : FUNCTIONALITY, P : PRIMITIVE, D : DISTINGUISHER) = {
   }
 }.
 
-
-module DC (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
-  proc distinguish () : bool = {
-    var b : bool;
-    NC.init();
-    C.init();
-    b <@ D(FC(F),PC(P)).distinguish();
-    return b;
-  }
-}.
 
 
 module P = Perm.
@@ -111,38 +89,31 @@ section Real_Ideal.
       forall i, 1 <= i <= (parse l).`2 => ((parse l).`1,i) \in dom squeeze).
 
 
-  inductive m_p (m : (state, state) fmap) (p : (block list, state) fmap)
-      (q : (block list * int, block list) fmap) =
+  inductive m_p (m : (state, state) fmap) (p : (block list, state) fmap) =
   | IND_M_P of (p.[[]] = Some (b0, c0))
         & (forall l, l \in dom p => forall i, 0 <= i < size l =>
             exists b c, p.[take i l] = Some (b,c) /\
-            m.[(b +^ nth witness l i, c)] = p.[take (i+1) l])
-        & (forall l n, (l,n) \in dom q => 
-            valid l /\ 0 < n /\ size (oget q.[(l,n)]) = n /\
-            (forall i, 0 < i <= n => q.[(l,i)] = Some (take i (oget q.[(l,n)]))))
-        & (forall l n, (l,n) \in dom q => exists c, p.[format l n] = Some (last b0 (oget q.[(l,n)]),c))
-        & (forall l, l \in dom p => l <> [] => exists l2, parse (l ++ l2) \in dom q).
+            m.[(b +^ nth witness l i, c)] = p.[take (i+1) l]).
 
 
   inductive INV_Real
     (c1 c2 : int)
     (m mi : (state, state) fmap)
-    (p : (block list, state) fmap)
-    (q : (block list * int, block list) fmap) =
+    (p : (block list, state) fmap) =
     | INV_real of (c1 <= c2)
-                & (m_p m p q)
+                & (m_p m p)
                 & (invm m mi).
 
-  local lemma INV_Real_incr c1 c2 m mi p q :
-      INV_Real c1 c2 m mi p q =>
-      INV_Real (c1 + 1) (c2 + 1) m mi p q.
+  local lemma INV_Real_incr c1 c2 m mi p :
+      INV_Real c1 c2 m mi p =>
+      INV_Real (c1 + 1) (c2 + 1) m mi p.
   proof. by  case;progress;split=>//=/#. qed.
 
-  local lemma INV_Real_addm_mi c1 c2 m mi p q x y :
-      INV_Real c1 c2 m mi p q =>
+  local lemma INV_Real_addm_mi c1 c2 m mi p x y :
+      INV_Real c1 c2 m mi p =>
       ! x \in dom m =>
       ! y \in rng m =>
-      INV_Real c1 c2 m.[x <- y] mi.[y <- x] p q.
+      INV_Real c1 c2 m.[x <- y] mi.[y <- x] p.
   proof.
   case=> H_c1c2 H_m_p H_invm H_x_dom H_y_rng;split=>//=.
   + split;case:H_m_p=>//=;
@@ -162,56 +133,25 @@ section Real_Ideal.
       invm m mi => dom m = rng mi.
   proof. by move=>h;rewrite fsetP=>x;split;rewrite in_dom in_rng/#. qed.
 
-  local lemma lemma1 c1 c2 m mi p q bs i (l : block list):
-      INV_Real c1 c2 m mi p q =>
-      ! (bs,i) \in dom q =>
-      valid bs =>
-      0 < i =>
-      size l = i =>
-      (exists c, p.[format bs i] = Some (last b0 l, c)) =>
-      (forall j, 0 < j < i => q.[(bs,j)] = Some (take j l)) =>
-      INV_Real c1 c2 m mi p q.[(bs,i) <- l].
-  proof.
-  move=>INV0 H_bs_n_dom H_bs_valid H0in H_size H_format_dom H_pref_quer.
-  split;cut[]//=H_c1c2 H_m_p H_invm:=INV0.
-  split;cut[]//H_mp0 H_mp1 H_mp2 H_mp3 H_mp4:=H_m_p.
-  + move=>l1 n1;rewrite dom_set in_fsetU1.
-    case((l1, n1) = (bs, i))=>[[]->>->>|H_neq]//=. 
-    - rewrite H_bs_valid getP/= oget_some/=H_size//=;split;1:rewrite/#;move=>j []Hj0 Hj1.
-      rewrite getP/=;case(j=i)=>[->>|/#]//=;1:rewrite -H_size take_size//=.
-    rewrite getP/=;move=>H_dom;cut[]->[]->[]H_size_get/=help:=H_mp2 _ _ H_dom;split.
-    - by rewrite H_neq/=H_size_get.
-    move=> j[]hj0 hji.
-    rewrite !getP/=.
-    cut:=H_neq;case(l1=bs)=>[->>H_n1i|]//=;smt(in_dom).
-  + move=>m1 j;rewrite dom_set in_fsetU1 getP. 
-    case((m1, j) = (bs, i))=>//=h H_dom.
-    by cut[]c ->/#:=H_mp3 _ _ H_dom.
-  + smt(dom_set in_fsetU1).
-  qed.
-
-  local lemma all_prefixes_of_INV_real c1 c2 m mi p q:
-      INV_Real c1 c2 m mi p q =>
+  local lemma all_prefixes_of_INV_real c1 c2 m mi p:
+      INV_Real c1 c2 m mi p =>
       all_prefixes p.
   proof.
-  move=>[]_[]Hp0 Hmp1 _ _ _ _ l H_dom i.
+  move=>[]_[]Hp0 Hmp1 _ l H_dom i.
   smt(take_le0 take_oversize size_take take_take take_size nth_take in_dom).
   qed.
 
-  local lemma lemma2 c1 c2 m mi p q bl i sa sc lres:
-      INV_Real c1 c2 m mi p q =>
+  local lemma lemma2 c1 c2 m mi p bl i sa sc:
+      INV_Real c1 c2 m mi p =>
       1 < i =>
       valid bl =>
       (sa,sc) \in dom m =>
       ! (format bl i) \in dom p =>
-      ! (bl, i) \in dom q =>
       p.[format bl (i-1)] = Some (sa,sc) =>
-      q.[(bl,i-1)] = Some lres =>
-      INV_Real c1 c2 m mi p.[format bl i <- oget m.[(sa,sc)]] 
-               q.[(bl,i) <- rcons lres (oget m.[(sa,sc)]).`1].
+      INV_Real c1 c2 m mi p.[format bl i <- oget m.[(sa,sc)]].
   proof.
-  move=>inv0 h1i h_valid H_dom_m H_dom_p H_dom_q H_p_val H_q_val.
-  split;cut[]//=_[] hmp0 hmp1 hmp2 hmp3 hmp4 hinvm:=inv0;split=>//=.
+  move=>inv0 h1i h_valid H_dom_m H_dom_p H_p_val.
+  split;cut[]//=_[] hmp0 hmp1 hinvm:=inv0;split=>//=.
   + by rewrite getP;smt(size_cat size_nseq size_ge0).
   + move=>l;rewrite dom_set in_fsetU1;case;1:smt(all_prefixes_of_INV_real getP).
     move=>->>j[]hj0 hjsize;rewrite getP/=.
@@ -240,28 +180,6 @@ section Real_Ideal.
     rewrite h'' take_size/=-h 1:/# -h' take_size.
     rewrite nth_cat h';cut->/=:! size bl + i - 2 < size bl by smt().
     by rewrite nth_nseq 1:/#;smt(Block.WRing.AddMonoid.addm0 in_dom get_oget). 
-  + move=>bs n;rewrite dom_set in_fsetU1;case=>//=[Hdom|[]->>->>]//=;do!split=>//=.
-    - by cut//:=hmp2 _ _ Hdom.
-    - by cut//:=hmp2 _ _ Hdom.
-    - by cut[]H_valid[]Hn0[]H_size H_prefixe:=hmp2 _ _ Hdom;rewrite getP/=;smt().
-    - cut[]H_valid[]Hn0[]H_size H_prefixe k[]hk0 hksize:=hmp2 _ _ Hdom.
-      rewrite!getP/=;cut->/=:!(bs = bl && n = i) by smt().
-      by rewrite-H_prefixe//=;smt(in_dom).
-    - smt().
-    - by rewrite getP/=oget_some/=size_rcons;smt(in_dom get_oget).
-    move=>j[]hj0 hji;rewrite!getP/=oget_some-{2}cats1 take_cat. 
-    case(i=j)=>[->>|]//=.
-    - by cut<-/=:j - 1 = size lres;smt(in_dom get_oget cats1).
-    move=>hij;cut->/=:j<>i by smt().
-    cut->:size lres = i - 1 by smt(in_dom get_oget cats1).
-    case(j < i - 1)=>//=hh;1:smt(in_dom get_oget cats1).
-    by cut->>/=: j = i - 1;smt(cats0).
-  + move=>bs n;rewrite dom_set in_fsetU1;case=>[Hdom|[]->>->>].
-    - rewrite !getP/=;smt(in_dom).
-    by rewrite!getP/=oget_some last_rcons/=;smt(get_oget in_dom).
-  move=>l;rewrite dom_set in_fsetU1;case=>[H_dom|->>]l_n_nil.
-  + smt(dom_set in_fsetU1).
-  by exists [];rewrite cats0 parseK//= 1:/# dom_set in_fsetU1.
   qed.
 
   local lemma take_nseq (a : 'a) i j :
@@ -289,14 +207,14 @@ section Real_Ideal.
   qed.
 
 
-  local lemma equiv_sponge (D <: DISTINGUISHER {P, NC, Redo, C, SLCommon.C}) :
+  local lemma equiv_sponge (D <: DISTINGUISHER {P, Redo, C, SLCommon.C}) :
     equiv [ GReal(A(D)).main
-      ~ NIndif(Squeeze(SqueezelessSponge(P)),P,DC(D)).main
-      : ={glob D} ==> ={res, glob D, glob P, NC.queries, C.c} /\ SLCommon.C.c{1} <= C.c{2}].
+      ~ NIndif(Squeeze(SqueezelessSponge(P)),P,DRestr(D)).main
+      : ={glob D} ==> ={res, glob D, glob P, C.c} /\ SLCommon.C.c{1} <= C.c{2}].
   proof.
   proc;inline*;sp;wp.
-  call(: ={Redo.prefixes, glob P, NC.queries, C.c} /\
-    INV_Real SLCommon.C.c{1} C.c{2} Perm.m{1} Perm.mi{1} Redo.prefixes{1} NC.queries{1});auto;last first.
+  call(: ={Redo.prefixes, glob P, C.c} /\
+    INV_Real SLCommon.C.c{1} C.c{2} Perm.m{1} Perm.mi{1} Redo.prefixes{1});auto;last first.
   + by progress;1:(split=>//=;1:split;smt(dom0 in_fset0 dom_set in_fsetU1 getP map0P));case:H0=>//=. 
   + by proc;inline*;auto;sp;if;auto;sp;if;auto;
       smt(INV_Real_addm_mi INV_Real_incr supp_dexcepted).
@@ -308,79 +226,48 @@ section Real_Ideal.
       case:H=>H_c H_m_p H_invm;cut<-//:=(invm_dom_rng Perm.mi{2} Perm.m{2}). 
       by rewrite invmC.
     + exact INV_Real_incr.
-  + proc;inline*;sp;if;auto;if;auto.
+  + proc;inline*;sp;if;auto.
     swap 6;wp;sp=>/=;if;auto;last by progress;split;case:H=>//=;smt(size_ge0).
-    rcondt{1}1;1:auto;rcondt{2}1;1:auto;sp.
-    conseq(:_==> ={i,nb,bl,n,p,NC.queries, C.c,glob Redo,glob P,lres}
-        /\ (n,p){1} = (nb,bl){1} /\ i{1} = nb{1}
-        /\ format p{1} i{1} \in dom Redo.prefixes{1}
-        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1) 
-             Perm.m{1} Perm.mi{1} Redo.prefixes{1} NC.queries{1});progress.
-    while(={i,nb,bl,n,p,NC.queries,C.c,glob Redo,glob P,lres}
-        /\ (n,p){1} = (nb,bl){1} /\ 0 < i{1} <= nb{1}
-        /\ (0 < i{1} => Some lres{1} = NC.queries{1}.[(bl{1}, i{1})])
-        /\ format p{1} i{1} \in dom Redo.prefixes{1} /\ valid p{1}
-        /\ size lres{1} = i{1}
-        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1) Perm.m{1} Perm.mi{1} 
-             Redo.prefixes{1} NC.queries{1});last first.
-    + sp;conseq(:_ ==> ={i,nb,bl,n,p,NC.queries,C.c,glob Redo,glob P,lres}
-          /\ (n,p){1} = (nb,bl){1} /\ 0 < i{1} <= nb{1}
-          /\ (0 < i{1} => Some lres{1} = NC.queries{1}.[(bl{1}, i{1})])
-          /\ format p{1} i{1} \in dom Redo.prefixes{1} /\ size lres{1} = i{1}
-          /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1) 
-             Perm.m{1} Perm.mi{1} Redo.prefixes{1} NC.queries{1});1:progress=>/#. 
-      sp;if;auto;last first.
-      * progress. 
-        - by rewrite/#.
-        - by rewrite get_oget//.
-        - by cut INV0:=H;cut[]//=H_c1c2 H_m_p H_invm:=INV0;cut[]:=H_m_p;smt(in_dom).
-        - cut[]_[]Hmp0 Hmp1 Hmp2 Hmp3 Hmp4 Hinvm:=H.
-          by cut//=:=Hmp2 bl{2} 1 H4;rewrite H0/==>help;cut/=->/=:=help 1;
-            rewrite oget_some size_take.
-        by split;case:H=>//=;smt(size_ge0).
-      sp=>/=.
-      exists* Redo.prefixes{1}, SLCommon.C.c{1};elim*=>pref count;progress.
-      conseq(:_==> ={i0,p0,i,p,n,nb,bl,sa,lres,NC.queries,C.c,glob Redo,glob Perm}
+    sp.
+    seq 2 2:(={i,n,p,lres,nb,bl,b,glob P,glob C,glob Redo}
+           /\  INV_Real SLCommon.C.c{1} (C.c{2} + size bl{2})
+                 Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+           /\  (n,p){1} = (nb,bl){1} /\ lres{1} = [] /\ i{1} = 0
+           /\  valid p{1}
+           /\ Redo.prefixes.[p]{1} = Some (b,sc){1}).
+    + exists* Redo.prefixes{1},SLCommon.C.c{1};elim* => pref count/=.
+      wp;conseq(:_==> ={i0,p0,i,p,n,nb,bl,sa,lres,C.c,glob Redo,glob Perm}
             /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = p{1} /\ i0{1} = size p{1}
             /\ Redo.prefixes{1}.[take i0{1} p{1}] = Some (sa{1},sc{1})
-            /\ INV_Real count C.c{1} Perm.m{1} Perm.mi{1} pref NC.queries{1}
+            /\ INV_Real count C.c{1} Perm.m{1} Perm.mi{1} pref
             /\ (forall l, l \in dom Redo.prefixes{1} => 
                  l \in dom pref \/ (exists j, 0 < j <= i0{2} /\ l = take j p{1}))
             /\ (forall l, l \in dom pref => pref.[l] = Redo.prefixes{1}.[l])
             /\ SLCommon.C.c{1} <= count + i0{1} <= C.c{1} + i0{1}
             /\ (forall j, 0 <= j < i0{1} =>
                  exists b c, Redo.prefixes{1}.[take j p{1}] = Some (b,c) /\
-                 Perm.m{1}.[(b +^ nth witness p{1} j, c)] = Redo.prefixes{1}.[take (j+1) p{1}]));
-        progress.
-      + by rewrite/#. 
-      + by rewrite getP/=. 
-      + by rewrite/format/=nseq0 cats0//-take_size in_dom H6.
-      + cut inv0:=H7;cut[]h_c1c2[]Hmp0 Hmp1 Hmp2 Hmp3 Hmp4 Hinvm:=inv0;split=>//=.
+                 Perm.m{1}.[(b +^ nth witness p{1} j, c)] = 
+                 Redo.prefixes{1}.[take (j+1) p{1}]));
+        progress. 
+      - cut inv0:=H3;cut[]h_c1c2[]Hmp0 Hmp1 Hinvm:=inv0;split=>//=.
         - case:inv0;smt(size_ge0).
         split=>//=.
         - smt(in_dom).
-        - move=>l H_dom_R i []Hi0 Hisize;cut:=H8 l H_dom_R.
+        - move=>l H_dom_R i []Hi0 Hisize;cut:=H4 l H_dom_R.
           case(l \in dom Redo.prefixes{2})=>H_in_pref//=.
           * cut:=Hmp1 l H_in_pref i _;rewrite//=.
-            rewrite ?H9//=;1:smt(in_dom).
+            rewrite ?H5//=;1:smt(in_dom).
             case(i+1 < size l)=>h;1:smt(in_dom).
             by rewrite take_oversize 1:/#.
           move=>[]j[][]hj0 hjsize ->>.
           cut:=Hisize;rewrite size_take 1:/#.
           pose k:=if _ then _ else _;cut->>Hij{k}:k=j by rewrite/#.
           by rewrite!take_take!min_lel 1,2:/# nth_take 1,2:/#;smt(in_dom).
-        - by move=>l n;rewrite!dom_set in_fsetU1=>[][];smt(getP oget_some in_dom take_oversize).
-        - move=>l n;rewrite dom_set in_fsetU1 getP;case((l, n) = (bl{2}, 1))=>//=[[->>->>]|].
-          * by rewrite oget_some/=/format/=nseq0 cats0-take_size H6/#.
-          move=>h H_dom;cut[]c:=Hmp3 _ _ H_dom;smt(in_dom).
-        - move=>l H_dom_R H_not_nil;rewrite dom_set.
-          cut:=H8 l H_dom_R;case;1:smt(in_fsetU1).
-          move=>[]j[][]hj0 hjsize ->>;exists(drop j bl{2}).
-          by rewrite cat_take_drop parse_valid//=in_fsetU1.
-    while( ={i0,p0,i,p,n,nb,bl,sa,sc,lres,NC.queries,C.c,glob Redo,glob Perm}
+        - smt(getP oget_some in_dom take_oversize).
+      while( ={i0,p0,i,p,n,nb,bl,sa,sc,lres,C.c,glob Redo,glob Perm}
         /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = p{1} /\ 0 <= i0{1} <= size p{1}
         /\ Redo.prefixes{1}.[take i0{1} p{1}] = Some (sa{1},sc{1})
-        /\ INV_Real count C.c{1} Perm.m{1} Perm.mi{1} pref NC.queries{1}
+        /\ INV_Real count C.c{1} Perm.m{1} Perm.mi{1} pref
         /\ (forall l, l \in dom Redo.prefixes{1} => 
              l \in dom pref \/ (exists j, 0 < j <= i0{2} /\ l = take j p{1}))
         /\ (forall l, l \in dom pref => pref.[l] = Redo.prefixes{1}.[l])
@@ -393,407 +280,297 @@ section Real_Ideal.
              exists b c, Redo.prefixes{1}.[take j p{1}] = Some (b,c) /\
              Perm.m{1}.[(b +^ nth witness p{1} j, c)] = 
              Redo.prefixes{1}.[take (j+1) p{1}]));last first.
-    + auto;progress.
-      - by rewrite /format/=nseq0 cats0.
-      - exact size_ge0.
-      - by rewrite take0;cut[]_[]->//=:=H.
-      - by rewrite/#.
-      - by cut[]->//=:=H.
-      - smt(all_prefixes_of_INV_real).
-      - by rewrite/#.
-      by rewrite/#.
-    if;auto;progress.
-    + by rewrite/#.
-    + by rewrite/#.
-    + smt(get_oget in_dom).
-    + smt(in_dom take_take take_oversize size_take).
-    + by rewrite/#.
-    + by rewrite/#.
-    + by rewrite/#.
-    + case(j<i0{2})=>h;1:rewrite/#;cut<<-:j=i0{2} by rewrite/#.
-      cut->>:=H7 H10 H12.
-      by cut[]_[]_ help _ _ _ _:=H2;cut:=help _ H12 j _;smt(take_take nth_take size_take).
-    sp;if;auto;progress.
-    + by rewrite/#.
-    + by rewrite/#.
-    + by rewrite!getP/=.
-    + by apply INV_Real_addm_mi=>//=;smt(supp_dexcepted). 
-    + by move:H16;rewrite dom_set in_fsetU1/#.
-    + by rewrite!getP/=;smt(in_dom). 
-    + by rewrite/#.
-    + by rewrite/#.
-    + move:H12;apply absurd=>//=_.
-      move:H17;rewrite dom_set in_fsetU1.
-      cut->/=:!take (i0{2} + 1 + 1) bl{2} = take (i0{2} + 1) bl{2} by smt(size_take).
-      smt(take_take size_take).
-    + move=>l;rewrite!dom_set in_fsetU1;case.
-      - move=>H_dom;cut[]:=H3 l H_dom.
-        * by move=>Hdom i;rewrite in_fsetU1/=;
-            smt(in_dom all_prefixes_of_INV_real). 
-        move=>[]j[][]hj0 hji0->>k.
-        rewrite in_fsetU1 take_take;left.
-        cut[]:=H3 _ H_dom;smt(in_dom take_take take_le0 take0 take_oversize).
-      move=>->>k.
-      rewrite in_fsetU1 take_take;case(0 <= k)=>hk0;
-        last smt(in_fsetU1 in_dom take_take take_le0 take0 take_oversize).
-      case(k < i0{2})=>hki01;
-        first smt(in_fsetU1 in_dom take_take take_le0 take0 take_oversize).
-      by case(k <= i0{2} + 1)=>hki02;smt(in_dom).
-    + rewrite!getP/=oget_some.
-      cut->/=:!take j bl{2} = take (i0{2} + 1) bl{2} by smt(size_take).
-      case(j < i0{2})=>hj0;2:smt(getP oget_some size_take).
-      cut->/=:!take (j + 1) bl{2} = take (i0{2} + 1) bl{2} by smt(size_take). 
-      by cut:=H9 j _;1:rewrite hj0 H16//=;smt(in_rng getP in_dom). 
-    + by rewrite/#.
-    + by rewrite/#.
-    + by rewrite!getP/=.
-    + by move:H14;rewrite dom_set in_fsetU1/#.
-    + by rewrite!getP/=;smt(in_dom). 
-    + by rewrite/#.
-    + by rewrite/#.
-    + move:H12;apply absurd=>//=_.
-      move:H15;rewrite dom_set in_fsetU1.
-      cut->/=:!take (i0{2} + 1 + 1) bl{2} = take (i0{2} + 1) bl{2} by smt(size_take).
-      by move=>h;cut:=H8 _ h (i0{2}+1);rewrite take_take/#.
-    + move=>l;rewrite!dom_set in_fsetU1;case.
-      - move=>H_dom;cut[]:=H3 l H_dom.
-        * by move=>Hdom i;rewrite in_fsetU1/=;
-            smt(in_dom all_prefixes_of_INV_real). 
-        move=>[]j[][]hj0 hji0->>k.
-        rewrite in_fsetU1 take_take;left.
-        cut[]:=H3 _ H_dom;smt(in_dom take_take take_le0 take0 take_oversize).
-      move=>->>k.
-      rewrite in_fsetU1 take_take;case(0 <= k)=>hk0;
-        last smt(in_fsetU1 in_dom take_take take_le0 take0 take_oversize).
-      case(k < i0{2})=>hki01;
-        first smt(in_fsetU1 in_dom take_take take_le0 take0 take_oversize).
-      by case(k <= i0{2} + 1)=>hki02;smt(in_dom).
-    rewrite!getP/=.
-    cut->/=:!take j bl{2} = take (i0{2} + 1) bl{2} by smt(size_take).
-    by case(j < i0{2})=>hj0;smt(get_oget in_dom oget_some size_take).
-  sp;if;auto;last first;progress.
-  + rewrite/#.
-  + rewrite/#.
-  + by rewrite get_oget//=.
-  + rewrite in_dom;cut[]_[]_ _ _ help _ _:=H4. 
-    by cut//=:=help bl{2} (size lres{2}+1);rewrite H7/==>[][]c->.
-  + cut[]_[]_ _ help _ _ _:=H4.
-    by cut:=help bl{2} (size lres{2}+1);rewrite H7/=H3/==>[][]_[]->//=.
-  + by split;cut[]//=/#:=H4.
+      + auto;progress.
+        - exact size_ge0.
+        - by rewrite take0;cut[]_[]->//=:=H.
+        - smt().
+        - by cut[]->//=:=H.
+        - smt(all_prefixes_of_INV_real).
+        - smt().
+        - smt().
+      if;auto;progress.
+      - smt().
+      - smt().
+      - smt(get_oget in_dom).
+      - smt(in_dom).
+      - smt().
+      - smt().
+      - smt(all_prefixes_of_INV_real in_dom take_take size_take).
+      - case(j < i0{2})=>hj;1:smt().
+        cut<<-/=:j = i0{2} by smt().
+        cut->>:=H7 H10 H12.
+        cut[]_[]hmp0 hmp1 _:=H2.
+        cut[]b3 c3:=hmp1 _ H12 j _;1:smt(size_take).
+        smt(take_take nth_take size_take).
+      sp;if;auto;progress. 
+      - smt().
+      - smt().
+      - smt(getP get_oget in_dom).
+      - rewrite INV_Real_addm_mi//=;smt(supp_dexcepted). 
+      - smt(dom_set in_fsetU1).
+      - smt(getP in_dom).
+      - smt().
+      - smt().
+      - move:H17;apply absurd=>//=_;rewrite dom_set in_fsetU1.
+        pose x:=_ = _;cut->/={x}:x=false by smt(size_take).
+        move:H12;apply absurd=>//=.
+        smt(all_prefixes_of_INV_real dom_set in_fsetU1 take_take size_take).
+      - move=>l;rewrite!dom_set!in_fsetU1;case=>[H_dom|->>]/=;1:smt(in_fsetU1).
+        move=>j;rewrite in_fsetU1.
+        case(0 <= j)=>hj0;2:smt(in_dom take_le0).
+        case(j < i0{2} + 1)=>hjiS;2:smt(in_dom take_take).
+        rewrite take_take/min hjiS//=;left.
+        cut:=(take_take bl{2} j i0{2});rewrite min_lel 1:/#=><-.
+        smt(all_prefixes_of_INV_real in_dom).
+      - smt(getP get_oget in_dom dom_set in_fsetU1).
+      - smt(getP get_oget in_dom).
+      - smt().
+      - smt(getP get_oget in_dom).
+      - smt(dom_set in_fsetU1).
+      - smt(getP in_dom).
+      - smt().
+      - smt().
+      - move:H15;apply absurd=>//=_;rewrite dom_set in_fsetU1.
+        pose x:=_ = _;cut->/={x}:x=false by smt(size_take).
+        move:H12;apply absurd=>//=.
+        cut:=take_take bl{2}(i0{2} + 1)(i0{2} + 1 + 1);rewrite min_lel 1:/# =><-h. 
+        by rewrite (H8 _ h).
+      - move=>l;rewrite!dom_set!in_fsetU1;case=>[H_dom|->>]/=;1:smt(in_fsetU1).
+        move=>j;rewrite in_fsetU1.
+        case(0 <= j)=>hj0;2:smt(in_dom take_le0).
+        case(j < i0{2} + 1)=>hjiS;2:smt(in_dom take_take).
+        rewrite take_take/min hjiS//=;left.
+        cut:=(take_take bl{2} j i0{2});rewrite min_lel 1:/#=><-.
+        smt(all_prefixes_of_INV_real in_dom).
+      - smt(getP get_oget in_dom dom_set in_fsetU1).
+  sp;case(0 < n{1});last first.
+  - rcondf{1}1;2:rcondf{2}1;auto;1:smt().
+    splitwhile{1} 1 : i + 1 < n;splitwhile{2} 1 : i + 1 < n.
+    rcondt{1}2;2:rcondt{2}2;auto;progress.
+    + while(i < n);auto.
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    + while(i < n);auto.
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    rcondf{1}4;2:rcondf{2}4;auto.
+    + while(i < n);auto;2:smt().
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    + while(i < n);auto;2:smt().
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    rcondf{1}4;2:rcondf{2}4;1,2:auto.
+    + while(i < n);auto;2:smt().
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    + while(i < n);auto;2:smt().
+      by sp;if;auto;sp;while(i < n);auto;if;auto;sp;if;auto.
+    conseq(:_==> ={i,n,p,lres,nb,bl,b,glob P,glob C,glob Redo}
+           /\  INV_Real SLCommon.C.c{1} (C.c{2} + size bl{2} + i{1} - 1)
+                 Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+           /\  i{1} = n{1});1:smt();wp. 
+    conseq(:_==> ={i,n,p,lres,nb,bl,b,glob P,glob C,glob Redo}
+           /\  INV_Real SLCommon.C.c{1} (C.c{2} + size bl{2} + i{1})
+                 Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+           /\  i{1}+1 = n{1});1:smt(). 
+    while(={i,n,p,lres,nb,bl,b,glob P,glob C,glob Redo}
+           /\  INV_Real SLCommon.C.c{1} (C.c{2} + size bl{2} + i{1})
+                 Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+           /\  (n,p){1} = (nb,bl){1} /\ 0 < i{1}+1 <= n{1}
+           /\  valid p{1}
+           /\  (exists c2, Redo.prefixes.[format p (i+1)]{1} = Some (b,c2){1}));
+    last by auto;smt(nseq0 cats0). 
+  sp;rcondt{1}1;2:rcondt{2}1;auto.
   sp.
-  splitwhile{1} 1 : i0 < size p0 - 1;splitwhile{2} 1 : i0 < size p0 - 1.
+  splitwhile{1} 1 : i1 < size p1 - 1;splitwhile{2} 1 : i1 < size p1 - 1.
   rcondt{1}2;2:rcondt{2}2;1,2:by auto;
-    while(i0 < size p0);auto;1:if;2:(sp;if);auto;smt(size_cat size_nseq size_ge0).
+    while(i1 < size p1);auto;1:if;2:(sp;if);auto;smt(size_cat size_nseq size_ge0).
   rcondf{1}4;2:rcondf{2}4;1,2:by auto;
-    seq 1 : (i0 = size p0 - 1);1:(auto;
-      while(i0 < size p0);auto;1:if;2:(sp;if);auto;smt(size_cat size_nseq size_ge0));
+    seq 1 : (i1 = size p1 - 1);1:(auto;
+      while(i1 < size p1);auto;1:if;2:(sp;if);auto;smt(size_cat size_nseq size_ge0));
     if;sp;2:if;auto;smt(size_cat size_nseq size_ge0).
-  wp;conseq(:_==> ={sa,sc,glob Redo,glob Perm}
+  wp=>//=.
+  wp;conseq(:_==> ={sa0,sc0,glob Redo,glob Perm}
+          /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1}) 
+               Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+          /\ (format p{1} i{1} \in dom Redo.prefixes{1})
+          /\ exists (c2 : capacity), Redo.prefixes{1}.[format p{1} (i{1}+1)] = Some (sa0{1}, c2));progress.
+  + smt(size_ge0).
+  + smt(size_ge0).
+  + smt().
+  seq 1 1 : (={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
+          /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p1{1} = format p{1} (i{1}+1)
+          /\ 1 <= i{1} < n{1} /\ valid p{1} /\ i1{1} = size p1{1} - 1
+          /\ Redo.prefixes{1}.[format p{1} i{1}] = Some (sa0{1},sc0{1})
           /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1) Perm.m{1} Perm.mi{1}
-               Redo.prefixes{1} NC.queries{1}.[(p{1}, i{1}) <- rcons lres{1} sa{1}]
-          /\ (format p{1} i{1} \in dom Redo.prefixes{1}));progress.
-  + smt(size_ge0).
-  + smt(size_ge0).
-  + by rewrite getP/=.
-  + exact size_rcons.
-  seq 1 1 : (={nb,bl,n,p,p0,i,i0,lres,sa,sc,NC.queries,C.c,glob Redo,glob Perm}
-          /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = format p{1} i{1}
-          /\ 1 < i{1} <= n{1} /\ valid p{1} /\ i0{1} = size p0{1} - 1
-          /\ Some lres{1} = NC.queries{1}.[(bl{1}, i{1}-1)]
-          /\ ! ((p{1}, i{1}) \in dom NC.queries{1})
-          /\ Redo.prefixes{1}.[format p{1} (i{1}-1)] = Some (sa{1},sc{1})
-          /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 2) Perm.m{1} Perm.mi{1}
-               Redo.prefixes{1} NC.queries{1}.[(bl{1}, i{1} - 1) <- lres{1}]);last first.
+               Redo.prefixes{1});last first.
   + if;auto;progress. 
-    - move:H6;rewrite -addzA/=take_size=>H_dom.
-      move:H5;rewrite set_eq 1:H2//= =>inv0.
-      apply lemma1=>//=.
-      * split;case:inv0=>//=/#.
-      * smt().
-      * rewrite size_rcons;cut[]//=Hc[]Hmp0 Hmp1 Hmp2 Hmp3 Hmp4 Hinvm:=inv0.
-        by cut:=Hmp2 bl{2} (i{2}-1);rewrite in_dom -H2/=H1/=oget_some/#.
-      * rewrite last_rcons;smt(get_oget in_dom).
-      move=>j[]hj0 hji.
-      cut[]//=Hc[]Hmp0 Hmp1 Hmp2 Hmp3 Hmp4 Hinvm:=inv0;cut:=Hmp2 bl{2} (i{2}-1).
-      rewrite in_dom -H2/=H1/=oget_some=>[][]hi10[]hsize->;1:smt().
-      congr;rewrite-cats1 take_cat;case(j < size lres{2})=>//=hsize2.
-      cut->//=:j = size lres{2} by smt().
-      by rewrite cats0 take_size.
-    - by move:H6;rewrite -(addzA _ _ 1)/=take_size.  
+    - by split;case:H3=>//=;smt().
+    - by rewrite in_dom H2//=.
+    - by move:H4;rewrite -(addzA _ _ 1)/=take_size;smt(get_oget in_dom).
     sp;if;auto;progress.
-    - move:H6 H7;rewrite!getP/=!oget_some nth_last -(addzA _ _ 1)/=take_size.
+    - move:H4 H5;rewrite!getP/=!oget_some nth_last -(addzA _ _ 1)/=take_size.
       rewrite last_cat last_nseq 1:/# Block.WRing.addr0;progress. 
-      cut//=:=lemma2(SLCommon.C.c{1} + 1)(C.c{2} + size bl{2} + i{2} - 1)
-        Perm.m{2}.[(sa_R, sc{2}) <- y0L] Perm.mi{2}.[y0L <- (sa_R, sc{2})]
-        Redo.prefixes{2} NC.queries{2} bl{2} i{2} sa_R sc{2} lres{2}.
-      rewrite H/=H1/=H2/=H4/=H6/=H3/=dom_set in_fsetU1/=getP/=oget_some.
-      cut->->//=:y0L = (y0L.`1, y0L.`2) by smt().
+      cut//=:=lemma2(SLCommon.C.c{1} + 1)(C.c{2} + size bl{2} + i{2})
+        Perm.m{2}.[(sa0_R, sc0{2}) <- y2L] Perm.mi{2}.[y2L <- (sa0_R, sc0{2})]
+        Redo.prefixes{2} bl{2} (i{2}+1) sa0_R sc0{2}.
+      rewrite -(addzA _ 1)/=H1/=!dom_set!in_fsetU1/=H4/=H2/=getP/=oget_some/=.
+      cut->->//=:y2L = (y2L.`1, y2L.`2);1,-1:smt().
       rewrite INV_Real_addm_mi//=;2:smt(supp_dexcepted). 
-      by cut:=H5;rewrite set_eq 1:H2//==>hinv0;split;case:hinv0=>//=/#.
-    - by rewrite dom_set in_fsetU1//=-(addzA _ _ 1)/=take_size.
-    - move:H6 H7;rewrite nth_last -(addzA _ _ 1)/=take_size.
+      by cut:=H3=>hinv0;split;case:hinv0=>//=/#.
+    - by rewrite dom_set in_fsetU1//=-(addzA _ _ 1)/=take_size in_dom H2.
+    - by rewrite!getP-(addzA _ _ 1)/=take_size/=;smt().
+    - move:H4 H5;rewrite nth_last -(addzA _ _ 1)/=take_size.
       rewrite last_cat last_nseq 1:/# Block.WRing.addr0;progress. 
-      pose a:=(_, _);cut->/={a}:a = oget Perm.m{2}.[(sa_R, sc{2})] by smt().
-      apply lemma2=>//=;first cut:=H5;rewrite set_eq 1:H2//==>hinv0;split;case:hinv0=>//=/#.
-      rewrite H2//=.
-    - by rewrite dom_set in_fsetU1//=-(addzA _ _ 1)/=take_size.
+      pose a:=(_, _);cut->/={a}:a = oget Perm.m{2}.[(sa0_R, sc0{2})] by smt().
+      apply lemma2=>//=;first cut:=H3=>hinv0;split;case:hinv0=>//=/#.
+      smt().
+      smt().
+    - by rewrite dom_set in_fsetU1//=-(addzA _ _ 1)/=take_size;smt(in_dom).
+    - by rewrite!getP-(addzA _ _ 1)/=take_size/=;smt().
   alias{1} 1 pref = Redo.prefixes;sp;alias{1} 1 count = SLCommon.C.c.
   alias{1} 1 pm = Perm.m;sp;alias{1} 1 pmi = Perm.mi;sp.
-  conseq(:_==> ={nb,bl,n,p,p0,i,i0,lres,sa,sc,NC.queries,C.c,glob Redo,glob Perm}
+  conseq(:_==> ={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
         /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1}
         /\ pref{1} = Redo.prefixes{1} /\ SLCommon.C.c{1} = count{1}
-        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = format p{1} i{1}
-        /\ i0{1} = size p0{1} - 1
-        /\ Redo.prefixes{1}.[format p{1} (i0{1} - size p{1} + 1)] = 
-             Some (sa{1}, sc{1}));1:smt(size_cat size_nseq set_eq in_dom).
-  splitwhile{1}1:i0 < size p;splitwhile{2}1:i0 < size p.
-  while(={nb,bl,n,p,p0,i,i0,lres,sa,sc,NC.queries, C.c,glob Redo,glob Perm}
-        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1} /\ 0 < i{1}
+        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p1{1} = format p{1} (i{1}+1)
+        /\ i1{1} = size p1{1} - 1
+        /\ Redo.prefixes{1}.[format p{1} (i1{1} - size p{1} + 1)] = 
+             Some (sa0{1}, sc0{1}));progress. 
+  + smt(size_cat size_nseq set_eq in_dom).
+  + move:H8;rewrite size_cat size_nseq-(addzA _ 1 (-1))/=/max H0/=.
+    by pose x:= Int.(+) _ _;cut->/={x}: x = i_R + 1 by smt().
+  + move:H8;rewrite size_cat size_nseq-(addzA _ 1 (-1))/=/max H0/=;smt().
+  splitwhile{1}1:i1 < size p;splitwhile{2}1:i1 < size p.
+  while(={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
+        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1)
+             Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1}
         /\ pref{1} = Redo.prefixes{1} /\ SLCommon.C.c{1} = count{1}
-        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = format p{1} i{1}
-        /\ size p{1} <= i0{1} <= size p0{1} - 1 /\ valid p{1}
-        /\ (format p{1} (i{1}-1) \in dom Redo.prefixes{1})
-        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 2)
-             Perm.m{1} Perm.mi{1} Redo.prefixes{1} NC.queries{1}
-        /\ Redo.prefixes{1}.[format p{1} (i0{1} - size p{1} + 1)] = Some (sa{1}, sc{1}) ).
+        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p1{1} = format p{1} (i{1}+1)
+        /\ (format p{1} i{1} \in dom Redo.prefixes{1})
+        /\ size p{1} <= i1{1} <= size p1{1} - 1 /\ valid p{1}
+        /\ Redo.prefixes{1}.[format p{1} (i1{1} - size p{1} + 1)] = 
+             Some (sa0{1}, sc0{1})).
   + rcondt{1}1;2:rcondt{2}1;auto;progress.
-    - rewrite take_format;1,2:smt(size_cat size_ge0 size_nseq). 
-      cut->/=:! i0{m} + 1 <= size bl{m} by smt().
-      cut:=take_format bl{m} (i{m}-1) (i0{m} + 1) _ _;1,2:smt(size_cat size_ge0 size_nseq).
-      cut->/=<-:! i0{m} + 1 <= size bl{m} by smt().
-      by cut/#:=all_prefixes_of_INV_real.
-    - rewrite take_format;1,2:smt(size_cat size_ge0 size_nseq). 
-      cut->/=:! i0{hr} + 1 <= size bl{hr} by smt().
-      cut:=take_format bl{hr} (i{hr}-1) (i0{hr} + 1) _ _;1,2:smt(size_cat size_ge0 size_nseq).
-      cut->/=<-:! i0{hr} + 1 <= size bl{hr} by smt().
-      by cut/#:=all_prefixes_of_INV_real.
-    - smt().
-    - smt().
-    - rewrite take_format//=;1:smt(size_cat size_ge0 size_nseq). 
-      cut->/=:!i0{2} + 1 <= size bl{2} by smt().
-      rewrite get_oget 2:/#. 
-      cut:=take_format bl{2} (i{2}-1) (i0{2} + 1) _ _;1,2:smt(size_cat size_ge0 size_nseq).
-      cut->/=:!i0{2} + 1 <= size bl{2} by smt().
-      by cut/#:=all_prefixes_of_INV_real.
-  conseq(:_==> ={nb,bl,n,p,p0,i,i0,lres,sa,sc,NC.queries, C.c,glob Redo,glob Perm}
-        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1} /\ 0 < i{1}
+    + cut->:take (i1{m} + 1) (format bl{m} (i{m} + 1)) = 
+            take (i1{m} + 1) (format bl{m} i{m});2:smt(all_prefixes_of_INV_real).
+      smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+    + cut->:take (i1{hr} + 1) (format bl{hr} (i{hr} + 1)) = 
+            take (i1{hr} + 1) (format bl{hr} i{hr});2:smt(all_prefixes_of_INV_real).
+      smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+    + smt().    
+    + smt(size_cat size_nseq).
+    + rewrite get_oget;2:smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+      cut->:format bl{2} (i1{2} + 1 - size bl{2} + 1) = 
+            take (i1{2} + 1) (format bl{2} i{2})
+        by smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+      smt(all_prefixes_of_INV_real).
+  conseq(:_==> ={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
+        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1)
+             Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1}
         /\ pref{1} = Redo.prefixes{1} /\ SLCommon.C.c{1} = count{1}
-        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = format p{1} i{1}
-        /\ size p{1} = i0{1} /\ valid p{1}
-        /\ (format p{1} (i{1}-1) \in dom Redo.prefixes{1})
-        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 2) Perm.m{1} Perm.mi{1}
-             Redo.prefixes{1} NC.queries{1}
-        /\ Redo.prefixes{1}.[take i0{1} p{1}] = Some (sa{1}, sc{1}));
-    progress.
-  + smt(size_cat size_ge0 size_nseq).
-  + by rewrite /format/=nseq0 cats0 -take_size;exact H12.
-  + smt().
-  while( ={nb,bl,n,p,p0,i,i0,lres,sa,sc,NC.queries, C.c,glob Redo,glob Perm}
-        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1} /\ 1 < i{1}
+        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p1{1} = format p{1} (i{1}+1)
+        /\ (format p{1} i{1} \in dom Redo.prefixes{1})
+        /\ i1{1} = size p{1} /\ valid p{1}
+        /\ Redo.prefixes{1}.[take i1{1} p{1}] = Some (sa0{1}, sc0{1}));
+    1:smt(size_cat size_nseq nseq0 cats0 take_size).
+  while(={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
+        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 1)
+             Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+        /\ pmi{1} = Perm.mi{1} /\ pm{1} = Perm.m{1}
         /\ pref{1} = Redo.prefixes{1} /\ SLCommon.C.c{1} = count{1}
-        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = format p{1} i{1}
-        /\ 0 <= i0{1} <= size p{1} /\ valid p{1}
-        /\ (format p{1} (i{1}-1) \in dom Redo.prefixes{1})
-        /\ INV_Real SLCommon.C.c{1} (C.c{1} + size bl{2} + i{1} - 2) Perm.m{1} Perm.mi{1}
-             Redo.prefixes{1} NC.queries{1}
-        /\ Redo.prefixes{1}.[take i0{1} p{1}] = Some (sa{1}, sc{1}) );last first.
+        /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p1{1} = format p{1} (i{1}+1)
+        /\ (format p{1} i{1} \in dom Redo.prefixes{1})
+        /\ 0 <= i1{1} <= size p{1} /\ valid p{1}
+        /\ Redo.prefixes{1}.[take i1{1} p{1}] = Some (sa0{1}, sc0{1}));last first.
   + auto;progress.
-    - smt(size_ge0).
-    - smt(size_ge0).
     - smt().
-    - smt(set_eq in_dom).
-    - by rewrite take0;case:H4=>[]_[]//=.
-    - smt(size_cat size_nseq size_ge0).
-    - smt(size_cat size_nseq size_ge0).
+    - cut[]_[]:=H;smt(in_dom).
+    - exact size_ge0.
+    - cut[]_[]:=H;smt(in_dom take0).
+    - smt(size_cat size_nseq).
   rcondt{1}1;2:rcondt{2}1;auto;progress.
-  + cut->:take (i0{m} + 1) (format bl{m} i{m}) = 
-          take (i0{m} + 1) (format bl{m} (i{m} - 1))
-      by rewrite!take_format//=;smt(size_cat size_ge0 size_nseq).
-    by cut/#:=all_prefixes_of_INV_real.
-  + cut->:take (i0{hr} + 1) (format bl{hr} i{hr}) = 
-          take (i0{hr} + 1) (format bl{hr} (i{hr} - 1))
-      by rewrite!take_format//=;smt(size_cat size_ge0 size_nseq).
-    by cut/#:=all_prefixes_of_INV_real.
-  + smt().
-  + smt().
-  cut->:take (i0{2} + 1) (format bl{2} i{2}) = 
-        take (i0{2} + 1) (format bl{2} (i{2} - 1))
-    by rewrite!take_format//=;smt(size_cat size_ge0 size_nseq).
-  cut->:take (i0{2} + 1) bl{2} = take (i0{2} + 1) (format bl{2} (i{2} - 1))
-    by rewrite take_format;smt(size_cat size_ge0 size_nseq).
-  by cut:=all_prefixes_of_INV_real _ _ _ _ _ _ H4 _ H3;smt(in_dom).
+  - cut->:take (i1{m} + 1) (format bl{m} (i{m} + 1)) = 
+          take (i1{m} + 1) (format bl{m} i{m});2:smt(all_prefixes_of_INV_real).
+    smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+  - cut->:take (i1{hr} + 1) (format bl{hr} (i{hr} + 1)) = 
+          take (i1{hr} + 1) (format bl{hr} i{hr});2:smt(all_prefixes_of_INV_real).
+    smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+  - smt().
+  - smt().
+  - cut->:take (i1{2} + 1) (format bl{2} (i{2} + 1)) = 
+          take (i1{2} + 1) (format bl{2} i{2}) 
+      by smt(take_format size_ge0 size_eq0 valid_spec size_cat size_nseq).
+    cut->:take (i1{2} + 1) bl{2} = 
+          take (i1{2} + 1) (format bl{2} i{2})
+      by smt(take_cat take_le0 cats0).
+    rewrite get_oget//=;smt(all_prefixes_of_INV_real).
   qed.
 
 
-
-  local lemma lemma3 c c' m mi p q bl i sa sc lres:
-      INV_Real c c' m mi p q =>
+  local lemma lemma4 c c' m mi p bl i sa sc:
+      INV_Real c c' m mi p =>
       0 < i =>
-      q.[(bl,i)] = Some lres =>
-      p.[format bl i] = Some (sa,sc) =>
-      (bl,i+1) \in dom q =>
-      q.[(bl,i+1)] = Some (rcons lres (oget m.[(sa,sc)]).`1).
-  proof.
-  move=>inv0 H_i0 H_q_i H_p_i H_dom_iS.
-  cut[]_[]_ hmp1 hmp2 hmp3 _ _:=inv0.
-  cut[]c2 h2:=hmp3 _ _ H_dom_iS.
-  cut:=hmp1 (format bl (i+1));rewrite in_dom h2/==>help.
-  cut:=help (size (format bl i)) _;1:smt(size_ge0 size_cat size_nseq).
-  move=>[]b3 c3;rewrite!take_format;..4:smt(size_ge0 size_cat size_nseq).
-  cut->/=:!size (format bl i) + 1 <= size bl by smt(size_cat size_nseq size_ge0).
-  rewrite nth_cat.
-  cut->/=:!size (format bl i) < size bl by smt(size_cat size_ge0).
-  rewrite nth_nseq 1:size_cat 1:size_nseq 1:/#.
-  pose x:=if _ then _ else _;cut->/={x}:x = format bl i.
-  + rewrite/x;case(i = 1)=>//=[->>|hi1].
-    - by rewrite/format/=nseq0 cats0//=take_size.
-    by rewrite size_cat size_nseq/#.
-  pose x:=List.size _ + 1 - List.size _ + 1;cut->/={x}:x=i+1
-    by rewrite/x size_cat size_nseq;smt().
-  rewrite H_p_i h2=>[]/=[][]->>->>. 
-  rewrite Block.WRing.addr0=>H_pm;rewrite H_pm/=oget_some. 
-  cut[]_[]_[]H_size H:=hmp2 _ _ H_dom_iS.
-  cut H_q_i':=H i _;1:smt().
-  cut:=H (i+1) _;1:smt().
-  rewrite (take_nth witness)1:/# =>H_q_iS.
-  rewrite H_q_iS/=oget_some last_rcons;congr.
-  by cut:=H_q_i';rewrite H_q_i/=.
-  qed.
-
-
-  local lemma lemma3' c c' m mi p q bl i sa sc lres:
-      INV_Real c c' m mi p q =>
-      0 < i =>
-      q.[(bl,i)] = Some lres =>
-      p.[format bl i] = Some (sa,sc) =>
-      (bl,i+1) \in dom q =>
-      q.[(bl,i+1)] = Some (rcons lres (oget p.[format bl (i+1)]).`1).
-  proof.
-  move=>inv0 H_i0 H_q_i H_p_i H_dom_iS.
-  cut[]_[]_ hmp1 hmp2 hmp3 _ _:=inv0.
-  cut->:=lemma3 _ _ _ _ _ _ _ _ _ _ _ inv0 H_i0 H_q_i H_p_i H_dom_iS;congr;congr.
-  cut[]b3 c3[]:=hmp1 (format bl (i+1)) _ (size (format bl i)) _.
-  + rewrite in_dom;smt().
-  + rewrite!size_cat!size_nseq;smt(size_ge0).
-  rewrite nth_cat nth_nseq;1:smt(size_cat size_nseq size_ge0).
-  cut->/=:!size (format bl i) < size bl by smt(size_cat size_nseq size_ge0).
-  rewrite Block.WRing.addr0 !take_format 1,3:/#;1,2:smt(size_cat size_nseq size_ge0).
-  cut->/=:!size (format bl i) + 1 <= size bl by smt(size_cat size_nseq size_ge0).
-  cut->:size (format bl i) + 1 - size bl = i by smt(size_cat size_nseq).
-  case(size (format bl i) <= size bl)=>//=Hi;last first.
-  + cut->:size (format bl i) - size bl + 1 = i by smt(size_cat size_nseq).
-    by rewrite H_p_i/==>[][]->>->>->//.
-  cut->>/=:i = 1 by smt(size_cat size_nseq).
-  by cut:=H_p_i;rewrite /(format bl 1)/=nseq0 cats0 take_size=>->/=[]->>->>->//.
-  qed.
-  
-
-  local lemma lemma4 c c' m mi p q bl i sa sc lres:
-      INV_Real c c' m mi p q =>
-      0 < i =>
-      q.[(bl,i)] = Some lres =>
-      p.[format bl i] = Some (sa,sc) =>
-      (bl,i+1) \in dom q =>
-      p.[format bl (i+1)] = m.[(sa,sc)].
-  proof.
-  move=>inv0 H_i0 H_q_i H_p_i H_dom_iS.
-  cut[]_[]_ hmp1 hmp2 hmp3 _ _:=inv0.
-  cut[]c2 h2:=hmp3 _ _ H_dom_iS.
-  cut:=hmp1 (format bl (i+1));rewrite in_dom h2/==>help.
-  cut:=help (size (format bl i)) _;1:smt(size_ge0 size_cat size_nseq).
-  move=>[]b3 c3;rewrite!take_format;..4:smt(size_ge0 size_cat size_nseq).
-  cut->/=:!size (format bl i) + 1 <= size bl by smt(size_cat size_nseq size_ge0).
-  rewrite nth_cat.
-  cut->/=:!size (format bl i) < size bl by smt(size_cat size_ge0).
-  rewrite nth_nseq 1:size_cat 1:size_nseq 1:/#.
-  pose x:=if _ then _ else _;cut->/={x}:x = format bl i.
-  + rewrite/x;case(i = 1)=>//=[->>|hi1].
-    - by rewrite/format/=nseq0 cats0//=take_size.
-    by rewrite size_cat size_nseq/#.
-  pose x:=List.size _ + 1 - List.size _ + 1;cut->/={x}:x=i+1
-    by rewrite/x size_cat size_nseq;smt().
-  rewrite H_p_i h2=>[]/=[][]->>->>. 
-  rewrite Block.WRing.addr0=>H_pm;rewrite H_pm/=. 
-  cut[]_[]_[]H_size H:=hmp2 _ _ H_dom_iS.
-  cut H_q_i':=H i _;1:smt().
-  cut:=H (i+1) _;1:smt().
-  by rewrite (take_nth witness)1:/# =>H_q_iS.
-  qed.
-
-
-
-  local lemma lemma4' c c' m mi p q bl i sa sc lres:
-      INV_Real c c' m mi p q =>
-      0 < i =>
-      q.[(bl,i)] = Some lres =>
       p.[format bl i] = Some (sa,sc) =>
       format bl (i+1) \in dom p =>
       p.[format bl (i+1)] = m.[(sa,sc)].
   proof.
-  move=>inv0 H_i0 H_q_i H_p_i H_p_dom_iS.
-  cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=inv0.
-  cut[]:=hmp4 _ H_p_dom_iS _.
-  + smt(size_ge0 size_eq0 size_cat valid_spec size_nseq).
-  move=>l;pose pn := parse (format bl (i + 1) ++ l).
-  cut->/=H_dom_iS:pn = (pn.`1,pn.`2) by smt().
-  cut[]c2:=hmp3 _ _ H_dom_iS.
-  cut->/=:format pn.`1 pn.`2 = (format bl (i + 1) ++ l) by smt(parseK formatK).
-  move:H_dom_iS;cut->/={pn}H_dom_iS H_p_iS_l:(pn.`1, pn.`2) = parse (format bl (i + 1) ++ l) by smt().
-  cut help:=hmp1 (format bl (i + 1) ++ l) _;1:by rewrite in_dom H_p_iS_l.
-  cut[]b3 c3:=help (size (format bl i)) _.
-  + smt(size_ge0 size_cat size_nseq).
-  rewrite take_cat take_format//=1:/#.
-  + smt(size_ge0 size_cat size_nseq).
-  cut->/=:size (format bl i) < size (format bl (i + 1))  by smt(size_cat size_nseq).
-  pose x:=if _ then _ else _;cut->/={x}:x = format bl i.
-  + rewrite/x;rewrite size_cat size_nseq max_ler 1:/#.
-    case(size bl + (i - 1) <= size bl)=>//=[h|/#].
-    by cut->>/=:i=1;smt(take_size nseq0 cats0).
-  rewrite H_p_i/==>[][][]->>->>.
-  rewrite nth_cat/=.
-  cut->/=:size (format bl i) < size (format bl (i + 1)) by smt(size_cat size_nseq).
+  move=>inv0 H_i0 H_p_i H_dom_iS.
+  cut[]_[]_ hmp1 _ :=inv0.
+  cut:=hmp1 (format bl (i+1)) H_dom_iS=>help. 
+  cut:=help (size (format bl i)) _;1:smt(size_ge0 size_cat size_nseq).
+  move=>[]b3 c3;rewrite!take_format;..4:smt(size_ge0 size_cat size_nseq).
+  cut->/=:!size (format bl i) + 1 <= size bl by smt(size_cat size_nseq size_ge0).
   rewrite nth_cat.
-  cut->/=:!size (format bl i) < size bl by smt(size_cat size_nseq size_ge0).
+  cut->/=:!size (format bl i) < size bl by smt(size_cat size_ge0).
   rewrite nth_nseq 1:size_cat 1:size_nseq 1:/#.
-  rewrite take_cat.
-  cut->/=:size (format bl i) + 1 = size (format bl (i + 1)) by smt(size_cat size_nseq).
-  rewrite take0 cats0 Block.WRing.addr0 =>->//=.
+  pose x:=if _ then _ else _;cut->/={x}:x = format bl i.
+  + rewrite/x;case(i = 1)=>//=[->>|hi1].
+    - by rewrite/format/=nseq0 cats0//=take_size.
+    by rewrite size_cat size_nseq/#.
+  pose x:=List.size _ + 1 - List.size _ + 1;cut->/={x}:x=i+1
+    by rewrite/x size_cat size_nseq;smt().
+  rewrite H_p_i=>[]/=[][]->>->>. 
+  by rewrite Block.WRing.addr0=>H_pm;rewrite H_pm/=. 
+  qed.
+
+  local lemma lemma3 c1 c2 m mi p bl b (sa:block) sc:
+      INV_Real c1 c2 m mi p =>
+      (sa +^ b,sc) \in dom m =>
+      ! rcons bl b \in dom p =>
+      p.[bl] = Some (sa,sc) =>
+      INV_Real c1 c2 m mi p.[rcons bl b <- oget m.[(sa +^ b,sc)]].
+  proof.
+  move=>inv0 H_dom_m H_dom_p H_p_val.
+  split;cut[]//=_[] hmp0 hmp1 hinvm:=inv0;split=>//=.
+  + by rewrite getP;smt(size_cat size_nseq size_ge0).
+  + move=>l;rewrite dom_set in_fsetU1;case;1:smt(all_prefixes_of_INV_real getP).
+    move=>->>j[]hj0 hjsize;rewrite getP/=.
+    cut:=hmp1 bl;rewrite in_dom H_p_val/==>help.
+    cut->/=:!take j (rcons bl b) = rcons bl b by smt(size_take).
+    move:hjsize;rewrite size_rcons=>hjsize.
+    rewrite-cats1 !take_cat.
+    pose x := if _ then _ else _;cut->/={x}: x = take j bl by smt(take_le0 cats0 take_size).
+    rewrite nth_cat.
+    case(j < size bl)=>//=hj;last first.
+    + cut->>/=:j = size bl by smt().
+      by rewrite take_size H_p_val/=;exists sa sc=>//=;smt(getP get_oget).
+    cut->/=:j + 1 - size bl <= 0 by smt().
+    rewrite cats0.
+    pose x := if _ then _ else _;cut->/={x}: x = take (j+1) bl by smt(take_le0 cats0 take_size).
+    cut:=hmp1 bl;rewrite in_dom H_p_val/==>hep.
+    cut:=hep j _;rewrite//=;smt(getP size_cat size_take).
   qed.
 
 
-  module QBlockSponge (P : DPRIMITIVE) : FUNCTIONALITY = {
-    proc init() = {}
-    proc f (p : block list, n : int) : block list = {
-      var r : block list <- [];
-      var i : int <- 0;
-      var (b,c) <- (b0,c0);
-      if (valid p /\ 0 < n) {
-        while (i < size p) {
-          (b,c) <@ P.f(b +^ nth witness p i, c);
-          i <- i + 1;
-        }
-        i <- 1;
-        r <- rcons r b;
-        while (i < n) {
-          (b,c) <@ P.f(b, c);
-          r <- rcons r b;
-          i <- i + 1;
-        }
-      }
-      return r;
-    }
-  }.
 
-  local lemma squeeze_squeezeless (D <: DISTINGUISHER {P, NC, Redo, C, SLCommon.C}) :
-    equiv [ NIndif(Squeeze(SqueezelessSponge(P)),P,DC(D)).main
-        ~ RealIndif(QBlockSponge,P,DRestr(D)).main
+  local lemma squeeze_squeezeless (D <: DISTINGUISHER {P, Redo, C, SLCommon.C}) :
+    equiv [ NIndif(Squeeze(SqueezelessSponge(P)),P,DRestr(D)).main
+        ~ RealIndif(Sponge,P,DRestr(D)).main
         : ={glob D} ==> ={res, glob P, glob D, C.c}].
   proof.
   proc;inline*;sp;wp. 
   call(: ={glob Perm,C.c}
-      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1} 
-           NC.queries{1});auto;last first.
-  + progress.
+      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1});auto;last first.
+  + progress. 
     split=>//=;1:split=>//=;smt(getP dom0 map0P in_fset0 dom_set in_fsetU1). 
   + proc;inline*;auto;sp;if;auto;sp;if;auto;progress.
     - by rewrite INV_Real_addm_mi;2..:smt(supp_dexcepted);split;case:H=>//=;smt().
@@ -803,308 +580,242 @@ section Real_Ideal.
       * case:H;smt(invm_dom_rng invmC supp_dexcepted).
       case:H;smt(invm_dom_rng invmC supp_dexcepted).
     - by split;case:H=>//=;smt(). 
-  proc;inline*;sp;auto;if;auto;if;auto;sp;if;auto;
+  proc;inline*;sp;auto;if;auto;sp;if;auto;
     last by progress;split;case:H=>//=;smt(size_ge0).
-  rcondt{1}1;auto;sp. 
-  seq 1 3 : (={glob Perm,  C.c, i, p, n, bl, nb} /\ nb{1} = n{1}
-      /\ (lres){1} = (r0){2} /\ bl{1} = p{2}
-      /\ NC.queries{1}.[(p{1},i{1})] = Some lres{1}
-      /\ valid p{1} /\ i{1} <= n{1} /\ i{1} = 1
-      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1} 
-           NC.queries{1}.[(p{1}, i{1}) <- lres{1}]
-      /\ Redo.prefixes{1}.[p{1}] = Some (b,c){2});last first.
-  + auto=>/=.
-    while(={glob Perm,  C.c, i, p, n, bl, nb} /\ nb{1} = n{1}
-      /\ (lres){1} = (r0){2} /\ bl{1} = p{2} /\ 0 < i{2} <= n{1}
-      /\ valid p{1}
-      /\ NC.queries{1}.[(p{1},i{1})] = Some lres{1}
-      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1} 
-           NC.queries{1}
-      /\ Redo.prefixes{1}.[format p{1} i{1}] = Some (b{2},c{2}));last first.
-    - auto;progress.
-      * cut:=H2;rewrite set_eq//=.
-      * by rewrite/format/=nseq0 cats0 H3//=.
-    sp;if{1};last first.
-    - rcondf{2}1;auto;progress.
-      * cut:=H3;rewrite in_dom=>inv0.
-        cut[]_[]_ hmp1 hmp2 hmp3 _ _:=inv0.
-        cut:=hmp1 (format p{hr} (i{hr}+1));rewrite in_dom//=.
-        cut[]c3 h3:=hmp3 _ _ H7;rewrite h3/= => help.
-        cut[]b4 c4:=help (size p{hr} + i{hr} - 1) _;1:smt(size_cat size_nseq size_ge0).
-        rewrite !take_format 1,3:/#;1,2:smt(size_cat size_nseq size_ge0).
-        rewrite nth_cat/=nth_nseq/=1:/# -(addzA _ (-1) 1)/=.
-        cut->/=:!size p{hr} + i{hr} <= size p{hr} by smt().
-        cut->/=:!size p{hr} + i{hr} - 1 < size p{hr} by smt().
-        pose x:=if _ then _ else _;cut->/={x}:x = format p{hr} i{hr}.
-        + rewrite/x;case(i{hr}=1)=>[->>|/#]//=.
-          by rewrite -(addzA _ 1 (-1))/= take_size/format/=nseq0 cats0.
-        by rewrite Block.WRing.addr0 (addzAC _ i{hr})/=H4/==>[][][]->>->>->;rewrite h3.
-      * cut:=H3;move=>inv0.
-        by cut->:=lemma3 _ _ _ _ _ _ _ _ _ _ _ inv0 H H2 H4 H7.
-      (* * cut:=H3;rewrite //==>inv0.  *)
-      (*   by cut->:=lemma3 _ _ _ _ _ _ _ _ _ _ _ inv0 H H2 H4 H7. *)
-      * smt().
-      * smt().
-      * smt(get_oget in_dom).
-      * cut:=H3;rewrite //==>inv0. 
-        cut->:=lemma4 _ _ _ _ _ _ _ _ _ _ _ inv0 H H2 H4 H7;rewrite get_oget 2:/#. 
-        cut[]_[]_ hmp1 hmp2 hmp3 _ _:=inv0.
-        cut:=hmp1 (format p{2} (i{2}+1));rewrite in_dom//=.
-        cut[]c3 h3:=hmp3 _ _ H7;rewrite h3/= => help.
-        cut[]b4 c4:=help (size p{2} + i{2} - 1) _;1:smt(size_cat size_nseq size_ge0).
-        rewrite !take_format 1,3:/#;1,2:smt(size_cat size_nseq size_ge0).
-        rewrite nth_cat/=nth_nseq/=1:/# -(addzA _ (-1) 1)/=.
-        cut->/=:!size p{2} + i{2} <= size p{2} by smt().
-        cut->/=:!size p{2} + i{2} - 1 < size p{2} by smt().
-        pose x:=if _ then _ else _;cut->/={x}:x = format p{2} i{2}.
-        + rewrite/x;case(i{2}=1)=>[->>|/#]//=.
-          by rewrite -(addzA _ 1 (-1))/= take_size/format/=nseq0 cats0.
-        by rewrite in_dom Block.WRing.addr0 (addzAC _ i{2})/=H4/==>[][][]->>->>->;rewrite h3.
-    swap{2}4-3;wp;sp=>/=.
-    splitwhile{1}1:i0 < size p0 - 1.
-    rcondt{1}2;2:rcondf{1}4;auto.
-    + while(0 <= i0 <= size p0 -1);last by auto;smt(size_cat size_nseq size_ge0).
-      if;auto;1:smt(size_cat size_nseq size_ge0).
-      by sp;if;auto;smt(size_cat size_nseq size_ge0).
-    + seq 1 : (i0 = size p0 - 1).
-      - while(0 <= i0 <= size p0 -1);last by auto;smt(size_cat size_nseq size_ge0).
-        if;auto;1:smt(size_cat size_nseq size_ge0).
-        by sp;if;auto;smt(size_cat size_nseq size_ge0).
-      by if;auto;1:smt();sp;if;auto;smt().
-    seq 1 0 : (={glob P, C.c, i, p, n, bl, nb}
-          /\ nb{1} = n{1} /\ lres{1} = r0{2} /\ bl{1} = p{1}
-          /\ x0{2} = (sa,sc){1} /\ p0{1} = format p{1} i{1}
-          /\ i0{1} = size p{1} + i{1} - 2 /\ 1 < i{1} <= n{1}
-          /\ valid p{1} /\ 0 < n{1}
-          /\ ! ((p{1}, i{1}) \in dom NC.queries{1})
-          /\ NC.queries{1}.[(p{1},i{1}-1)] = Some lres{1}
-          /\ Redo.prefixes{1}.[format p{1} (i{1}-1)] = Some (sa,sc){1}
+  sp.
+  seq 2 1 : (={glob P, i, n, C.c,sa,sc}
+    /\ b{1} = sa{2} /\ Redo.prefixes.[p]{1} = Some (sa,sc){2}
+    /\ lres{1} = z0{2} /\ i{1} = 0 /\ valid p{1}
+    /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1}).
+  + conseq(:_==> ={glob P, n, C.c,sa,sc} /\ b{1} = sa{2} /\ i0{1} = size p0{1}
+        /\ Redo.prefixes{1}.[take i0{1} p0{1}] = Some (sa{1}, sc{1})
+        /\ lres{1} = z0{2} /\ xs{2} = drop i0{1} p0{1}
+        /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1});1:smt(take_size drop_size).
+    wp;while(={glob P, n, C.c,sa,sc} /\ sa{1} = sa{2} /\ sc{1} = sc{2}
+        /\ 0 <= i0{1} <= size p0{1} 
+        /\ Redo.prefixes{1}.[take i0{1} p0{1}] = Some (sa{1}, sc{1})
+        /\ lres{1} = z0{2} /\ xs{2} = drop i0{1} p0{1}
+        /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1}).
+    + if{1};auto.
+      + sp;rcondf{2}1;auto;progress.
+        + rewrite head_nth nth_drop//=.
+          cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{m} _;1:smt(size_take).
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          rewrite H1=>//=[][][]->>->>.
+          by rewrite nth_onth (onth_nth b0)//=;smt(in_dom).
+        + rewrite head_nth nth_drop//=.
+          cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          rewrite H1=>//=[][][]->>->>.
+          by rewrite nth_onth (onth_nth b0)//=;smt(in_dom).
+        + rewrite head_nth nth_drop//=.
+          cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          rewrite H1=>//=[][][]->>->>.
+          by rewrite nth_onth (onth_nth b0)//=;smt(in_dom).
+        + rewrite head_nth nth_drop//=.
+          cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          rewrite H1=>//=[][][]->>->>.
+          by rewrite nth_onth (onth_nth b0)//=;smt(in_dom).
+        + rewrite head_nth nth_drop//=.
+          cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          rewrite H1=>//=[][][]->>->>.
+          by rewrite nth_onth (onth_nth b0)//=;smt(in_dom).
+        + smt().
+        + smt().
+        + smt(get_oget).
+        + smt(behead_drop drop_add).
+        + smt(size_drop size_eq0).
+        + smt(size_drop size_eq0).
+      sp=>//=. 
+      if;auto;progress.
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth witness)//=.
+      + by move:H6;rewrite head_nth nth_drop //=nth_onth (onth_nth witness)//=.
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + smt().
+      + smt().
+      + by rewrite getP/=.
+      + by rewrite behead_drop drop_add. 
+      + rewrite!getP/=oget_some.
+        cut:=lemma3 0 C.c{2}Perm.m{2}.[(sa{2} +^ nth witness p0{1} i0{1}, sc{2}) <- yL]
+          Perm.mi{2}.[yL <- (sa{2} +^ nth witness p0{1} i0{1}, sc{2})] Redo.prefixes{1}
+          (take i0{1} p0{1}) (nth witness p0{1} i0{1}) sa{2} sc{2}.
+        rewrite!dom_set!in_fsetU1/=-take_nth//=H5/=H1/=getP/=oget_some.
+        cut->->//=:(yL.`1, yL.`2) = yL by smt().
+        rewrite INV_Real_addm_mi=>//=;smt(supp_dexcepted).
+      + smt(size_drop size_eq0).
+      + smt(size_drop size_eq0).
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + by rewrite head_nth nth_drop //=nth_onth (onth_nth b0)//=. 
+      + smt().
+      + smt().
+      + by rewrite getP.
+      + by rewrite behead_drop drop_add.
+      + rewrite(take_nth witness)//=. 
+        cut:=lemma3 0 C.c{2} Perm.m{2} Perm.mi{2} Redo.prefixes{1}
+          (take i0{1} p0{1}) (nth witness p0{1} i0{1}) sa{2} sc{2}.
+        by rewrite-take_nth//= H5/=H1/=H2/=H6/=;smt().
+      + smt(size_drop size_eq0).
+      + smt(size_drop size_eq0).
+    auto;progress.
+    + exact size_ge0.
+    + by rewrite take0;cut[]_[]->:=H.
+    + by rewrite drop0.
+    + split;case:H=>//=;smt(size_ge0).
+    + smt(size_ge0 size_eq0).
+    + smt(size_ge0 size_eq0).
+    + smt().
+  case(0 < n{1});last by rcondf{1}1;2:rcondf{2}1;auto;progress.
+  splitwhile{1} 1 : i + 1 < n;splitwhile{2} 1 : i + 1 < n.
+  rcondt{1}2;2:rcondt{2}2;auto;progress.
+  + by while(i<n);auto;sp;if;auto;sp;while(i<n);auto;if;auto;sp;if;auto.
+  + by while(i<n);auto;sp;if;auto;sp;if;auto.
+  rcondf{1}4;2:rcondf{2}4;auto;progress.
+  + by while(i<n);auto;2:smt();sp;if;auto;sp;while(i<n);auto;if;auto;sp;if;auto.
+  + by while(i<n);auto;2:smt();sp;if;auto;sp;if;auto.
+  rcondf{1}4;2:rcondf{2}4;auto;progress.
+  + by while(i<n);auto;2:smt();sp;if;auto;sp;while(i<n);auto;if;auto;sp;if;auto.
+  + by while(i<n);auto;2:smt();sp;if;auto;sp;if;auto.
+  conseq(:_==> ={i,n,glob P,C.c} /\ lres{1} = z0{2} /\ b{1} = sa{2}
+      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1}
+      /\ Redo.prefixes{1}.[format p{1} (i{1}+1)] = Some (sa,sc){2});progress.
+  while(={i,n,glob P,C.c} /\ lres{1} = z0{2} /\ b{1} = sa{2} /\ 0 <= i{1} < n{1}
+      /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1} /\ valid p{1}
+      /\ Redo.prefixes{1}.[format p{1} (i{1}+1)] = Some (sa,sc){2});last first.
+  + auto;1:smt(nseq0 cats0).
+  sp;if;auto;sp.
+  splitwhile{1}1: i1 < size p1 - 1.
+  rcondt{1}2;2:rcondf{1}4;1,2:auto.
+  + while(i1 < size p1);auto;2:smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
+    by if;auto;1:smt();sp;if;auto;progress;smt().
+  + seq 1 : (i1 = size p1 - 1).
+    - while(i1 < size p1);auto;2:smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
+      by if;auto;1:smt();sp;if;auto;progress;smt().
+    by if;auto;1:smt();sp;if;auto;smt().
+  seq 1 0 : (={i,n,glob P,C.c} /\ x0{2} = (sa{2}, sc{2}) /\ 0 < i{1} < n{1}
+          /\ p1{1} = format p{1} (i{1} + 1) /\ (sa0,sc0){1} = x0{2}
+          /\ i1{1} = size p{1} + i{1} - 1 /\ lres{1} = z0{2} /\ valid p{1}
+          /\ Redo.prefixes{1}.[format p{1} i{1}] = Some (sa{2}, sc{2})
           /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1}
-               NC.queries{1});last first.
-    + if{1}.
-      - wp;rcondf{2}1.
-        * auto;progress.
-          cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=H6.
-          cut:=hmp4 _ H7 _. 
-          + rewrite-size_eq0 size_take;1:smt(size_ge0). 
-            by rewrite size_cat size_nseq;smt(valid_spec size_eq0 size_ge0).
-          move=>[]l;rewrite take_oversize;1:rewrite size_cat size_nseq/#.
-          move=>H_dom.
-          pose x:= (parse (format p{hr} i{hr} ++ l)).`1.
-          pose y:= (parse (format p{hr} i{hr} ++ l)).`2.
-          cut[]:=hmp3 x y _;1:smt();cut->/=:format x y = (format p{hr} i{hr} ++ l) by smt(formatK).
-          cut->/={x y}c H_dom_c:(x, y) = (parse (format p{hr} i{hr} ++ l)) by smt().
-          cut help:=hmp1 (format p{hr} i{hr} ++ l) _;1:by rewrite in_dom H_dom_c.
-          cut:=help (size (format p{hr} i{hr})-1) _;1:split.
-          - smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
-          - move=>_;rewrite !size_cat.
-            cut:size l <> 0;2:smt(size_ge0).
-            by rewrite size_eq0;smt(in_dom cats0 formatK parseK).
-          move=>[]b2 c2;rewrite take_cat nth_cat/=. 
-          cut->/=:size (format p{hr} i{hr}) - 1 < size (format p{hr} i{hr}) by smt().
-          rewrite nth_cat nth_nseq.
-          - smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
-          cut->/=:!size (format p{hr} i{hr}) - 1 < size p{hr} 
-            by smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
-          rewrite take_format 1:/#.
-          - smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
-          pose x:=if _ then _ else _;cut->/={x}:x = format p{hr} (i{hr}-1).
-          - rewrite /x;rewrite size_cat size_nseq/=/max/=.
-            cut->/=:0 < i{hr} - 1 by smt().
-            case(size p{hr} + (i{hr} - 1) - 1 <= size p{hr})=>//=[h|/#].
-            cut->>/=:i{hr}=2 by smt().
-            smt(take_size nseq0 cats0).
-          rewrite H5=>//=[][][]->>->>;rewrite Block.WRing.addr0 take_cat.
-          rewrite-(addzA _ _ 1)//=take0 cats0=>h.
-          cut:=help (size (format p{hr} i{hr})) _.
-          - cut:size l <> 0;2:smt(size_ge0 size_cat).
-            by rewrite size_eq0;smt(in_dom cats0 formatK parseK). 
-          by move=>[]b5 c5;rewrite take_cat take_size/=take0 cats0 in_dom h=>[][]->//=.
-        auto;progress.
-        * move:H7;rewrite take_oversize;1:rewrite size_cat size_nseq/#. 
-          move=>H_dom.
-          cut:=lemma4' _ _ _ _ _ _ _ _ _ _ _ H6 _ H4 H5 _;1,2:smt().
-          by rewrite-(addzA _ _ 1)/==>->//=.
-        (* * move:H7;rewrite take_oversize;1:rewrite size_cat size_nseq/#.  *)
-        (*   move=>H_dom. *)
-        (*   cut:=lemma4' _ _ _ _ _ _ _ _ _ _ _ H6 _ H4 H5 _;1,2:smt(). *)
-        (*   by rewrite-(addzA _ _ 1)/==>->//=. *)
-        * smt().
-        * move:H7;rewrite take_oversize;1:rewrite size_cat size_nseq/#. 
-          move=>H_dom.
-          cut:=lemma4' _ _ _ _ _ _ _ _ _ _ _ H6 _ H4 H5 _;1,2:smt().
-          by rewrite-(addzA _ _ 1)/==>->//=;rewrite getP/=.
-        * move:H7;rewrite take_oversize;1:rewrite size_cat size_nseq/#.
-          cut H_i_size:i{2}-1 = size r0{2}.
-          + cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=H6.
-            cut:=hmp2 p{2} (i{2}-1);rewrite in_dom H4/==>[][]_[]_[].
-            by rewrite oget_some=>->/=/#.
-          move=>H_l;apply(lemma1 _ _ _ _ _ _ _ _ _ H6 H3 H1 _ _ _ _);1:smt().
-          + by rewrite size_rcons-H_i_size;ring.
-          + by rewrite get_oget//last_rcons oget_some/#. 
-          move=>j[]hj0 hji;rewrite -cats1 take_cat-H_i_size.
-          pose x:=if _ then _ else _;cut->/={x}:x = take j r0{2}.
-          - rewrite /x;case(j<i{2}-1)=>//=h;cut->>/=:j=i{2}-1 by smt().
-            by rewrite H_i_size cats0 take_size.
-          cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=H6.
-          by cut:=hmp2 p{2} (i{2}-1);rewrite in_dom H4//=oget_some/#.
-        move:H7;rewrite take_oversize;1:rewrite size_cat size_nseq/#. 
-        move=>H_dom.
-        cut:=lemma4' _ _ _ _ _ _ _ _ _ _ _ H6 _ H4 H5 _;1,2:smt().
-        by rewrite-(addzA _ _ 1)/==><-//=;smt(get_oget in_dom).
-      sp;wp;if;auto;progress.
-      - move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0.
-      - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0.
-      - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0.
-      - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0.
-      - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0.
-      (* - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt(). *)
-      (*   rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq). *)
-      (*   by rewrite Block.WRing.addr0. *)
-      - smt().
-      - rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0 getP/=.
-      - move:H7 H8;rewrite take_oversize;1:rewrite size_cat size_nseq/#. 
-        rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        rewrite Block.WRing.addr0/==>H_dom h;rewrite getP/=oget_some.
-        cut//=:=lemma2 0 C.c{2}Perm.m{2}.[(sa_L, sc{1}) <- yL]
-             Perm.mi{2}.[yL <- (sa_L, sc{1})]Redo.prefixes{1}
-             NC.queries{1}p{2}i{2}sa_L sc{1} r0{2} _ _ _ _ _ _ _ _;rewrite//=.
-        * by apply INV_Real_addm_mi=>//=;1:smt(supp_dexcepted).
-        * by rewrite dom_set in_fsetU1.
-        by rewrite!getP/=oget_some/#.
-      - move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0 !getP/=oget_some/=take_oversize//=size_cat size_nseq/#.
-      - move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0. 
-      (* - move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt(). *)
-      (*   rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq). *)
-      (*   by rewrite Block.WRing.addr0.  *)
-      - smt().
-      - move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        by rewrite Block.WRing.addr0 getP/=. 
-      - move:H7 H8;rewrite take_oversize;1:rewrite size_cat size_nseq/#. 
-        rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-        rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-        rewrite Block.WRing.addr0/==>H_dom h.
-        by cut//=:=lemma2 0 C.c{2}Perm.m{2}Perm.mi{2}Redo.prefixes{1}
-             NC.queries{1}p{2}i{2}sa_L sc{1} r0{2} _ _ _ _ _ _ _ _;rewrite//=/#.
-      move:H8;rewrite nth_cat;cut->/=:!size p{2} + i{2} - 2 < size p{2} by smt().
-      rewrite nth_nseq;1:smt(size_ge0 valid_spec size_eq0 size_cat size_nseq).
-      by rewrite Block.WRing.addr0 getP/=take_oversize//=size_cat size_nseq/#.
-    alias{1} 1 pref = Redo.prefixes;sp.
-    conseq(:_==> ={glob P} /\ i0{1} = size p{1} + i{1} - 2 /\ Redo.prefixes{1} = pref{1}
-          /\ Redo.prefixes{1}.[take i0{1} (format p{1} (i{1} - 1))] = Some (sa{1}, sc{1}));progress.
-    + by cut:=H8;rewrite take_oversize 2:-(addzA _ 1)/=2:H4//=size_cat size_nseq;smt().
-    + by cut:=H8;rewrite take_oversize 2:-(addzA _ 1)/=2:H4//=size_cat size_nseq;smt().
-    + smt().
-    + smt().
-    + smt().
-    + smt(dom_set in_fsetU1).
-    + by cut:=H8;rewrite take_oversize 2:-(addzA _ 1)//=size_cat size_nseq;smt().
-    while{1}( ={glob P} /\ 0 <= i0{1} <= size p{1} + i{1} - 2
-        /\ 1 < i{1} <= n{1}
-        /\ Redo.prefixes{1} = pref{1} /\ p0{1} = format p{1} i{1}
-        /\ format p{1} (i{1}-1) \in dom Redo.prefixes{1}
-        /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1} NC.queries{1}
-        /\ Redo.prefixes{1}.[take i0{1} (format p{1} (i{1} - 1))] = 
-             Some (sa{1}, sc{1}))(size p0{1} - 1 - i0{1});auto;last first.
-    + auto;progress.
-      + smt(size_ge0).
-      + smt(in_dom).
+          /\ valid p{1});last first.
+  + if{1};auto.
+    + rcondf{2}1;auto;progress.
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#.
+        move=>H_dom;rewrite in_dom. 
+        by cut<-:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;rewrite-in_dom.
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#;move=>H_dom.
+        by cut:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;smt(in_dom).
       + smt().
-      + smt(in_dom).
-      + cut[]_[]:=H3;smt(take0 in_dom).
-      + smt().
-      + smt(size_cat size_nseq).
-    rcondt 1;auto;progress.
-    + cut->:take (i0{hr} + 1) (format p{hr} i{hr}) = 
-            take (i0{hr} + 1) (format p{hr} (i{hr}-1));
-      last by smt(in_dom all_prefixes_of_INV_real).
-      by rewrite!take_format//= 1,3:/#;1,2:smt(size_cat size_nseq).
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#;move=>H_dom.
+        by cut:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;smt(in_dom).
+    sp;if;auto;progress.
+    + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite Block.WRing.addr0.
+    + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite Block.WRing.addr0.
+    + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite Block.WRing.addr0.
+    + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite Block.WRing.addr0.
+    + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite Block.WRing.addr0.
     + smt().
-    + smt(size_cat size_nseq).
-    + cut->:take (i0{hr} + 1) (format p{hr} i{hr}) = 
-            take (i0{hr} + 1) (format p{hr} (i{hr}-1));
-      last by smt(in_dom all_prefixes_of_INV_real).
-      by rewrite!take_format//= 1,3:/#;1,2:smt(size_cat size_nseq).
-    smt().
-
-  if{1};last first.
-  + wp=>//=.
-    conseq(:_==> ={glob P} /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1}
-                Redo.prefixes{1} NC.queries{1}
-          /\  i{2} = size p{2}
-          /\  Redo.prefixes{1}.[take i{2} p{2}] = Some (b,c){2}
-          /\  (0 < i{2} => Perm.m.[x]{2} = Some (b,c){2}));progress.
-    - cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=H5.
-      cut/=[]_[]H_size H':=hmp2 _ _ H4.
-      cut/=[]c3:=hmp3 _ _ H4;rewrite/format/=nseq0 cats0-{1}take_size H6/==>[][]H_b ->>//=.
-      rewrite get_oget//=;apply (eq_from_nth b0)=>//=i.
-      rewrite H_size=>h;cut->>/=:i = 0 by smt().
-      cut->:0 = size (oget NC.queries{1}.[(bl{2}, 1)]) - 1 by rewrite H_size.
-      by rewrite nth_last H_b.
-    (* - cut[]_[]_ hmp1 hmp2 hmp3 hmp4 _:=H5. *)
-    (*   cut/=[]_[]H_size H':=hmp2 _ _ H4. *)
-    (*   cut/=[]c3:=hmp3 _ _ H4;rewrite/format/=nseq0 cats0-{1}take_size H6/==>[][]H_b ->>//=. *)
-    (*   rewrite get_oget//=;apply (eq_from_nth b0)=>//=i. *)
-    (*   rewrite H_size=>h;cut->>/=:i = 0 by smt(). *)
-    (*   cut->:0 = size (oget NC.queries{2}.[(bl{2}, 1)]) - 1 by rewrite H_size. *)
-    (*   by rewrite nth_last H_b. *)
-    - smt(get_oget in_dom).
-    - smt().
-    - smt(set_eq get_oget in_dom).
-    - smt(take_size).
-    while{2}(={glob P} /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1}
-                Redo.prefixes{1} NC.queries{1}
-          /\  0 <= i{2} <= size p{2}
-          /\ ((p{2}, 1) \in dom NC.queries{1})
-          /\  Redo.prefixes{1}.[take i{2} p{2}] = Some (b,c){2}
-          /\  (0 < i{2} => Perm.m.[x]{2} = Some (b,c){2}))(size p{2}-i{2});
-      progress;last first.
-    - auto;progress.
-      * split;case:H=>//=;smt(size_ge0 size_eq0 valid_spec).
-      * exact size_ge0.
-      * by rewrite take0;cut[]_[]->//:=H.
-      * smt().
-      * smt().
-    sp;rcondf 1;auto;progress.
-    - cut[]_[]_ hmp1 hmp2 hmp3 _ _:=H.
-      cut[]c3:=hmp3 p{hr} 1 H2;rewrite/(format _ 1)/=nseq0 cats0=> H_pref. 
-      cut:=hmp1 p{hr};rewrite 2!in_dom H_pref/==>help.
-      by cut[]b4 c4 []:=help i{hr} _;1:smt();rewrite H3/==>[][]->>->>->;
-        smt(in_dom all_prefixes_of_INV_real).
-    - smt().
-    - smt().
-    - cut[]_[]_ hmp1 hmp2 hmp3 _ _:=H.
-      cut[]c3:=hmp3 p{hr} 1 H2;rewrite/(format _ 1)/=nseq0 cats0=> H_pref. 
-      cut:=hmp1 p{hr};rewrite in_dom H_pref/==>help.
-      by cut[]b4 c4 []:=help i{hr} _;1:smt();rewrite H3/==>[][]->>->>->;
-        smt(in_dom all_prefixes_of_INV_real get_oget).
-    - cut[]_[]_ hmp1 hmp2 hmp3 _ _:=H.
-      cut[]c3:=hmp3 p{hr} 1 H2;rewrite/(format _ 1)/=nseq0 cats0=> H_pref. 
-      cut:=hmp1 p{hr};rewrite in_dom H_pref/==>help.
-      by cut[]b4 c4 []:=help i{hr} _;1:smt();rewrite H3/==>[][]->>->>->;
-        smt(in_dom all_prefixes_of_INV_real get_oget).
-    - smt().
-  sp;wp.
-  (* TODO *)  
+    + move:H5 H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
+      cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
+      rewrite Block.WRing.addr0 !getP/=oget_some take_oversize;1:rewrite size_cat size_nseq/#.
+      move=>H_dom_iS H_dom_p.
+      cut:=lemma2 0 C.c{2} Perm.m{2}.[(sa{2}, sc{2}) <- y0L]
+          Perm.mi{2}.[y0L <- (sa{2}, sc{2})] Redo.prefixes{1}
+          p{1} (i{2}+1) sa{2} sc{2} _ _ H4 _ H_dom_iS.
+      + by rewrite INV_Real_addm_mi//=;smt(supp_dexcepted).
+      + smt().
+      + by rewrite dom_set in_fsetU1.
+      by rewrite!getP/=oget_some-(addzA)/=H2/=;smt().
+    + by rewrite!getP/=take_oversize//=size_cat size_nseq/#.
+    + rewrite nth_cat;cut->/=:! size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite nth_nseq//=1:/# Block.WRing.addr0.
+    + smt().
+    + move:H5 H6;rewrite take_oversize 1:size_cat 1:size_nseq 1:/#.
+      rewrite nth_cat;cut->/=:! size p{1} + i{2} - 1 < size p{1} by smt().
+      rewrite nth_nseq//=1:/# Block.WRing.addr0 =>h1 h2.
+      by cut:=lemma2 0 C.c{2} Perm.m{2} Perm.mi{2} Redo.prefixes{1}
+          p{1} (i{2}+1) sa{2} sc{2} H3 _ H1 h2 h1;smt().
+    + move:H5 H6;rewrite take_oversize 1:size_cat 1:size_nseq 1:/#.
+      rewrite nth_cat;cut->/=:! size p{1} + i{2} - 1 < size p{1} by smt().
+      by rewrite nth_nseq//=1:/# Block.WRing.addr0 !getP//=. 
+  alias{1} 1 pref = Redo.prefixes;sp.
+  conseq(:_==> ={glob P}
+        /\ p1{1} = format p{1} (i{1} + 1) /\ pref{1} = Redo.prefixes{1}
+        /\ i1{1} = size p1{1} - 1 
+        /\ Redo.prefixes{1}.[take i1{1} p1{1}] = Some (sa0{1}, sc0{1})
+        /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1});progress.
+  + smt().
+  + move:H9;rewrite take_format/=1:/#;1:smt(size_ge0 size_cat size_nseq).
+    pose x := if _ then _ else _ ;cut->/={x}: x = format p{1} (i_R+1).
+    + rewrite/x size_cat size_nseq-(addzA _ 1 (-1))/=!max_ler 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
+      case(size p{1} + i_R <= size p{1})=>//=h;2:smt(size_ge0 size_cat size_nseq).
+      cut->>/=:i_R = 0 by smt().
+      by rewrite take_size/format nseq0 cats0.
+    by rewrite H3/==>[][]->>->>.
+  + move:H9;rewrite take_format/=1:/#;1:smt(size_ge0 size_cat size_nseq).
+    pose x := if _ then _ else _ ;cut->/={x}: x = format p{1} (i_R+1).
+    + rewrite/x size_cat size_nseq-(addzA _ 1 (-1))/=!max_ler 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
+      case(size p{1} + i_R <= size p{1})=>//=h;2:smt(size_ge0 size_cat size_nseq).
+      cut->>/=:i_R = 0 by smt().
+      by rewrite take_size/format nseq0 cats0.
+    by rewrite H3/=.
+  + by rewrite size_cat size_nseq;smt().
+  while{1}(={glob P} /\ 0 <= i1{1} <= size p1{1} - 1 /\ 0 < i{1} < n{1}
+        /\ p1{1} = format p{1} (i{1} + 1) /\ pref{1} = Redo.prefixes{1}
+        /\ format p{1} i{1} \in dom pref{1}
+        /\ Redo.prefixes{1}.[take i1{1} p1{1}] = Some (sa0{1}, sc0{1})
+        /\ INV_Real 0 C.c{1} Perm.m{1} Perm.mi{1} Redo.prefixes{1})
+    (size p1{1}-i1{1}-1);auto;last first.
+  + progress.
+    + smt(size_cat size_nseq size_ge0 size_eq0 valid_spec).
+    + smt().
+    + by rewrite in_dom H3.
+    + by rewrite take0;cut[]_[]:=H1.
+    + smt().
+    + smt().
+  rcondt 1;auto;progress.
+  + cut->:take (i1{hr} + 1) (format p{hr} (i{hr} + 1)) =
+          take (i1{hr} + 1) (format p{hr} i{hr});2:smt(all_prefixes_of_INV_real in_dom).
+    rewrite!take_format;smt(valid_spec size_ge0 size_eq0 size_cat size_nseq).
+  + smt().
+  + smt(valid_spec size_ge0 size_eq0 size_cat size_nseq).
+  + cut->:take (i1{hr} + 1) (format p{hr} (i{hr} + 1)) =
+          take (i1{hr} + 1) (format p{hr} i{hr});2:smt(all_prefixes_of_INV_real in_dom).
+    rewrite!take_format;smt(valid_spec size_ge0 size_eq0 size_cat size_nseq).
+  smt().
   qed. 
+
+
+  local lemma pr_real (D <: DISTINGUISHER{SLCommon.C, C, Perm, Redo}) &m :
+      Pr [ GReal(A(D)).main() @ &m : res ] =
+      Pr [ RealIndif(Sponge,P,DRestr(D)).main() @ &m : res ].
+  proof.
+  cut->:Pr [ RealIndif(Sponge, P, DRestr(D)).main() @ &m : res ] =
+        Pr [ NIndif(Squeeze(SqueezelessSponge(P)),P,DRestr(D)).main() @ &m : res ].
+  + by rewrite eq_sym;byequiv (squeeze_squeezeless D)=>//=.
+  by byequiv (equiv_sponge D)=>//=.
+  qed.
+
+  (* TODO : Ideal *)
   
   local lemma equiv_ideal
       (IF <: FUNCTIONALITY{DSqueeze,C})
@@ -1263,4 +974,4 @@ search max_size.
   apply (eq_trans _ Pr[G4(F.LRO).distinguish() @ &m : res]);1:by byequiv (F.RO_LRO_D G4).
   by byequiv G4_Ideal.
 qed.
-  
+   
