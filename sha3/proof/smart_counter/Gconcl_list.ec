@@ -74,6 +74,384 @@ module P = Perm.
 section Real_Ideal.
 
 
+  module SimLast (S : SLCommon.SIMULATOR) (F : DFUNCTIONALITY) = S(Last(F)).
+
+  op (<=) (m1 m2 : (block list, 'b) fmap) = 
+    forall x, x <> [] => x \in dom m1 => m1.[x] = m2.[x].
+
+  local lemma leq_add_nin (m1 m2 : (block list, 'b) fmap) (x : block list) (y : 'b):
+      m1 <= m2 => 
+      ! x \in dom m2 =>
+      m1 <= m2.[x <- y].
+  proof.
+  move=>h_leq H_n_dom a H_a_dom;rewrite getP/=;smt(in_dom).
+  qed.
+
+
+  local lemma leq_add_in (m1 m2 : (block list, 'b) fmap) (x : block list) :
+      m1 <= m2 => 
+      x \in dom m2 =>
+      m1.[x <- oget m2.[x]] <= m2.
+  proof.
+  move=>h_leq H_n_dom a H_a_dom;rewrite getP/=;smt(in_dom getP).
+  qed.
+
+  local lemma leq_nin_dom (m1 m2 : (block list, 'b) fmap) (x : block list) :
+      m1 <= m2 =>
+      x <> [] =>
+      ! x \in dom m2 => ! x \in dom m1 by smt(in_dom).
+
+  local lemma prefixe_leq1 (l : block list) (m : (block list,block) fmap) i :
+      0 <= i =>
+      format l (i+1) \in dom m =>
+      size (format l (i+1)) <= prefixe (format l (i+1+1)) 
+        (get_max_prefixe (format l (i+1+1)) (elems (dom m))) <= size (format l (i+1+1)).
+  proof. 
+  rewrite memE;move=>hi0 H_dom. 
+  cut->:(format l (i + 1 + 1)) = format l (i + 1) ++ [b0].
+  + by rewrite/format/=-2!(addzA _ 1 (-1))//=nseqSr//-cats1 catA. 
+  cut:=prefixe_leq_prefixe_cat_size (format l (i + 1))[b0](elems (dom m)).
+  rewrite (prefixe_get_max_prefixe_eq_size _ _ H_dom)//=.
+  rewrite (size_cat _ [b0])/=;pose x:= format _ _.
+  cut:=get_max_prefixe_max (x ++ [b0]) _ _ H_dom.
+  cut->:prefixe (x ++ [b0]) (format l (i + 1)) = size x
+    by rewrite prefixeC-{1}(cats0 (format l (i+1)))/x prefixe_cat//=. 
+  smt(prefixe_sizel size_cat prefixe_ge0 ).
+  qed.
+
+  local lemma prefixe_le1 (l : block list) (m : (block list,block) fmap) i :
+      0 <= i =>
+      format l (i+1) \in dom m =>
+      size (format l (i+1+1)) - prefixe (format l (i+1+1)) 
+        (get_max_prefixe (format l (i+1+1)) (elems (dom m))) <= 1.
+  proof. 
+  smt(prefixe_leq1 size_ge0 size_cat size_nseq).
+  qed.
+
+  local lemma leq_add2  (m1 m2 : (block list, 'b) fmap) (x : block list) (y : 'b) :
+      m1 <= m2 => 
+      ! x \in dom m2 =>
+      m1.[x <- y] <= m2.[x <- y] by smt(in_dom getP dom_set in_fsetU1).
+
+
+  local equiv ideal_equiv (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
+      SLCommon.IdealIndif(IF, S, SLCommon.DRestr(A(D))).main
+      ~
+      SLCommon.IdealIndif(IF, S, A(D)).main
+      :
+      ={glob D} ==> ={glob D, res}.
+  proof.
+  proc;inline*;auto;sp.
+  call(: ={glob IF, glob S, glob A} /\ SLCommon.C.c{1} <= C.c{1}
+      /\ SLCommon.C.queries{1} <= F.RO.m{2});auto;last first.
+  + progress.
+    by move=>x;rewrite getP/=dom_set in_fsetU1 dom0 in_fset0//==>->.
+  + proc;inline*;sp;if;auto;sp;rcondt{1}1;1:auto=>/#;sp;if=>//=;2:auto=>/#.
+    wp 7 6;conseq(:_==> ={y} /\ ={F.RO.m} /\ ={S.paths, S.mi, S.m}
+        /\ SLCommon.C.queries{1} <= F.RO.m{2});1:smt().
+    if;auto;smt(leq_add_nin).
+  + by proc;inline*;sp;if;auto;sp;rcondt{1}1;1:auto=>/#;sp;if;auto;smt().
+  proc;inline*;sp;if;auto;swap 6;auto;sp;if;auto;2:smt(size_ge0).
+  case(0 < n{1});last first.
+  + sp;rcondf{1}3;2:rcondf{2}4;1,2:auto.
+     - by if;auto;if;auto.
+    by if{1};2:auto;1:if{1};auto;
+     smt(prefixe_ge0 leq_add_in DBlock.dunifin_ll in_dom size_ge0 getP leq_add2).
+  splitwhile{1}5: i + 1 < n;splitwhile{2}5: i + 1 < n.
+  rcondt{1}6;2:rcondt{2}6;auto.
+  * by while(i < n);auto;sp;if;auto;sp;if;auto;if;auto.
+  * by while(i < n);auto;sp;if;auto;sp;if;auto;if;auto.
+  rcondf{1}8;2:rcondf{2}8;auto.
+  * while(i < n);auto.
+      by sp;if;auto;sp;if;auto;if;auto.
+    sp;if;auto;2:smt();if;auto;smt().
+  * while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;if;auto.
+  rcondf{1}8;2:rcondf{2}8;auto.
+  * while(i < n);auto.
+      by sp;if;auto;sp;if;auto;if;auto.
+    sp;if;auto;2:smt();if;auto;smt().
+  * by while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;if;auto.
+  conseq(:_==> ={b,lres,F.RO.m,S.paths,S.mi,S.m}
+        /\ i{1} = n{1} - 1
+        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1} + i{1}
+        /\ SLCommon.C.queries{1} <= F.RO.m{2});1:smt().
+  while(={lres,F.RO.m,S.paths,S.mi,S.m,i,n,p,nb,b,bl}
+        /\ 0 <= i{1} <= n{1} - 1
+        /\ SLCommon.C.queries.[format p (i+1)]{1} = Some b{1}
+        /\ p{1} = bs{1} /\ valid p{1} /\ p{1} = bl{1}
+        /\ C.c{1} + size p{1} + n{1} - 1 <= max_size
+        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1} + i{1}
+        /\ SLCommon.C.queries{1} <= F.RO.m{2});progress.
+  sp;rcondt{1}1;2:rcondt{2}1;1,2:auto;sp.
+  case((x0 \in dom F.RO.m){2});last first.
+  * rcondt{2}2;1:auto;rcondt{1}1;1:(auto;smt(leq_nin_dom size_cat size_eq0 size_nseq valid_spec)).
+    rcondt{1}1;1:auto;1:smt(prefixe_le1 in_dom size_cat size_nseq). 
+    sp;rcondt{1}2;auto;progress.
+    - smt().
+    - smt().
+    - by rewrite!getP/=.
+    - smt(prefixe_le1 in_dom).
+    - by rewrite!getP/=oget_some leq_add2//=.
+  if{1}.
+  * rcondt{1}1;1:auto;1:smt(prefixe_le1 in_dom size_cat size_nseq). 
+    sp;rcondf{1}2;2:rcondf{2}2;auto;progress.
+    - smt().
+    - smt().
+    - by rewrite!getP/=.
+    - smt(prefixe_ge0 prefixe_le1 in_dom).
+    - smt(leq_add_in in_dom).
+  rcondf{2}2;auto;progress.
+  - smt(DBlock.dunifin_ll).
+  - smt().
+  - smt().
+  - smt().
+  - smt(set_eq in_dom).
+  - smt().
+  sp;conseq(:_==> ={F.RO.m,b}
+        /\ SLCommon.C.queries.[p]{1} = Some b{1}
+        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1}
+        /\ SLCommon.C.queries{1} <= F.RO.m{2});progress.
+  - smt().
+  - smt(nseq0 cats0).
+  - smt(size_ge0).
+  - smt().
+  case(p{2} \in dom F.RO.m{2}).
+  + rcondf{2}2;1:auto.
+    sp;if{1}.
+    - rcondt{1}1;1:auto;1:smt(prefixe_ge0).
+      sp;rcondf{1}2;auto;progress.
+      * by rewrite!getP/=. 
+      * smt(prefixe_ge0).
+      * smt(leq_add_in in_dom).
+    auto;progress.
+    - exact DBlock.dunifin_ll.
+    - smt(in_dom).
+    - smt(in_dom get_oget).
+    - smt(size_ge0).
+  rcondt{1}1;1:auto;1:smt(leq_nin_dom in_dom).
+  rcondt{1}1;1:auto;1:smt(prefixe_ge0).
+  sp;auto;progress.
+  + by rewrite!getP/=.
+  + smt(prefixe_ge0).
+  + rewrite getP/=oget_some leq_add2//=.
+  + by rewrite!getP/=.
+  + smt(prefixe_ge0).
+  + exact leq_add_in.
+  qed.
+
+
+  local module IF'(F : F.RO) = {
+    proc init = F.init
+    proc f (x : block list) : block = {
+      var b : block <- b0;
+      var i : int <- 0;
+      var p,n;
+      (p,n) <- parse x;
+      if (valid p) {
+        while (i < n) {
+          i <- i + 1;
+          F.sample(format p i);
+        }
+        b <@ F.get(x);
+      }
+      return b;
+    }
+  }.
+
+
+  local module SampleFirst (I : BIRO.IRO) = {
+    proc init = I.init
+    proc f (m : block list, k : int) = {
+      var r : block list <- [];
+      if (k <= 0) {
+        I.f(m,1);
+      } else {
+        r <- I.f(m,k);
+      }
+      return r;
+    }
+  }.
+
+
+  axiom valid_gt0 x : valid (parse x).`1 => 0 < (parse x).`2.
+  axiom valid_uniq p1 p2 n1 n2 :
+      valid p1 => valid p2 => format p1 n1 = format p2 n2 => p1 = p2 /\ n1 = n2.
+
+  op inv_map (m1 : (block list, block) fmap) (m2 : (block list * int, block) fmap) =
+      (forall p n, valid p => (p,n) \in dom m2 <=> format p (n+1) \in dom m1)
+      /\ (forall x, x \in dom m1 <=> ((parse x).`1,(parse x).`2-1) \in dom m2)
+      /\ (forall p n, valid p => m2.[(p,n-1)] = m1.[format p n])
+      /\ (forall x, m1.[x] = m2.[((parse x).`1,(parse x).`2-1)]).
+
+
+  local module L (D : DISTINGUISHER) (F : F.RO) = SLCommon.IdealIndif(IF'(F), S, A(D)).
+
+  local equiv Ideal_equiv (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
+      L(D,F.RO).main
+      ~
+      IdealIndif(SampleFirst(BIRO.IRO), SimLast(S), DRestr(D)).main
+      :
+      ={glob D} ==> ={glob D, res}.
+  proof.
+  proc;inline*;auto;sp.
+  call(: ={glob S, glob C} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});auto;last first.
+  + smt(dom0 in_fset0 map0P).
+  + proc;inline*;auto;sp;if;1,3:auto;sp;if;1,3:auto;if;1,3:auto;sp.
+    if{1};last by auto;if{2};auto;sp;rcondf{2}1;auto;smt().
+    rcondf{2}1;1:auto;1:smt(parse_valid valid_gt0).
+    sp;rcondt{2}1;1:auto=>/#.
+    seq 8 6 : (={x,y,glob S,C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});
+      last by conseq(:_==> ={z,glob S,C.c});progress;sim;progress.
+    wp;rnd;auto=>//=;rcondt{1}1;2:rcondt{2}1;1,2:by auto;smt(valid_gt0).
+    sp;conseq(:_==> (x0{1} \in dom F.RO.m{1})
+          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2}
+          /\ oget F.RO.m.[x0]{1} = last b0 bs0{2});
+      1:smt(DBlock.dunifin_ll getP dom_set in_fsetU1). 
+    conseq(:_==> format p0{1} i{1} \in dom F.RO.m{1}
+          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2}
+          /\ i{1} = n{1}
+          /\ oget F.RO.m.[format p0{1} i{1}]{1} = last b0 bs0{2});1:smt().
+    while((i,n){1} = (i0,n0){2} /\ x1{2} = p0{1} /\ valid p0{1}
+          /\ format p0{1} i{1} \in dom F.RO.m{1}
+          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2} /\ 0 < i{1} <= n{1}
+          /\ oget F.RO.m.[format p0{1} i{1}]{1} = last b0 bs0{2});progress.
+    - sp;if{2}.
+      * rcondt{1}2;1:auto=>/#;wp;rnd;skip;smt(dom_set in_fsetU1 valid_uniq
+            formatK parseK getP in_dom last_rcons).
+      by rcondf{1}2;auto;smt(dom_set in_fsetU1 valid_uniq formatK parseK getP 
+            in_dom DBlock.dunifin_ll last_rcons).
+    sp;if{2}.
+    - rcondt{1}2;1:auto=>/#;wp;rnd;skip;smt(dom_set in_fsetU1 valid_uniq 
+            formatK parseK getP in_dom last_rcons valid_gt0).
+    by rcondf{1}2;auto;smt(dom_set in_fsetU1 valid_uniq formatK parseK getP 
+          in_dom DBlock.dunifin_ll last_rcons valid_gt0).
+  + by proc;inline*;auto;sp;if;auto;sp;if;auto.
+  proc;inline*;auto;sp;if;auto;sp.
+  if{2};sp.
+  + if;auto;sp;rcondt{1}1;1:auto;1:smt(parse_valid).
+    rcondt{1}1;auto;1:smt(parse_valid);sp.
+    rcondf{1}3;auto;1:smt(parse_valid);sp.
+    rcondf{1}5;auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
+    rcondt{2}1;auto;rcondf{2}7;1:by auto;sp;if;auto.
+    swap{1}4 3;auto;conseq(:_==> lres{1} = bs{2} /\ ={S.paths, S.mi, S.m}
+        /\ ={C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});1:smt(DBlock.dunifin_ll).
+    rcondf{1}6;1:auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
+    sp;if{2}.
+    - by rcondt{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK
+          parseK getP in_dom DBlock.dunifin_ll last_rcons).
+    rcondf{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK parseK
+        getP in_dom DBlock.dunifin_ll last_rcons).
+  if;auto;sp;rcondt{1}1;auto;1:smt(parse_valid).
+  rcondt{1}1;auto;1:smt(parse_valid);sp.
+  rcondf{1}3;auto;1:smt(parse_valid).
+  rcondf{1}5;auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
+  swap{1}4 3;auto;conseq(:_==> lres{1} = bs0{2} /\ ={S.paths, S.mi, S.m}
+      /\ ={C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});1:smt(DBlock.dunifin_ll).
+  rcondt{2}1;1:auto=>/#;sp.
+  splitwhile{1} 6 : i + 1 < n.
+  rcondt{1}7;1:auto.
+  + by while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;while(i < n);auto. 
+  rcondf{1}9;1:auto.
+  + by while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;while(i < n);auto. 
+  rcondf{1}9;1:auto.
+  + by while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;while(i < n);auto. 
+  auto.
+  conseq(:_==> rcons lres{1} b{1} = bs0{2}
+        /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});auto.
+  while(i{1} + 1 = i0{2} /\ n{1} = n0{2} /\ valid p{1}
+        /\ F.RO.m.[format p (i+1)]{1} = Some b{1}
+        /\ (forall j, 0 < j <= i{1} + 1 => format p{1} j \in dom F.RO.m{1})
+        /\ x0{2} = p{1} /\ 0 <= i{1} < n{1}
+        /\ rcons lres{1} b{1} = bs0{2}
+        /\ inv_map F.RO.m{1} BIRO.IRO.mp{2}).
+  + sp;rcondt{1}1;1:auto;sp;rcondt{1}1;1:auto;1:smt(parseK).
+    wp 4 1=>/=;swap{1}1;sp.
+    conseq(:_==> (forall j, 0 < j <= i{1}+1 => format p{1} j \in dom F.RO.m{1})
+          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});1:smt(get_oget in_dom).
+    splitwhile{1}1 : i1 + 1 < n1.
+    rcondt{1}2;first by auto;while(i1 < n1);auto;smt(parseK).
+    rcondf{1}7;first by auto;while(i1 < n1);auto;smt(parseK).
+    seq 4 0:( (forall j, 0 < j <= i{1} => format p{1} j \in dom F.RO.m{1})
+          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2} /\ valid p{1}
+          /\ x4{1} = format p{1} (i{1} + 1) /\ 0 <= i{1} /\ x6{1} = x4{1}
+          /\ x2{2} = p{1} /\ n2{2} = i{1});last first.
+    - rcondf{1}4;1:auto;1:smt(dom_set in_fsetU1);rnd{1}.
+      if{2}.
+      * by rcondt{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK
+            parseK getP in_dom DBlock.dunifin_ll last_rcons dom_set in_fsetU1).
+      by rcondf{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK parseK
+          getP in_dom DBlock.dunifin_ll last_rcons).
+    alias{1} 1 m = F.RO.m;sp.
+    wp;conseq(:_==> F.RO.m{1} = m{1} /\ i1{1} = n1{1}-1);1:smt(parseK).
+    while{1}((forall j, 0 < j < n1{1} => format p1{1} j \in dom F.RO.m{1})
+          /\ 0 <= i1{1} < n1{1} /\ p1{1} = p{1}
+          /\ F.RO.m{1} = m{1})(n1{1}-1-i1{1});progress.
+    + by sp;rcondf 2;auto;smt(DBlock.dunifin_ll).
+    by auto;smt(parseK). 
+  if{2}.
+  + by rcondt{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK
+        parseK getP in_dom DBlock.dunifin_ll last_rcons dom_set in_fsetU1).
+  by rcondf{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK parseK
+      getP in_dom DBlock.dunifin_ll last_rcons).
+  qed.
+
+
+  local module Valid (F : F.RO) = {
+    proc init = F.init
+    proc f (q : block list) = {
+      var r : block  <- b0;
+      var s,t;
+      (s,t) <- parse q;
+      if (valid s) {
+        r <@ F.get(q);
+      } else {
+        F.sample(q);
+      }
+      return r;
+    }
+  }.
+
+  local module L2 (D : DISTINGUISHER) (F : F.RO) = 
+    SLCommon.IdealIndif(Valid(F), S, A(D)).
+
+  local equiv Ideal_equiv_valid (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
+      L(D,F.LRO).main
+      ~
+      L2(D,F.LRO).main
+      :
+      ={glob D} ==> ={glob D, res}.
+  proof.
+  proc;inline*;sp;wp.
+  call(: ={glob F.RO, glob S, glob C});auto.
+  + proc;sp;if;auto.
+    call(: ={glob IF,glob S});auto.
+    sp;if;auto;if;auto;sp.
+    - call(: ={glob IF});2:auto;2:smt();sp;if;auto;1:smt().
+      inline F.LRO.sample;call(: ={glob IF});auto;progress.
+      by while{1}(true)(n{1}-i{1});auto;smt().
+    by inline*;auto.
+  + by proc;sim.
+  proc;sp;if;auto;sp;call(: ={glob IF,glob S});auto.
+  sp;if;auto.
+  while(={glob S,glob IF,lres,i,n,p,b}).
+  + sp;if;auto.
+    call(: ={glob IF});auto.
+    sp;if;auto;progress;1,2:smt().
+    + call(: ={glob IF});auto.
+      conseq(:_==> true);auto. 
+      by inline*;while{1}(true)(n{1}-i{1});auto;smt().
+    by inline*;auto.
+  call(: ={glob IF});auto;sp;if;auto;1:smt().
+  + call(: ={glob IF});auto. 
+    conseq(:_==> true);auto. 
+    by inline*;while{1}(true)(n{1}-i{1});auto;smt().
+  by inline*;auto.
+  qed.  
+
+
+  (* Real part *)
+
+
   
   pred inv_ideal (squeeze : (block list * int, block list) fmap)
                  (c : (block list, block) fmap) =
@@ -838,296 +1216,45 @@ section Real_Ideal.
   qed.
 
 
-  print Real_Ideal.
+(* This lemma is false, overuse of valid tests *)
 
-  print SLCommon.SIMULATOR.
-
-  print Last.
-
-  module SimLast (S : SLCommon.SIMULATOR) (F : DFUNCTIONALITY) = S(Last(F)).
-
-  op (<=) (m1 m2 : (block list, 'b) fmap) = 
-    forall x, x <> [] => x \in dom m1 => m1.[x] = m2.[x].
-
-  local lemma leq_add_nin (m1 m2 : (block list, 'b) fmap) (x : block list) (y : 'b):
-      m1 <= m2 => 
-      ! x \in dom m2 =>
-      m1 <= m2.[x <- y].
-  proof.
-  move=>h_leq H_n_dom a H_a_dom;rewrite getP/=;smt(in_dom).
-  qed.
-
-
-  local lemma leq_add_in (m1 m2 : (block list, 'b) fmap) (x : block list) :
-      m1 <= m2 => 
-      x \in dom m2 =>
-      m1.[x <- oget m2.[x]] <= m2.
-  proof.
-  move=>h_leq H_n_dom a H_a_dom;rewrite getP/=;smt(in_dom getP).
-  qed.
-
-  local lemma leq_nin_dom (m1 m2 : (block list, 'b) fmap) (x : block list) :
-      m1 <= m2 =>
-      x <> [] =>
-      ! x \in dom m2 => ! x \in dom m1 by smt(in_dom).
-
-  local lemma prefixe_leq1 (l : block list) (m : (block list,block) fmap) i :
-      0 <= i =>
-      format l (i+1) \in dom m =>
-      size (format l (i+1)) <= prefixe (format l (i+1+1)) 
-        (get_max_prefixe (format l (i+1+1)) (elems (dom m))) <= size (format l (i+1+1)).
-  proof. 
-  rewrite memE;move=>hi0 H_dom. 
-  cut->:(format l (i + 1 + 1)) = format l (i + 1) ++ [b0].
-  + by rewrite/format/=-2!(addzA _ 1 (-1))//=nseqSr//-cats1 catA. 
-  cut:=prefixe_leq_prefixe_cat_size (format l (i + 1))[b0](elems (dom m)).
-  rewrite (prefixe_get_max_prefixe_eq_size _ _ H_dom)//=.
-  rewrite (size_cat _ [b0])/=;pose x:= format _ _.
-  cut:=get_max_prefixe_max (x ++ [b0]) _ _ H_dom.
-  cut->:prefixe (x ++ [b0]) (format l (i + 1)) = size x
-    by rewrite prefixeC-{1}(cats0 (format l (i+1)))/x prefixe_cat//=. 
-  smt(prefixe_sizel size_cat prefixe_ge0 ).
-  qed.
-
-  local lemma prefixe_le1 (l : block list) (m : (block list,block) fmap) i :
-      0 <= i =>
-      format l (i+1) \in dom m =>
-      size (format l (i+1+1)) - prefixe (format l (i+1+1)) 
-        (get_max_prefixe (format l (i+1+1)) (elems (dom m))) <= 1.
-  proof. 
-  smt(prefixe_leq1 size_ge0 size_cat size_nseq).
-  qed.
-
-  local lemma leq_add2  (m1 m2 : (block list, 'b) fmap) (x : block list) (y : 'b) :
-      m1 <= m2 => 
-      ! x \in dom m2 =>
-      m1.[x <- y] <= m2.[x <- y] by smt(in_dom getP dom_set in_fsetU1).
-
-
-  local equiv ideal_equiv (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
-      SLCommon.IdealIndif(IF, S, SLCommon.DRestr(A(D))).main
+  local equiv Ideal_equiv_valid (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
+      L2(D,F.RO).main
       ~
       SLCommon.IdealIndif(IF, S, A(D)).main
       :
       ={glob D} ==> ={glob D, res}.
   proof.
-  proc;inline*;auto;sp.
-  call(: ={glob IF, glob S, glob A} /\ SLCommon.C.c{1} <= C.c{1}
-      /\ SLCommon.C.queries{1} <= F.RO.m{2});auto;last first.
-  + progress.
-    by move=>x;rewrite getP/=dom_set in_fsetU1 dom0 in_fset0//==>->.
-  + proc;inline*;sp;if;auto;sp;rcondt{1}1;1:auto=>/#;sp;if=>//=;2:auto=>/#.
-    wp 7 6;conseq(:_==> ={y} /\ ={F.RO.m} /\ ={S.paths, S.mi, S.m}
-        /\ SLCommon.C.queries{1} <= F.RO.m{2});1:smt().
-    if;auto;smt(leq_add_nin).
-  + by proc;inline*;sp;if;auto;sp;rcondt{1}1;1:auto=>/#;sp;if;auto;smt().
-  proc;inline*;sp;if;auto;swap 6;auto;sp;if;auto;2:smt(size_ge0).
-  case(0 < n{1});last first.
-  + sp;rcondf{1}3;2:rcondf{2}4;1,2:auto.
-     - by if;auto;if;auto.
-    by if{1};2:auto;1:if{1};auto;
-     smt(prefixe_ge0 leq_add_in DBlock.dunifin_ll in_dom size_ge0 getP leq_add2).
-  splitwhile{1}5: i + 1 < n;splitwhile{2}5: i + 1 < n.
-  rcondt{1}6;2:rcondt{2}6;auto.
-  * by while(i < n);auto;sp;if;auto;sp;if;auto;if;auto.
-  * by while(i < n);auto;sp;if;auto;sp;if;auto;if;auto.
-  rcondf{1}8;2:rcondf{2}8;auto.
-  * while(i < n);auto.
-      by sp;if;auto;sp;if;auto;if;auto.
-    sp;if;auto;2:smt();if;auto;smt().
-  * while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;if;auto.
-  rcondf{1}8;2:rcondf{2}8;auto.
-  * while(i < n);auto.
-      by sp;if;auto;sp;if;auto;if;auto.
-    sp;if;auto;2:smt();if;auto;smt().
-  * by while(i < n);auto;2:smt();sp;if;auto;sp;if;auto;if;auto.
-  conseq(:_==> ={b,lres,F.RO.m,S.paths,S.mi,S.m}
-        /\ i{1} = n{1} - 1
-        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1} + i{1}
-        /\ SLCommon.C.queries{1} <= F.RO.m{2});1:smt().
-  while(={lres,F.RO.m,S.paths,S.mi,S.m,i,n,p,nb,b,bl}
-        /\ 0 <= i{1} <= n{1} - 1
-        /\ SLCommon.C.queries.[format p (i+1)]{1} = Some b{1}
-        /\ p{1} = bs{1} /\ valid p{1} /\ p{1} = bl{1}
-        /\ C.c{1} + size p{1} + n{1} - 1 <= max_size
-        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1} + i{1}
-        /\ SLCommon.C.queries{1} <= F.RO.m{2});progress.
-  sp;rcondt{1}1;2:rcondt{2}1;1,2:auto;sp.
-  case((x0 \in dom F.RO.m){2});last first.
-  * rcondt{2}2;1:auto;rcondt{1}1;1:(auto;smt(leq_nin_dom size_cat size_eq0 size_nseq valid_spec)).
-    rcondt{1}1;1:auto;1:smt(prefixe_le1 in_dom size_cat size_nseq). 
-    sp;rcondt{1}2;auto;progress.
-    - smt().
-    - smt().
-    - by rewrite!getP/=.
-    - smt(prefixe_le1 in_dom).
-    - by rewrite!getP/=oget_some leq_add2//=.
-  if{1}.
-  * rcondt{1}1;1:auto;1:smt(prefixe_le1 in_dom size_cat size_nseq). 
-    sp;rcondf{1}2;2:rcondf{2}2;auto;progress.
-    - smt().
-    - smt().
-    - by rewrite!getP/=.
-    - smt(prefixe_ge0 prefixe_le1 in_dom).
-    - smt(leq_add_in in_dom).
-  rcondf{2}2;auto;progress.
-  - smt(DBlock.dunifin_ll).
-  - smt().
-  - smt().
-  - smt().
-  - smt(set_eq in_dom).
-  - smt().
-  sp;conseq(:_==> ={F.RO.m,b}
-        /\ SLCommon.C.queries.[p]{1} = Some b{1}
-        /\ SLCommon.C.c{1} <= C.c{1} + size bl{1}
-        /\ SLCommon.C.queries{1} <= F.RO.m{2});progress.
-  - smt().
-  - smt(nseq0 cats0).
-  - smt(size_ge0).
-  - smt().
-  case(p{2} \in dom F.RO.m{2}).
-  + rcondf{2}2;1:auto.
-    sp;if{1}.
-    - rcondt{1}1;1:auto;1:smt(prefixe_ge0).
-      sp;rcondf{1}2;auto;progress.
-      * by rewrite!getP/=. 
-      * smt(prefixe_ge0).
-      * smt(leq_add_in in_dom).
-    auto;progress.
-    - exact DBlock.dunifin_ll.
-    - smt(in_dom).
-    - smt(in_dom get_oget).
-    - smt(size_ge0).
-  rcondt{1}1;1:auto;1:smt(leq_nin_dom in_dom).
-  rcondt{1}1;1:auto;1:smt(prefixe_ge0).
-  sp;auto;progress.
-  + by rewrite!getP/=.
-  + smt(prefixe_ge0).
-  + rewrite getP/=oget_some leq_add2//=.
-  + by rewrite!getP/=.
-  + smt(prefixe_ge0).
-  + exact leq_add_in.
-  qed.
-
-
-  local module IF'(F : F.RO) = {
-    proc init = F.init
-    proc f (x : block list) : block = {
-      var b : block <- b0;
-      var i : int <- 0;
-      var p,n;
-      (p,n) <- parse x;
-      if (valid p) {
-        while (i < n) {
-          i <- i + 1;
-          F.sample(format p i);
-        }
-        b <@ F.get(x);
-      }
-      return b;
-    }
-  }.
-
-
-  local module SampleFirst (I : BIRO.IRO) = {
-    proc init = I.init
-    proc f (m : block list, k : int) = {
-      var r : block list <- [];
-      if (k <= 0) {
-        I.f(m,1);
-      } else {
-        r <- I.f(m,k);
-      }
-      return r;
-    }
-  }.
-
-
-  axiom valid_gt0 x : valid (parse x).`1 => 0 < (parse x).`2.
-  axiom valid_uniq p1 p2 n1 n2 :
-      valid p1 => valid p2 => format p1 n1 = format p2 n2 => p1 = p2 /\ n1 = n2.
-
-  op inv_map (m1 : (block list, block) fmap) (m2 : (block list * int, block) fmap) =
-      (forall p n, valid p => (p,n) \in dom m2 <=> format p (n+1) \in dom m1)
-      /\ (forall x, x \in dom m1 <=> ((parse x).`1,(parse x).`2-1) \in dom m2)
-      /\ (forall p n, valid p => m2.[(p,n-1)] = m1.[format p n])
-      /\ (forall x, m1.[x] = m2.[((parse x).`1,(parse x).`2-1)]).
-
-print BIRO.
-
-  local equiv Ideal_equiv (D <: DISTINGUISHER{SLCommon.C, C, IF, BIRO.IRO, S}) :
-      SLCommon.IdealIndif(IF'(F.RO), S, A(D)).main
-      ~
-      IdealIndif(SampleFirst(BIRO.IRO), SimLast(S), DRestr(D)).main
-      :
-      ={glob D} ==> ={glob D, res}.
-  proof.
-  proc;inline*;auto;sp.
-  call(: ={glob S, glob C} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});auto;last first.
-  + smt(dom0 in_fset0 map0P).
-  + proc;inline*;auto;sp;if;1,3:auto;sp;if;1,3:auto;if;1,3:auto;sp.
-    if{1};last by auto;if{2};auto;sp;rcondf{2}1;auto;smt().
-    rcondf{2}1;1:auto;1:smt(parse_valid valid_gt0).
-    sp;rcondt{2}1;1:auto=>/#.
-    seq 8 6 : (={x,y,glob S,C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});
-      last by conseq(:_==> ={z,glob S,C.c});progress;sim;progress.
-    wp;rnd;auto=>//=;rcondt{1}1;2:rcondt{2}1;1,2:by auto;smt(valid_gt0).
-    sp;conseq(:_==> (x0{1} \in dom F.RO.m{1})
-          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2}
-          /\ oget F.RO.m.[x0]{1} = last b0 bs0{2});
-      1:smt(DBlock.dunifin_ll getP dom_set in_fsetU1). 
-    conseq(:_==> format p0{1} i{1} \in dom F.RO.m{1}
-          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2}
-          /\ i{1} = n{1}
-          /\ oget F.RO.m.[format p0{1} i{1}]{1} = last b0 bs0{2});1:smt().
-    while((i,n){1} = (i0,n0){2} /\ x1{2} = p0{1} /\ valid p0{1}
-          /\ format p0{1} i{1} \in dom F.RO.m{1}
-          /\ inv_map F.RO.m{1} BIRO.IRO.mp{2} /\ 0 < i{1} <= n{1}
-          /\ oget F.RO.m.[format p0{1} i{1}]{1} = last b0 bs0{2});progress.
-    - sp;if{2}.
-      * rcondt{1}2;1:auto=>/#;wp;rnd;skip;smt(dom_set in_fsetU1 valid_uniq
-            formatK parseK getP in_dom last_rcons).
-      by rcondf{1}2;auto;smt(dom_set in_fsetU1 valid_uniq formatK parseK getP 
-            in_dom DBlock.dunifin_ll last_rcons).
-    sp;if{2}.
-    - rcondt{1}2;1:auto=>/#;wp;rnd;skip;smt(dom_set in_fsetU1 valid_uniq 
-            formatK parseK getP in_dom last_rcons valid_gt0).
-    by rcondf{1}2;auto;smt(dom_set in_fsetU1 valid_uniq formatK parseK getP 
-          in_dom DBlock.dunifin_ll last_rcons valid_gt0).
-  + by proc;inline*;auto;sp;if;auto;sp;if;auto.
-  proc;inline*;auto;sp;if;auto;sp.
-  if{2};sp.
-  + if;auto;sp;rcondt{1}1;1:auto;1:smt(parse_valid).
-    rcondt{1}1;auto;1:smt(parse_valid);sp.
-    rcondf{1}3;auto;1:smt(parse_valid);sp.
-    rcondf{1}5;auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
-    rcondt{2}1;auto;rcondf{2}7;1:by auto;sp;if;auto.
-    swap{1}4 3;auto;conseq(:_==> lres{1} = bs{2} /\ ={S.paths, S.mi, S.m}
-        /\ ={C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});1:smt(DBlock.dunifin_ll).
-    rcondf{1}6;1:auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
-    sp;if{2}.
-    - by rcondt{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK
-          parseK getP in_dom DBlock.dunifin_ll last_rcons).
-    rcondf{1}2;auto;smt(parse_valid dom_set in_fsetU1 valid_uniq formatK parseK
-        getP in_dom DBlock.dunifin_ll last_rcons).
-  if;auto;sp;rcondt{1}1;auto;1:smt(parse_valid).
-  rcondt{1}1;auto;1:smt(parse_valid);sp.
-  rcondf{1}3;auto;1:smt(parse_valid).
-  rcondf{1}5;auto;1:smt(dom_set in_fsetU1 nseq0 cats0 parse_valid).
-  swap{1}4 3;auto;conseq(:_==> lres{1} = bs0{2} /\ ={S.paths, S.mi, S.m}
-      /\ ={C.c} /\ inv_map F.RO.m{1} BIRO.IRO.mp{2});1:smt(DBlock.dunifin_ll).
-  rcondt{1}6;1:auto=>/#.
-  rcondt{2}1;1:auto=>/#.
-  (* TODO *)
-
-    rcondt{2}1;auto;rcondf{2}7;1:by auto;sp;if;auto.
-  rcondf{1}7;auto.
-  + while
-
-
-  qed.
+  proc;inline*;sp;wp.
+  call(: ={glob F.RO, glob S, glob C});auto.
+  + proc;sp;if;auto.
+    call(: ={glob IF,glob S});auto.
+    sp;if;auto;if;auto;sp.
+    - call(: ={glob IF});2:auto;2:smt();sp;if;auto;1:smt().
+      inline F.LRO.sample;call(: ={glob IF});auto;progress.
+      by while{1}(true)(n{1}-i{1});auto;smt().
+    by inline*;auto.
+  + by proc;sim.
+  proc;sp;if;auto;sp;call(: ={glob IF,glob S});auto.
+  sp;if;auto.
+  while(={glob S,glob IF,lres,i,n,p,b}).
+  + sp;if;auto.
+    call(: ={glob IF});auto.
+    sp;if;auto;progress;1,2:smt().
+    + call(: ={glob IF});auto.
+      conseq(:_==> true);auto. 
+      by inline*;while{1}(true)(n{1}-i{1});auto;smt().
+    by inline*;auto.
+  call(: ={glob IF});auto;sp;if;auto;1:smt().
+  + call(: ={glob IF});auto. 
+    conseq(:_==> true);auto. 
+    by inline*;while{1}(true)(n{1}-i{1});auto;smt().
+  by inline*;auto.
+  qed.  
 
   (* TODO : Ideal *)
+  
+
   
   local lemma equiv_ideal
       (IF <: FUNCTIONALITY{DSqueeze,C})
