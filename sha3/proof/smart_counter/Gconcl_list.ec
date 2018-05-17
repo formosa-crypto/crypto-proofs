@@ -1697,7 +1697,7 @@ end section Real.
 
 section Real_Ideal.
   (* REAL & IDEAL *)
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S}.
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
 
   axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
@@ -1723,13 +1723,158 @@ section Real_Ideal.
   lemma concl &m :
       Pr [ RealIndif(Sponge,P,DRestr(D)).main() @ &m : res ] <=
       Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ] +
-      (max_size ^ 2)%r / 2%r * mu dstate (pred1 witness) + 
+      (max_size ^ 2)%r / 2%r  / (2^r)%r  / (2^c)%r  + 
       max_size%r * ((2*max_size)%r / (2^c)%r) + 
       max_size%r * ((2*max_size)%r / (2^c)%r).
   proof.
   rewrite-(pr_real D &m). 
-  rewrite-(equiv_ideal D &m). 
-  apply(Real_Ideal (A(D)) A_lossless &m).
+  rewrite-(equiv_ideal D &m).
+  cut:=Real_Ideal (A(D)) A_lossless &m. print DProd.
+  pose x:=witness;elim:x=>a b.
+  by rewrite/dstate DProd.dprod1E DBlock.dunifin1E DCapacity.dunifin1E/=
+    block_card capacity_card;smt(). 
   qed.
 
+
 end section Real_Ideal.
+
+
+require import AdvAbsVal.
+
+print AdvAbsVal.
+
+section Real_Ideal_Abs.
+
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+
+  axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+    islossless P0.f => islossless P0.fi => islossless F0.f => 
+    islossless D(F0, P0).distinguish.
+
+
+  local module Neg_D (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+    proc distinguish () : bool = {
+      var b : bool;
+      b <@ D(F,P).distinguish();
+      return !b;
+    }
+  }.
+ 
+
+  local lemma Neg_D_lossless (F <: DFUNCTIONALITY{Neg_D(D)}) (P <: DPRIMITIVE{Neg_D(D)}) :
+       islossless P.f => islossless P.fi =>
+       islossless F.f => islossless Neg_D(D, F, P).distinguish.
+  proof.
+  by progress;proc;inline*;call(D_lossless F P H H0 H1);auto.
+  qed.
+
+
+  local lemma useful m mi a :
+      invm m mi => ! a \in dom m => Distr.is_lossless ((bdistr `*` cdistr) \ mem (rng m)).
+  proof.
+  move=>hinvm nin_dom.
+  cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
+  + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
+  apply dexcepted_ll=>//=;rewrite-prod_ll.
+  cut->:predT = predU (predC (mem (rng m))) (mem (rng m));1:rewrite predCU//=.
+  rewrite Distr.mu_disjoint 1:predCI//=StdRing.RField.addrC. 
+  cut/=->:=ltr_add2l (mu (bdistr `*` cdistr) (mem (rng m))) 0%r.
+  rewrite Distr.witness_support/predC.
+  move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
+  cut{hyp}hyp:forall x, x \in rng m by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
+  move:a. 
+  cut:=eqEcard (dom m) (rng m);rewrite leq_card_rng_dom/=. 
+  cut->//=/#:dom m \subset rng m;rewrite subsetP=>x;rewrite hyp//=. 
+  qed.
+
+  local lemma invmC (m mi : (state, state) fmap) :
+      invm m mi <=> invm mi m.
+  proof. smt(). qed.
+
+
+  local lemma Real_lossless :
+    islossless RealIndif(Sponge, P, DRestr(Neg_D(D))).main.
+  proof.
+  proc;inline*;auto;call(: invm Perm.m Perm.mi);2..:auto.  
+  + exact D_lossless. 
+  + proc;inline*;sp;if;auto;sp;if;auto;progress. 
+    - by cut:=useful _ _ _ H H1. 
+    - smt(invm_set dexcepted1E).
+  + proc;inline*;sp;if;auto;sp;if;auto;progress. 
+    - cut:=H;rewrite invmC=>h;cut/#:=useful _ _ _ h H1. 
+    - move:H;rewrite invmC=>H;rewrite invmC;smt(invm_set dexcepted1E in_dom in_rng).
+  + proc;inline*;sp;if;auto;sp;if;auto.
+    while(invm Perm.m Perm.mi)(n-i);auto.
+    - sp;if;auto;2:smt();sp;if;auto;2:smt();progress.
+      * by cut:=useful _ _ _ H H2. 
+      * smt(invm_set dexcepted1E).
+      smt().
+    conseq(:_==> invm Perm.m Perm.mi);1:smt().
+    while(invm Perm.m Perm.mi)(size xs);auto.
+    - sp;if;auto;progress.
+      * by cut:=useful _ _ _ H H1.
+      * smt(invm_set dexcepted1E).
+      * smt(size_behead). 
+      * smt(size_behead). 
+    smt(size_ge0 size_eq0).
+  smt(map0P).
+  qed.
+
+
+  local lemma Ideal_lossless :
+    islossless IdealIndif(BIRO.IRO, SimLast(S), DRestr(Neg_D(D))).main.
+  proof.
+  proc;inline*;auto;call(D_lossless (FC(BIRO.IRO)) (PC(SimLast(S, BIRO.IRO))) _ _ _);auto.
+  + proc;inline*;sp;if;auto;sp;if;auto;sp;if;auto;2:smt(DBlock.dunifin_ll DCapacity.dunifin_ll). 
+    sp;if;auto;sp;if;auto;2,4:smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
+    * while(true)(n-i);auto;2:smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
+      by sp;if;auto;smt(DBlock.dunifin_ll).
+    while(true)(n0-i0);auto;2:smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
+    by sp;if;auto;smt(DBlock.dunifin_ll).
+  + by proc;inline*;sp;if;auto;sp;if;auto;smt(DBlock.dunifin_ll DCapacity.dunifin_ll).
+  proc;inline*;sp;if;auto;sp;if;auto;while(true)(n-i);auto;2:smt().
+  by sp;if;auto;smt(DBlock.dunifin_ll).
+  qed.
+
+
+
+
+  local lemma neg_D_concl &m : 
+      Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ] <=
+      Pr [ RealIndif(Sponge,P,DRestr(D)).main() @ &m : res ] +
+      (max_size ^ 2)%r / 2%r  / (2^r)%r  / (2^c)%r  + 
+      max_size%r * ((2*max_size)%r / (2^c)%r) + 
+      max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+  cut->:Pr[IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res] =
+        Pr[Neg_main(IdealIndif(BIRO.IRO, SimLast(S), DRestr(Neg_D(D)))).main() @ &m : res].
+  + by byequiv=>//=;proc;inline*;auto;conseq(:_==> b0{1} = b2{2});progress;sim.
+  cut->:Pr [ RealIndif(Sponge,P,DRestr(D)).main() @ &m : res ] =
+        Pr [ Neg_main(RealIndif(Sponge,P,DRestr(Neg_D(D)))).main() @ &m : res ].
+  + by byequiv=>//=;proc;inline*;auto;conseq(:_==> b0{1} = b2{2});progress;sim.
+  cut h1 := Neg_A_Pr_minus (RealIndif(Sponge,P,DRestr(Neg_D(D)))) &m Real_lossless.
+  cut h2 := Neg_A_Pr_minus (IdealIndif(BIRO.IRO, SimLast(S), DRestr(Neg_D(D)))) &m Ideal_lossless.
+  cut/#:=concl (Neg_D(D)) _ &m;progress.
+  by proc;call(D_lossless F0 P0 H H0 H1);auto.
+  qed.
+
+  lemma Real_Ideal &m : 
+      `|Pr [ RealIndif(Sponge,Perm,DRestr(D)).main() @ &m : res ] -
+        Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ]| <=
+      (max_size ^ 2)%r / 2%r  / (2^r)%r  / (2^c)%r  + 
+      max_size%r * ((2*max_size)%r / (2^c)%r) + 
+      max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+  cut := concl D D_lossless &m.
+  cut := neg_D_concl &m.
+  pose p1 := Pr[IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res].
+  pose p2 := Pr[RealIndif(Sponge, Perm, DRestr(D)).main() @ &m : res]. 
+  rewrite-5!(StdRing.RField.addrA).
+  pose p3 := (max_size ^ 2)%r / 2%r / (2 ^ r)%r / (2 ^ c)%r +
+             (max_size%r * ((2 * max_size)%r / (2 ^ c)%r) +
+             max_size%r * ((2 * max_size)%r / (2 ^ c)%r)).
+  smt().
+  qed.  
+
+end section Real_Ideal_Abs.
+

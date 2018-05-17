@@ -4,7 +4,7 @@ require import AllCore List IntDiv StdOrder Distr.
 
 require import Common Sponge. import BIRO.
 
-require SLCommon BlockSponge.
+require SLCommon Gconcl_list.
 
 (* FIX: would be nicer to define limit at top-level and then clone
    BlockSponge with it - so BlockSponge would then clone lower-level
@@ -85,8 +85,14 @@ module DRestr (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 section.
 
 declare module Dist :
-  DISTINGUISHER{Perm, BlockSponge.Sim, IRO, Cntr, BlockSponge.BIRO.IRO,
-                BlockSponge.C}.
+  DISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
+                BlockSponge.C, Gconcl.S,
+                SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
+                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO}.
+
+axiom Dist_lossless (F <: DFUNCTIONALITY) (P <: DPRIMITIVE) :
+  islossless P.f => islossless P.fi => islossless F.f =>
+  islossless Dist(F,P).distinguish.
 
 lemma drestr_commute1 &m :
   Pr[BlockSponge.RealIndif
@@ -121,21 +127,21 @@ qed.
 
 lemma drestr_commute2 &m :
   Pr[BlockSponge.IdealIndif
-     (BlockSponge.BIRO.IRO, BlockSponge.Sim,
+     (BlockSponge.BIRO.IRO, Gconcl_list.SimLast(Gconcl.S),
       LowerDist(DRestr(Dist))).main() @ &m : res] =
   Pr[BlockSponge.IdealIndif
-     (BlockSponge.BIRO.IRO, BlockSponge.Sim,
+     (BlockSponge.BIRO.IRO, Gconcl_list.SimLast(Gconcl.S),
       BlockSponge.DRestr(LowerDist(Dist))).main() @ &m : res].
 proof.
 byequiv=> //; proc.
 seq 2 2 :
   (={glob Dist, BlockSponge.BIRO.IRO.mp,
-     glob BlockSponge.Sim}); first sim.
+     glob Gconcl_list.SimLast(Gconcl.S)}); first sim.
 inline*; wp; sp.
 call
-  (_ :
-   ={c}(Cntr, BlockSponge.C) /\ ={BlockSponge.BIRO.IRO.mp} /\
-   ={glob BlockSponge.Sim}).
+  (_ :  ={BlockSponge.BIRO.IRO.mp,Gconcl_list.BIRO2.IRO.mp} /\
+   ={c}(Cntr, BlockSponge.C) /\
+   ={glob Gconcl_list.SimLast(Gconcl.S)}).
 proc; sp; if=> //; sim.
 proc; sp; if=> //; sim.
 proc=> /=.
@@ -146,14 +152,15 @@ progress; smt(size_pad2blocks).
 seq 1 1 :
   (={n} /\ nb{2} = (n{2} + r - 1) %/ r /\ bl{2} = pad2blocks bs{1} /\
    Cntr.c{1} = BlockSponge.C.c{2} /\
-   ={BlockSponge.BIRO.IRO.mp, Gconcl.S.paths, Gconcl.S.mi, Gconcl.S.m}).
+   ={BlockSponge.BIRO.IRO.mp, Gconcl_list.BIRO2.IRO.mp,
+     Gconcl.S.paths, Gconcl.S.mi, Gconcl.S.m}).
 auto; progress.
 rewrite size_pad2blocks //.
 inline RaiseFun(BlockSponge.BIRO.IRO).f.
 wp; sp.
 call (_ : ={BlockSponge.BIRO.IRO.mp}); first sim.
 auto.
-auto; progress; by rewrite blocks2bits_nil.
+auto; progress. by rewrite blocks2bits_nil.
 auto.
 qed.
 
@@ -162,7 +169,7 @@ op wit_pair : block * capacity = witness.
 lemma security &m :
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif
-       (IRO, RaiseSim(BlockSponge.Sim),
+       (IRO, RaiseSim(Gconcl_list.SimLast(Gconcl.S)),
         DRestr(Dist)).main() @ &m : res]| <=
   (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
@@ -176,11 +183,7 @@ have -> :
   rewrite (fromintM (2 ^ r)) StdRing.RField.invfM StdRing.RField.mulrA
           -!StdRing.RField.mulrA.
   congr; by rewrite StdRing.RField.mul1r.
-rewrite -{1}block_card -{1}capacity_card
-        -(DBlock.dunifin1E wit_pair.`1) -(DCapacity.dunifin1E wit_pair.`2)
-        -StdRing.RField.mulrA -DProd.dprod1E.
-have -> : (wit_pair.`1, wit_pair.`2) = witness
-  by rewrite /wit_pair // {3}(pairS witness).
+rewrite/=.
 have -> :
   (4 * limit ^ 2)%r / (2 ^ c)%r =
   limit%r * ((2 * limit)%r / (2 ^ c)%r) + limit%r * ((2 * limit)%r / (2 ^ c)%r).
@@ -188,27 +191,31 @@ have -> :
   have {3}-> : 2 = 1 + 1 by trivial.
   rewrite powS // pow1 /#.
 rewrite -/SLCommon.dstate /limit.
-rewrite
-  (RealOrder.ler_trans
-   (`|Pr[BlockSponge.RealIndif
-         (BlockSponge.Sponge, Perm, LowerDist(DRestr(Dist))).main() @ &m : res] -
-      Pr[BlockSponge.IdealIndif
-         (BlockSponge.BIRO.IRO, BlockSponge.Sim,
-          LowerDist(DRestr(Dist))).main() @ &m : res]|))
-  1:RealOrder.lerr_eq
-  1:(conclusion BlockSponge.Sim (DRestr(Dist)) &m) //
-  (drestr_commute1 &m) (drestr_commute2 &m) StdRing.RField.addrA
-  (BlockSponge.conclusion (LowerDist(Dist)) &m).
+cut->:=conclusion (Gconcl_list.SimLast(Gconcl.S)) (DRestr(Dist)) &m.
+cut//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).
++ move=>F P hp hpi hf'//=.
+  cut hf:islossless RaiseFun(F).f.
+  - proc;call hf';auto.
+  exact(Dist_lossless (RaiseFun(F)) P hp hpi hf).
+by rewrite(drestr_commute1 &m) (drestr_commute2 &m);smt().
 qed.
 
 end section.
 
 lemma SHA3Security
-      (Dist <:
-       DISTINGUISHER{Perm, IRO, BlockSponge.BIRO.IRO, Cntr,
-                     BlockSponge.Sim, BlockSponge.C}) &m :
+      (Dist <: DISTINGUISHER{
+                 Perm, IRO, BlockSponge.BIRO.IRO, Cntr, 
+                 Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
+                 SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
+                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO})
+        &m :
+      (forall (F <: DFUNCTIONALITY) (P <: DPRIMITIVE),
+        islossless P.f => 
+        islossless P.fi => 
+        islossless F.f =>
+        islossless Dist(F,P).distinguish) =>
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif
-       (IRO, RaiseSim(BlockSponge.Sim), DRestr(Dist)).main() @ &m : res]| <=
+       (IRO, RaiseSim(Gconcl_list.SimLast(Gconcl.S)), DRestr(Dist)).main() @ &m : res]| <=
   (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
-proof. apply (security Dist &m). qed.
+proof. move=>h;apply (security Dist h &m). qed.

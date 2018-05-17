@@ -151,13 +151,13 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
 
 (* this is just for typechecking, right now: *)
 
-lemma conclusion :
-    forall (D <: DISTINGUISHER) &m,
-      `|  Pr[RealIndif(Sponge, Perm, DRestr(D)).main() @ &m : res]
-        - Pr[IdealIndif(IRO, Sim, DRestr(D)).main() @ &m : res]|
-       <= (max_size ^ 2)%r / 2%r * Distr.mu1 dstate witness +
-        max_size%r * ((2 * max_size)%r / (2 ^ c)%r) +
-        max_size%r * ((2 * max_size)%r / (2 ^ c)%r).
-proof. 
-admit.
-qed.
+(* lemma conclusion : *)
+(*     forall (D <: DISTINGUISHER) &m, *)
+(*       `|  Pr[RealIndif(Sponge, Perm, DRestr(D)).main() @ &m : res] *)
+(*         - Pr[IdealIndif(IRO, Sim, DRestr(D)).main() @ &m : res]| *)
+(*        <= (max_size ^ 2)%r / 2%r * Distr.mu1 dstate witness + *)
+(*         max_size%r * ((2 * max_size)%r / (2 ^ c)%r) + *)
+(*         max_size%r * ((2 * max_size)%r / (2 ^ c)%r). *)
+(* proof.  *)
+(* admit. *)
+(* qed. *)
