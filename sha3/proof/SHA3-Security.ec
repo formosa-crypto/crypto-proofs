@@ -1,10 +1,10 @@
 (* Top-level Proof of SHA-3 Security *)
 
-require import AllCore List IntDiv StdOrder Distr.
+require import AllCore List IntDiv StdOrder Distr NewFMap FSet.
 
 require import Common Sponge. import BIRO.
 
-require SLCommon Gconcl_list.
+require SLCommon Gconcl_list BlockSponge.
 
 (* FIX: would be nicer to define limit at top-level and then clone
    BlockSponge with it - so BlockSponge would then clone lower-level
@@ -12,8 +12,72 @@ require SLCommon Gconcl_list.
 
 op limit : {int | 0 < limit} as gt0_max_limit.
 *)
-
 op limit : int = SLCommon.max_size.
+
+
+
+(* The last inlined simulator *)
+type state = SLCommon.state.
+op parse = BlockSponge.parse.
+op valid = Gconcl_list.valid.
+
+
+module Simulator (F : DFUNCTIONALITY) = {
+  var m  : (state, state) fmap
+  var mi : (state, state) fmap
+  var paths : (capacity, block list * block) fmap
+  proc init() = {
+    m <- map0;
+    mi <- map0;
+    paths <- map0.[c0 <- ([],b0)];
+    Gconcl_list.BIRO2.IRO.init();
+  }
+  proc f (x : state) : state = {
+    var p,v,z,q,k,cs,y,y1,y2;
+    if (! x \in dom m) {
+      if (x.`2 \in dom paths) {
+        (p,v) <- oget paths.[x.`2];
+        z <- [];
+        (q,k) <- parse (rcons p (v +^ x.`1));
+        if (valid q) {
+          cs <@ F.f(oget (unpad_blocks q), k * r);
+          z <- bits2blocks cs;
+        } else {
+          z <- Gconcl_list.BIRO2.IRO.f(q,k);
+        }
+        y1 <- last b0 z;
+      } else {
+        y1 <$ bdistr;
+      }
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      m.[x]  <- y;
+      mi.[y] <- x;
+      if (x.`2 \in dom paths) {
+        (p,v) <-oget paths.[x.`2];
+        paths.[y2] <- (rcons p (v +^ x.`1),y.`1);
+      }
+    } else {
+      y <- oget m.[x];
+    }
+    return y;
+  }
+  proc fi (x : state) : state = {
+    var y,y1,y2;
+    if (! x \in dom mi) {
+      y1 <$ bdistr;
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      mi.[x] <- y;
+      m.[y]  <- x;
+    } else {
+      y <- oget mi.[x];
+    }
+    return y;
+  }
+}.
+
+      
 
 (*---------------------------- Restrictions ----------------------------*)
 
@@ -86,7 +150,7 @@ section.
 
 declare module Dist :
   DISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
-                BlockSponge.C, Gconcl.S,
+                Simulator, BlockSponge.C, Gconcl.S,
                 SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO}.
 
@@ -166,13 +230,55 @@ qed.
 
 op wit_pair : block * capacity = witness.
 
+local equiv equiv_sim_f (F <: DFUNCTIONALITY{Gconcl.S, Simulator}) :
+  RaiseSim(Gconcl_list.SimLast(Gconcl.S),F).f
+  ~
+  Simulator(F).f
+  :
+  ={arg, glob F, glob Gconcl_list.BIRO2.IRO} /\ ={m, mi, paths}(Gconcl.S,Simulator)
+  ==>
+  ={res, glob F, glob Gconcl_list.BIRO2.IRO} /\ ={m, mi, paths}(Gconcl.S,Simulator).
+proof.
+proc;inline*;if;1,3:auto=>/#.
+wp;conseq(:_==> ={y1, y2, glob F, glob Gconcl_list.BIRO2.IRO}
+  /\ ={m, mi, paths}(Gconcl.S,Simulator));progress;sim.
+if;1,3:auto=>/#;wp;sp;if;1:(auto;smt(BlockSponge.parseK BlockSponge.formatK));
+  last sim;smt(BlockSponge.parseK BlockSponge.formatK).
+by sp;wp;rcondt{1}1;auto;call(: true);auto;smt(BlockSponge.parseK BlockSponge.formatK).
+qed.
+
+
+local equiv equiv_sim_fi (F <: DFUNCTIONALITY{Gconcl.S, Simulator}) :
+  RaiseSim(Gconcl_list.SimLast(Gconcl.S),F).fi
+  ~
+  Simulator(F).fi
+  :
+  ={arg, glob F, glob Gconcl_list.BIRO2.IRO} /\ ={m, mi, paths}(Gconcl.S,Simulator)
+  ==>
+  ={res, glob F, glob Gconcl_list.BIRO2.IRO} /\ ={m, mi, paths}(Gconcl.S,Simulator).
+proof. by proc;inline*;if;auto=>/#. qed.
+
+local lemma replace_simulator &m :
+    Pr[IdealIndif(IRO, RaiseSim(Gconcl_list.SimLast(Gconcl.S)),
+      DRestr(Dist)).main() @ &m : res] =
+    Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res].
+proof.
+byequiv=>//=;proc;inline*;sp;wp.
+call(: ={glob IRO, glob DRestr, glob Gconcl_list.BIRO2.IRO}
+  /\ ={m, mi, paths}(Gconcl.S,Simulator));auto.
++ by proc;sp;if;auto;call(equiv_sim_f IRO);auto.
++ by proc;sp;if;auto;call(equiv_sim_fi IRO);auto.
+by proc;sim.
+qed.
+    
+
+
 lemma security &m :
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
-    Pr[IdealIndif
-       (IRO, RaiseSim(Gconcl_list.SimLast(Gconcl.S)),
-        DRestr(Dist)).main() @ &m : res]| <=
+    Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res]| <=
   (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
+rewrite -(replace_simulator &m).
 rewrite powS 1:addz_ge0 1:ge0_r 1:ge0_c -pow_add 1:ge0_r 1:ge0_c.
 have -> :
   (limit ^ 2)%r / (2 * (2 ^ r * 2 ^ c))%r =
@@ -200,11 +306,14 @@ cut//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).
 by rewrite(drestr_commute1 &m) (drestr_commute2 &m);smt().
 qed.
 
+
+
+
 end section.
 
 lemma SHA3Security
       (Dist <: DISTINGUISHER{
-                 Perm, IRO, BlockSponge.BIRO.IRO, Cntr, 
+                 Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
                  Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
                  SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
                  Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO})
@@ -215,7 +324,8 @@ lemma SHA3Security
         islossless F.f =>
         islossless Dist(F,P).distinguish) =>
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
-    Pr[IdealIndif
-       (IRO, RaiseSim(Gconcl_list.SimLast(Gconcl.S)), DRestr(Dist)).main() @ &m : res]| <=
+    Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res]| <=
   (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof. move=>h;apply (security Dist h &m). qed.
+
+
