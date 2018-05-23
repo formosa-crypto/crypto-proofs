@@ -1,0 +1,79 @@
+(*************************- Random Permutation -*************************)
+
+require import Core Real FSet NewFMap Distr.
+require import Dexcepted StdOrder. import RealOrder.
+require import Ring StdRing. import RField.
+require Monoid. import AddMonoid.
+
+type t.
+op dt : t distr.
+
+module type RP = {
+  proc init() : unit
+  proc f(x : t) : t
+  proc fi(x : t) : t
+}.
+
+module type DRP = {
+  proc f(x : t) : t
+  proc fi(x : t) : t
+}.
+
+module P : RP, DRP = {
+  var m : (t, t) fmap
+  var mi : (t, t) fmap
+
+  proc init() = { m = map0; mi = map0; }
+
+  proc f(x) = {
+    var y;
+
+    if (! mem (dom m) x) {
+      y      <$ dt \ (mem (rng m));
+      m.[x]  <- y;
+      mi.[y] <- x;
+    }
+    return oget m.[x];
+  }
+
+  proc fi(x) = {
+    var y;
+
+    if (! mem (dom mi) x) {
+      y      <$ dt \ (mem (rng mi));
+      mi.[x] <- y;
+      m.[y]  <- x;
+    }
+    return oget mi.[x];
+  }
+}.
+
+lemma P_init_ll: islossless P.init.
+proof. by proc; auto. qed.
+
+(* maybe a useful standard lemma? *)
+
+lemma mu_except ['a] (d : 'a distr, y : 'a, P : 'a -> bool) :
+  y \in d => ! P y => mu d P < mu d predT.
+proof.
+move=> in_supp_yd notP_y.
+have -> : mu d P = mu d predT - mu d (predC P)
+  by rewrite (mu_split d predT P) mu_not mu_and #ring.
+rewrite ltr_subl_addl (ltr_le_trans (mu d (pred1 y) + mu d predT)).
+by rewrite -(add0r (mu _ _)) 1:ltr_le_add.
+by rewrite ler_add mu_sub /pred1; first move=> ?.
+qed.
+
+lemma P_f_ll: is_lossless dt => support dt = predT => islossless P.f.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have [y not_mem_y_rng_m] := endo_dom_rng P.m{m} _; first by exists x{m}.
+by rewrite dexcepted_ll // -d_ll (mu_except dt y) -/(support _ _) 1:d_fu.
+qed.
+
+lemma P_fi_ll: is_lossless dt => support dt = predT => islossless P.fi.
+proof.
+move=> d_ll d_fu; proc; if=> //=; auto=> &m /= x_notin_m.
+have [y not_mem_y_rng_mi] := endo_dom_rng P.mi{m} _; first by exists x{m}.
+by rewrite dexcepted_ll // -d_ll (mu_except dt y) -/(support _ _) 1:d_fu.
+qed.
