@@ -1463,8 +1463,8 @@ have /incli_of_INV <- := inv0; 1:by rewrite Gmi_xaxc.
 rewrite Pmi_xaxc=> /= [#] <<*>.
 rcondf{2} 1; 1:by auto=> &hr [#] <<*>; rewrite in_dom Gmi_xaxc.
 by auto=> &1 &2 /#.
-progress;cut[]//=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H1;smt(in_dom).
-progress;cut[]//=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H1;smt(in_dom).
++ by move=> /> &1 &2 _ _ /m_p_of_INV []; smt(in_dom).
+by move=> /> &1 &2 -> ->.
 qed.
 
 
@@ -1765,7 +1765,7 @@ call(: !G1.bcol{2}
             G1.mh{2} G1.mhi{2} F.RO.m{2} G1.paths{2} Redo.prefixes{1} C.queries{2});
         progress;2..-2:rewrite/#.
       - by rewrite in_dom;cut[]_->_ _ _/=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0.
-      inline*; if{2}; auto; smt (@Block @Capacity).
+      by inline*; if{2}; auto=> &1 &2 />; smt(F.sampleto_ll sampleto_ll).
     have /mh_of_INV []/(_ _ _ _ _ G1mh_x1hx2) + _ _:= inv0.
     move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<- {xc0 xf0 yc0 yf0} /= [p0 v0] [#] Hro Hpath.
     have /pi_of_INV [] /(_ x2 p0 v0) /iffRL /(_ _) := inv0.
@@ -1788,7 +1788,7 @@ call(: !G1.bcol{2}
     cut[]_->_ _ _//=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0.
     case((x2, Unknown) \in rng hs0)=>//=_.
     exact/(@lemma3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hx2 _ _ hy2).
-  progress;cut[]//=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H1;smt(in_dom).
+  by move=> /> &1 &2 -> ->.
 qed.
 
 lemma head_nth (w:'a) l : head w l = nth w l 0.
@@ -1946,8 +1946,8 @@ proof.
       * by cut[]:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom).
       * by cut[]:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom).
       * by cut[]:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom set_eq).
-      * by cut[]:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom). 
-      * smt.
+      * by cut[]:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom).
+      * by rewrite build_hpathP; apply/Empty=> //; exact/take0.
       * by cut[]:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ H0;smt(take0 in_dom size_take size_eq0). 
       * smt(prefixe_sizel).
 
