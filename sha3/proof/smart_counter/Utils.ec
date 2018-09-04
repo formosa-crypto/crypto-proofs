@@ -48,10 +48,14 @@ proof.
       rewrite /augment; case (mem (map fst acc) x'.`1)=> _ h'; left=> //.
       by rewrite mem_rcons /=; right.
     rewrite /s' mapP=> -[[a' b']] /= [xy_in_m []].
-    rewrite eq_sym. have h0 /h0 ->> <<- {a' b'}:= f_pinj a' x _; 1:by smt.
+    rewrite eq_sym.
+    have h0 /h0 ->> <<- {a' b'}:= f_pinj a' x _.
+    + by rewrite domE mem_oflist mapP; exists (a',b').
     by apply/mem_assoc_uniq; 1:exact uniq_keys.
   rewrite -mem_oflist {1}/s -domE=> -[] h; have := h; rewrite dom_reindex.
-  rewrite imageP=> h'. have {h'} h': forall (a : 'a), !mem (dom m) a \/ f a <> f x by smt.
+  rewrite imageP=> h'.
+  have {h'} h': forall (a : 'a), !mem (dom m) a \/ f a <> f x.
+  + by move: h'=> /negb_exists /= + a - /(_ a) /negb_and.
   have /= := h' x.
   rewrite in_dom !getE /=.
   by move=> -> ->.

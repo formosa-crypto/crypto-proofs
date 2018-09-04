@@ -24,7 +24,7 @@ clone import StrongPRP as PRPt with
   type K  <- K,
     op dK <- dK,
   type D  <- D
-proof * by smt ml=0 w=dK_ll
+proof * by smt(dK_ll)
 rename "StrongPRP_" as "".
 
 clone import IdealPRP as PRPi with
@@ -450,7 +450,9 @@ section CollisionProbability.
     * by hoare; auto=> //=; smt w=(RealOrder.mulr_ge0 mu_bounded ge0_q).
   + move=> c; proc. rcondt 2; 1:by auto.
     sp; if=> //=.
-    * inline*;sp;if;auto;smt(size_set).
+    * inline*;sp;if;auto; 2:smt().
+      move=> &hr /> + + + + + y.
+      by rewrite !sizeE !dom_set !fcardU !fcard1; smt(fcard_ge0).
     * by auto=> /#.
   + by move=> b c; proc; rcondf 2; auto.
   + exists*FEL.c;elim*=> c.
@@ -468,7 +470,9 @@ section CollisionProbability.
     * by hoare; auto; smt w=(RealOrder.mulr_ge0 mu_bounded ge0_q).
   + move=> c; proc; rcondt 2; 1:by auto.
     sp; if=> //=.
-    * inline*;sp;if;auto;smt(size_set).
+    * inline*;sp;if;auto; 2:smt().
+      move=> &hr /> + + + + + x.
+      by rewrite !sizeE !dom_set !fcardU !fcard1; smt(fcard_ge0).
     * by auto=> /#.
   + by move=> b c; proc; rcondf 2; auto.
   qed.
