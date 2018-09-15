@@ -1729,7 +1729,7 @@ section Real_Ideal.
   proof.
   rewrite-(pr_real D &m). 
   rewrite-(equiv_ideal D &m).
-  cut:=Real_Ideal (A(D)) A_lossless &m. print DProd.
+  cut:=Real_Ideal (A(D)) A_lossless &m.
   pose x:=witness;elim:x=>a b.
   by rewrite/dstate DProd.dprod1E DBlock.dunifin1E DCapacity.dunifin1E/=
     block_card capacity_card;smt(). 
@@ -1740,8 +1740,6 @@ end section Real_Ideal.
 
 
 require import AdvAbsVal.
-
-print AdvAbsVal.
 
 section Real_Ideal_Abs.
 

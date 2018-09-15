@@ -538,7 +538,7 @@ section EXT.
       wp; rnd (mem (image snd (dom G1.m `|` dom G1.mi ))); skip=> /> &hr ? ? -> /= ? ?.
       rewrite (Mu_mem.mu_mem 
                    (image snd (dom G1.m{hr} `|` dom G1.mi{hr}))
-                   cdistr (1%r/(2^c)%r))//. print DCapacity. 
+                   cdistr (1%r/(2^c)%r))//.
       + by move=>x _;rewrite DCapacity.dunifin1E capacity_card.
       rewrite ler_wpmul2r;1:by apply divr_ge0=>//;apply /c_ge0r. 
       rewrite imageU fcardU le_fromint.
