@@ -1,18 +1,11 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
 
-(* checks with both Alt-Ergo and Z3; all smt applications are
-   restricted to specific lemmas *)
-
-(*
-prover ["Z3"].
-prover ["Alt-Ergo"].
-*)
+prover quorum=2 ["Z3" "Alt-Ergo"].
 
 require import Core Int IntExtra IntDiv Real List Distr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
-require (*--*) FinType BitWord RP Monoid.
+require (*--*) FinType BitWord IdealPRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
-(* require import NewLogic. *)
 
 pragma +implicits.
 
@@ -116,12 +109,16 @@ qed.
 
 (*------------------------------ Primitive -----------------------------*)
 
-clone export RP as Perm with
-  type t <- block * capacity,
-  op   dt <- bdistr `*` cdistr
+clone export IdealPRP as Perm with
+  type D  <- block * capacity,
+  op   dD <- bdistr `*` cdistr
   rename
-    [module type] "RP" as "PRIMITIVE"
-    [module] "P" as "Perm".
+    [module type] "PRP" as "PRIMITIVE"
+    [module] "RandomPermutation" as "Perm"
+  proof dD_ll.
+realize dD_ll.
+by apply/dprod_ll; rewrite Block.DBlock.dunifin_ll Capacity.DCapacity.dunifin_ll.
+qed.
 
 (*---------------------- Needed Blocks Computation ---------------------*)
 

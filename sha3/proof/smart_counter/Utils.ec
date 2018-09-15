@@ -1,11 +1,12 @@
 (** These should make it into the standard libs **)
-require import Core List FSet NewFMap.
+require import Core List FSet SmtMap.
 
 (* -------------------------------------------------------------------- *)
-  (* In NewFMap *)
+(* In SmtMap *)
 
 op reindex (f : 'a -> 'c) (m : ('a, 'b) fmap) =
-  NewFMap.oflist (map (fun (x : 'a * 'b) => (f x.`1,x.`2)) (elems m))
+  SmtMap.ofmap (
+  SmtMap.oflist (map (fun (x : 'a * 'b) => (f x.`1,x.`2)) (elems m))
   axiomatized by reindexE.
 
 

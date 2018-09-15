@@ -1,9 +1,10 @@
-pragma -oldip.
 require import Core List FSet NewFMap Distr.
 require IterProc.
 
+pragma -oldip.
+
 (* FIXME notation *)
-abbrev ([+]) ['a 'b](x : 'b) = fun (_ : 'a) => x.
+abbrev ([+]) ['a 'b] (x : 'b) = fun (_ : 'a) => x.
 
 type flag = [ Unknown | Known ].
 

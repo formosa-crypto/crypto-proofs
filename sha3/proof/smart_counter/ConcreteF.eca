@@ -1,22 +1,22 @@
 require import Core Int Real StdOrder Ring Distr IntExtra.
-require import List FSet NewFMap Utils Common SLCommon DProd Dexcepted.
+require import List FSet SmtMap Common SLCommon DProd Dexcepted.
 
 (*...*) import Capacity IntOrder RealOrder.
 
-require (*..*) Strong_rp_rf.
+require (*..*) Strong_RP_RF.
 
 module PF = {
   var m, mi: (state,state) fmap
 
   proc init(): unit = {
-    m  <- map0;
-    mi <- map0;
+    m  <- empty;
+    mi <- empty;
   }
 
   proc f(x : state): state = {
     var y1, y2;
 
-    if (!mem (dom m) x) {
+    if (x \notin m) {
       y1           <$ bdistr;
       y2           <$ cdistr;
       m.[x]        <- (y1,y2);
@@ -28,7 +28,7 @@ module PF = {
   proc fi(x : state): state = {
     var y1, y2;
 
-    if (!mem (dom mi) x) {
+    if (x \notin mi) {
       y1          <$ bdistr;
       y2          <$ cdistr;
       mi.[x]      <- (y1,y2);
@@ -50,7 +50,7 @@ section.
 
   local module GReal' = Indif(FC(SqueezelessSponge(Perm)), PC(Perm), D).
 
-  local clone import Strong_rp_rf as Switching with
+  local clone import Strong_RP_RF as Switching with
     type D  <- state,
       op uD <- dstate,
     type K  <- unit,
@@ -95,8 +95,8 @@ section.
   call (_: ={glob C, glob P, glob Redo}
     /\ all_prefixes Redo.prefixes{2}
     /\ Redo.prefixes{2}.[[]] = Some (b0,c0)
-    /\ dom C.queries{2} \subset dom Redo.prefixes{2}
-    /\ prefixe_inv C.queries{2} Redo.prefixes{2}
+    /\ (forall x, x \in C.queries{2} => x \in Redo.prefixes{2})
+    /\ prefix_inv C.queries{2} Redo.prefixes{2}
     /\ DBounder.FBounder.c{2} = C.c{2}).
   + proc; sp; if=> //=; inline *.
     rcondt{2} 3; 1: by auto=> /#.
@@ -106,95 +106,110 @@ section.
     by wp; call (_: true); auto.
   + proc; sp; if=> //=; inline *;1:if;auto.
 
-    splitwhile{1}5:take (i+1) p \in dom Redo.prefixes.
-    splitwhile{2}5:take (i+1) p \in dom Redo.prefixes.
+    splitwhile{1}5:take (i+1) p \in Redo.prefixes.
+    splitwhile{2}5:take (i+1) p \in Redo.prefixes.
 
     alias{1}1 pref = Redo.prefixes;alias{2}1 pref = Redo.prefixes;sp 1 1=>/=.
     alias{1}1 query = C.queries;alias{2}1 query = C.queries;sp 1 1=>/=.
     conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c}
         /\ all_prefixes Redo.prefixes{2}
-        /\ dom query{2} \subset dom Redo.prefixes{2}
+        /\ (forall x, x \in query{2} => x \in Redo.prefixes{2})
         /\ i{1} = size bs{1}
         /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
-        /\ (forall y, y \in dom pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
-        /\ (forall y, y \in dom Redo.prefixes{1} <=> (y \in dom pref{1} \/
+        /\ (forall y, y \in pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
+        /\ (forall y, y \in Redo.prefixes{1} <=> (y \in pref{1} \/
              (exists j, 0 <= j <= i{1} /\ y = take j bs{1})))
         /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1});
-    progress;..-2:smt(in_dom dom_set in_fsetU1 getP oget_some take_size cat_take_drop).
+    progress;..-2:smt(domE mem_set get_setE oget_some take_size cat_take_drop).
     while( ={sa, Redo.prefixes, glob P, i, C.c, p, sc} /\ p{1} = bs{1}
         /\ all_prefixes Redo.prefixes{2}
         /\ Redo.prefixes{2}.[[]] = Some (b0, c0)
-        /\ dom query{2} \subset dom Redo.prefixes{2}
-        /\ (i{1} < size p{1} => ! take (i{1} + 1) p{1} \in dom Redo.prefixes{1})
-        /\ 0 <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1}))) <= i{1} <= size bs{1}
+        /\ (forall x, x \in query{2} => x \in Redo.prefixes{2})
+        /\ (i{1} < size p{1} => ! take (i{1} + 1) p{1} \in Redo.prefixes{1})
+        /\ 0 <= prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1}))) <= i{1} <= size bs{1}
         /\ C.c{1} <= max_size
         /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
-        /\ (forall y, y \in dom pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
-        /\ (forall y, y \in dom Redo.prefixes{1} <=> (y \in dom pref{1} \/
+        /\ (forall y, y \in pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
+        /\ (forall y, y \in Redo.prefixes{1} <=> (y \in pref{1} \/
              (exists j, 0 <= j <= i{1} /\ y = take j bs{1})))
         /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1}).
-    + if;auto;1:smt(get_oget in_dom).
+    + if; auto; 1:smt(domE).
       sp;rcondt{2}1;1:auto=>/#;auto;1:call(:true);auto;progress.
-      * move=>x;rewrite dom_set in_fsetU1=>[][|-> j];1:smt(in_fsetU1).
+      * move=>x;rewrite mem_set=>[][|-> j]; 1:smt(mem_set).
         case(0 <= j)=>hj0;last first.
-        + by rewrite (@take_le0 j)1:/# in_fsetU1 in_dom H0//=.
-        rewrite take_take in_fsetU1/min/#.
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * rewrite dom_set in_fsetU1 negb_or H9 negb_or/=negb_exists/=.
+        + by rewrite (@take_le0 j)1:/# domE get_setE H0 /#.
+        by rewrite take_take /min; case: (j < i{2} + 1)=> _; rewrite mem_set //= /#.
+      * smt(mem_set take_take domE get_setE oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
+      * rewrite mem_set negb_or H9 negb_or/=negb_exists/=.
         cut htake:take (i{2} + 1) bs{1} = take (i{2} + 1) (take (i{2} + 1 + 1) bs{1});
           smt(take_take size_take).
       * rewrite/#.
       * rewrite/#.
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
-      * smt(dom_set in_fsetU1 take_take in_dom getP oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
+      * smt(mem_set take_take domE get_setE oget_some).
     sp;
     conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs} /\ p{1} = bs{1}
         /\ Redo.prefixes{2} = pref{2}
-        /\ dom query{2} \subset dom Redo.prefixes{2}
+        /\ (forall x, x \in query{2} => x \in Redo.prefixes{2})
         /\ C.c{1} <= max_size
-        /\ i{1} = prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+        /\ i{1} = prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1})))
         /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
         /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} +
-               prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1}))));
-       progress;..4,6..-2:
-       smt(prefixe_ge0 prefixe_lt_size prefixe_sizel prefixe_exchange prefixe_lt_size memE). 
-    + move:H8=>[]//=[]j [[hj0 hjsize] htake].
-      rewrite htake. 
-      apply take_get_max_prefixe2=>//=;1:smt(in_dom memE).
-      by rewrite-(@prefixe_exchange _ _ _ H2 H).
+               prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1}))))=> />.
+    progress.
+    + rewrite -negP.
+      move: H9; rewrite (prefix_exchange _ Redo.prefixes{2} _)=> //= H9.
+      by rewrite -mem_fdom memE; apply/prefix_lt_size=> /#.
+    + exact/prefix_ge0.
+    + exact/prefix_sizel.
+    + case: H9=> //= - [j] [#] H42 H72. print take_take.
+      have ->: j = min j (prefix bs{2} (get_max_prefix bs{2} (elems (fdom C.queries{2})))) by smt().
+      rewrite -(take_take bs{2} j (prefix bs{2} (get_max_prefix bs{2} (elems (fdom C.queries{2}))))).
+      by move=> ->; rewrite H domE //= H8.
+    + smt().
     alias{2} 1 k = DBounder.FBounder.c;sp;
     conseq(:_==> ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs} /\ p{1} = bs{1}
         /\ Redo.prefixes{2} = pref{2}
-        /\ dom query{2} \subset dom Redo.prefixes{2}
+        /\ (forall x, x \in query{2} => x \in Redo.prefixes{2})
         /\ C.c{2} <= max_size
-        /\ i{1} = prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
+        /\ i{1} = prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1})))
         /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
         /\ DBounder.FBounder.c{2} = k{2});1:progress=>/#.
     while( ={sa, Redo.prefixes, glob P, i, C.c, p, sc, bs, C.queries} /\ p{1} = bs{1}
         /\ Redo.prefixes{2} = pref{2}
-        /\ dom query{2} \subset dom Redo.prefixes{2}
-        /\ prefixe_inv C.queries{2} Redo.prefixes{2}
+        /\ (forall x, x \in query{2} => x \in Redo.prefixes{2})
+        /\ prefix_inv C.queries{2} Redo.prefixes{2}
         /\ all_prefixes Redo.prefixes{2}
         /\ C.c{2} <= max_size
-        /\ 0 <= i{1} <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
-        /\ (forall j, 0 <= j <= prefixe bs{1} (get_max_prefixe bs{1} (elems (dom C.queries{1})))
-            => take j bs{2} \in dom Redo.prefixes{1})
+        /\ 0 <= i{1} <= prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1})))
+        /\ (forall j, 0 <= j <= prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1})))
+            => take j bs{2} \in Redo.prefixes{1})
         /\ Redo.prefixes{1}.[take i{1} bs{1}] = Some (sa{1},sc{1})
         /\ DBounder.FBounder.c{2} = k{2}).
     + rcondt{1}1;2:rcondt{2}1;auto;progress.
-      * by rewrite/#. 
-      * by rewrite(@prefixe_exchange _ _ bs{2} H0 H1)all_take_in//=/#.
-      * smt(get_oget in_dom).
-    auto;progress. smt(prefixe_ge0). 
-    * apply take_get_max_prefixe2=>//=;1:smt(in_dom memE).
-      by rewrite-(@prefixe_exchange _ _ _ H2 H).
-    * smt(get_oget in_dom).
-    * smt(@Prefixe).
-  auto;call(:true);auto;smt(dom0 in_fset0 dom_set in_fsetU1 getP oget_some).
+      * by smt().
+      * by rewrite(@prefix_exchange _ _ bs{2} H0 H1)all_take_in//=/#.
+      * smt(domE).
+    auto;progress. smt(prefix_ge0). 
+    + apply/take_get_max_prefix2=> //=.
+      + by exists []; rewrite domE H0.
+      by rewrite-(@prefix_exchange _ _ _ H2 H).
+    * smt(domE take0).
+    * smt(@Prefix).
+  auto; call(: true); auto=> />.
+  (** TODO: send to smt with cast into infinite maps **)
+  do!split.
+  + rewrite/all_prefixes; smt(mem_set mem_empty).
+  + exact/get_set_sameE.
+  + smt(mem_empty mem_set).
+  + smt(mem_empty mem_set get_setE).
+  move=> ?; split=> [|_].
+  + smt(mem_set mem_empty).
+  smt(mem_empty mem_set).
   qed.
 
   local clone import ProdSampling with
@@ -212,11 +227,11 @@ section.
          res /\ C.c <= max_size] = Pr[GReal'.main()@ &m: res/\ C.c <= max_size].
     + byequiv=>//;proc;inline *;
       call (_: ={C.c, glob Perm, Redo.prefixes}
-          /\ prefixe_inv C.queries{2} Redo.prefixes{1}
+          /\ prefix_inv C.queries{2} Redo.prefixes{1}
           /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
           /\ all_prefixes Redo.prefixes{1});
         last first.
-      + auto;smt(dom0 in_fset0 dom_set in_fsetU1 getP oget_some).
+      + auto;smt(mem_empty mem_set get_setE oget_some).
       + by proc; inline*; sp; if; auto. 
       + by proc; inline*; sp; if; auto. 
       proc; inline *; wp; sp.
@@ -226,8 +241,8 @@ section.
           /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
           /\ ={Perm.m, Perm.mi, Redo.prefixes, C.c});1:smt(take_size).
       + while{1}( ={Perm.m, Perm.mi, Redo.prefixes, C.c}
-          /\ p{1} \in dom C.queries{2}
-          /\ prefixe_inv C.queries{2} Redo.prefixes{1}
+          /\ p{1} \in C.queries{2}
+          /\ prefix_inv C.queries{2} Redo.prefixes{1}
           /\ 0 <= i{1} <= size p{1}
           /\ Redo.prefixes{1}.[[]] = Some (b0, c0)
           /\ (sa{1},sc{1}) = oget Redo.prefixes{1}.[take i{1} p{1}]
@@ -235,8 +250,8 @@ section.
         + auto;sp;rcondt 1;auto;smt(excepted_lossless).
         by auto;smt(size_ge0 take0 take_size).
 
-      splitwhile{1} 1 : take (i+1) p \in dom Redo.prefixes;
-      splitwhile{2} 1 : take (i+1) p \in dom Redo.prefixes.
+      splitwhile{1} 1 : take (i+1) p \in Redo.prefixes;
+      splitwhile{2} 1 : take (i+1) p \in Redo.prefixes.
 
       alias{1}1 pref = Redo.prefixes;alias{2}1 pref = Redo.prefixes;sp 1 1=>/=.
       alias{2}1 query = C.queries;sp 0 1=>/=.
@@ -245,101 +260,119 @@ section.
           /\ C.c{1} = C.c{2} - size p{2} + i{2}
           /\ i{2} = size p{2}
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})
-          /\ (forall l, l \in dom pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
-          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in dom Redo.prefixes{2})
-          /\ (forall l, l \in dom Redo.prefixes{2} => 
-               l \in dom pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2})));
+          /\ (forall l, l \in pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
+          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in Redo.prefixes{2})
+          /\ (forall l, l \in Redo.prefixes{2} => 
+               l \in pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2})));
         progress.
       * by rewrite/#.
-      * move:H3 H7;rewrite take_size dom_set in_fsetU1 getP;case(bs0 = bs{2})=>//=[->|]h.
+      * move:H3 H7;rewrite take_size mem_set get_setE;case(bs0 = bs{2})=>//=[->|]h.
         * by rewrite h oget_some/=.
         * move:H=>[H []];progress. 
-          by rewrite -H4;1:smt(take_size);rewrite H//=.
-      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0).
-      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
-      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
-      * smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
+          by rewrite -H4; move: (H3 _ H9 (size bs0)); rewrite take_size //= H.
+      * smt(mem_set take_size oget_some get_setE domE take_oversize take_le0).
+      * elim: (H6 _ H10).
+        + elim: H=> _; rewrite andaE=> [#] _ /(_ bs0 i0 H9) h /h [l2] hl2.
+          by exists l2; rewrite mem_set hl2.
+        by move=> [j] [] hj ->; exists (drop j bs{2}); rewrite cat_take_drop mem_set.
+      * smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).
+      * smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).
       while(={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
           /\ C.c{1} = C.c{2} - size p{2} + i{2}
           /\ all_prefixes Redo.prefixes{2}
           /\ all_prefixes pref{2}
-          /\ prefixe_inv C.queries{2} pref{2}
-          /\ prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2}))) <= i{2} <= size p{2}
+          /\ prefix_inv C.queries{2} pref{2}
+          /\ prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{2}))) <= i{2} <= size p{2}
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})
-          /\ (forall l, l \in dom pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
-          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in dom Redo.prefixes{2})
-          /\ (forall l, l \in dom Redo.prefixes{2} => 
-               l \in dom pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2}))).
+          /\ (forall l, l \in pref{2} => pref{2}.[l] = Redo.prefixes{2}.[l])
+          /\ (forall j, 0 <= j <= i{2} => take j p{2} \in Redo.prefixes{2})
+          /\ (forall l, l \in Redo.prefixes{2} => 
+               l \in pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2}))).
       + rcondf{1}1;2:rcondf{2}1;..2:auto;progress.
          * cut:=H7 (take (i{m0}+1) p{m0}).
-           case((take (i{m0} + 1) p{m0} \in dom Redo.prefixes{m0}))=>//=_.
-           rewrite negb_or negb_exists/=;progress. 
-           + by rewrite memE prefixe_lt_size//=-(@prefixe_exchange _ _ p{m0} H1 H0)//=/#.
+           case((take (i{m0} + 1) p{m0} \in Redo.prefixes{m0}))=>//=_.
+           rewrite negb_or negb_exists/=;progress.
+           + by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ p{m0} H1 H0)//=/#.
            case(0<=a<=i{m0})=>//=ha;smt(size_take).
          * cut:=H7 (take (i{hr}+1) p{hr}).
-           case((take (i{hr} + 1) p{hr} \in dom Redo.prefixes{hr}))=>//=_.
+           case((take (i{hr} + 1) p{hr} \in Redo.prefixes{hr}))=>//=_.
            rewrite negb_or negb_exists/=;progress. 
-           + by rewrite memE prefixe_lt_size//=-(@prefixe_exchange _ _ p{hr} H1 H0)//=/#.
+           + by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ p{hr} H1 H0)//=/#.
            case(0<=a<=i{hr})=>//=ha;smt(size_take).
-           
+
         sp;auto;if;auto;progress.
         * rewrite/#.
-        * move=>x;rewrite dom_set in_fsetU1=>[][|h];1:
-            smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
-          rewrite h=>j;rewrite take_take in_fsetU1/min.
+        * move=>x;rewrite mem_set=>[][|h];1:
+            smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).
+          rewrite h=>j;rewrite take_take /min.
           case(j<i{2}+1)=>//=hij.
-          cut->:take j p{2} = take j (take i{2} p{2});smt(take_take take_le0).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * rewrite!getP/=.
-          cut/#: !take (i{2} + 1) p{2} \in dom pref{2}.
-          by rewrite memE prefixe_lt_size//=-(@prefixe_exchange _ _ _ H1 H0)//=/#.
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * move=>x;rewrite dom_set in_fsetU1=>[][|h];1:
-            smt(dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop).
-          rewrite h=>j;rewrite take_take in_fsetU1/min.
+          case: (0 <= j)=> hj //=.
+          + by rewrite mem_set; left; apply/H6=> /#.
+          rewrite mem_set (take_le0 j) 1:/#; left.
+          by rewrite -(take0 (take i{2} p{2})); apply/H/domE; rewrite H4.
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
+        * rewrite!get_setE/=.
+          cut/#: !take (i{2} + 1) p{2} \in pref{2}.
+          by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
+        * rewrite get_set_sameE !oget_some.
+          have: take (i{2} + 1) p{2} \notin Redo.prefixes{2}.
+          + move: (H7 (take (i{2} + 1) p{2})); case: (take (i{2} + 1) p{2} \in Redo.prefixes{2})=> //= _.
+            rewrite negb_or negb_exists //=; split.
+            + rewrite -mem_fdom memE; apply/prefix_lt_size.
+              + by rewrite -(prefix_exchange C.queries{2}) // /#.
+              by rewrite -(prefix_exchange C.queries{2}) // /#.
+            smt(size_take).
+          rewrite domE=> /= H728; rewrite get_set_neqE 2:H5 //.
+          have /H5:= H13.
+          by apply/contraLR=> /= ->>; move: H13; rewrite domE H728=> ->.          
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
+        * smt().
+        * move=>x;rewrite mem_set =>[][|h];1:
+            smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).
+          rewrite h=>j;rewrite take_take /min.
           case(j<i{2}+1)=>//=hij.
+(** HERE! CECILE! WE ARE HERE! **)
           cut->:take j p{2} = take j (take i{2} p{2});smt(take_take take_le0).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
         * rewrite!getP/=.
-          cut/#: !take (i{2} + 1) p{2} \in dom pref{2}.
-          by rewrite memE prefixe_lt_size//=-(@prefixe_exchange _ _ _ H1 H0)//=/#.
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefixe_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+          cut/#: !take (i{2} + 1) p{2} \in pref{2}.
+          by rewrite memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
+        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
       conseq(:_==> ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
           /\ C.c{1} = C.c{2} - size p{2} + i{2}
           /\ pref{2} = Redo.prefixes{2}
           /\ all_prefixes pref{2}
-          /\ prefixe_inv C.queries{2} pref{2}
-          /\ prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2}))) = i{2}
+          /\ prefix_inv C.queries{2} pref{2}
+          /\ prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2}))) = i{2}
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2}));1:
-        smt(prefixe_sizel take_get_max_prefixe2 in_dom prefixe_exchange).
+        smt(prefix_sizel take_get_max_prefix2 in_dom prefix_exchange).
 
       while( ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
-          /\ C.c{1} = C.c{2} - size p{2} + prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2})))
+          /\ C.c{1} = C.c{2} - size p{2} + prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2})))
           /\ pref{2} = Redo.prefixes{2}
           /\ all_prefixes pref{2}
-          /\ prefixe_inv C.queries{2} pref{2}
-          /\ 0 <= i{2} <= prefixe p{2} (get_max_prefixe p{2} (elems (dom C.queries{2})))
+          /\ prefix_inv C.queries{2} pref{2}
+          /\ 0 <= i{2} <= prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2})))
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})).
       + rcondt{1}1;2:rcondt{2}1;auto;progress.
-        * rewrite/#. search get_max_prefixe (<=) take mem.
-        * rewrite(@prefixe_inv_leq _ _ _ _ _ _ H H7 H0)//= 1:/#.
+        * rewrite/#. search get_max_prefix (<=) take mem.
+        * rewrite(@prefix_inv_leq _ _ _ _ _ _ H H7 H0)//= 1:/#.
           cut:=H0=>[][h1 [h2 h3]].
           cut:=h3 _ _ _ H7;last smt(memE).
           smt(size_eq0 size_take).
         * smt(get_oget in_dom).
       auto;progress.
       * rewrite/#.
-      * smt(prefixe_ge0).
+      * smt(prefix_ge0).
       * smt(take0).
-      * smt(prefixe_sizel @Prefixe memE).
-      * smt(prefixe_sizel @Prefixe memE).
+      * smt(prefix_sizel @Prefix memE).
+      * smt(prefix_sizel @Prefix memE).
 
     have p_ll := P_f_ll _ _.
     + apply/dprod_ll; split.

@@ -1,9 +1,6 @@
 (** A primitive: the building block we assume ideal **)
 type p.
 
-(** A functionality: the target construction **)
-type f_in, f_out.
-
 module type PRIMITIVE = {
   proc init(): unit
   proc f(x : p): p
@@ -14,6 +11,9 @@ module type DPRIMITIVE = {
   proc f(x : p): p
   proc fi(x : p): p
 }.
+
+(** A functionality: the target construction **)
+type f_in, f_out.
 
 module type FUNCTIONALITY = {
   proc init(): unit
