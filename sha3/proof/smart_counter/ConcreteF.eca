@@ -334,39 +334,44 @@ section.
             smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).
           rewrite h=>j;rewrite take_take /min.
           case(j<i{2}+1)=>//=hij.
-(** HERE! CECILE! WE ARE HERE! **)
-          cut->:take j p{2} = take j (take i{2} p{2});smt(take_take take_le0).
-        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * rewrite!getP/=.
+          case(0 <= j)=> //= hj.
+          + by rewrite mem_set H6 /#. 
+          rewrite (take_le0 j) 1:/# mem_set.
+          have:= (H (take i{2} p{2}) _ 0).
+          + by rewrite domE H4.
+          by rewrite take0=> ->.
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
+        * by rewrite!get_setE.
+        * rewrite !get_setE//=.
           cut/#: !take (i{2} + 1) p{2} \in pref{2}.
-          by rewrite memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
-        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
-        * smt(prefix_lt_size  dom_set in_fsetU1 take_size oget_some getP in_dom take_oversize take_le0 take_take cat_take_drop memE).
+          by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
+        * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
       conseq(:_==> ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
           /\ C.c{1} = C.c{2} - size p{2} + i{2}
           /\ pref{2} = Redo.prefixes{2}
           /\ all_prefixes pref{2}
           /\ prefix_inv C.queries{2} pref{2}
-          /\ prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2}))) = i{2}
+          /\ prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{2}))) = i{2}
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2}));1:
-        smt(prefix_sizel take_get_max_prefix2 in_dom prefix_exchange).
+        smt(prefix_sizel take_get_max_prefix2 domE prefix_exchange).
 
       while( ={sa,sc,Perm.m,Perm.mi,Redo.prefixes,i,p}
-          /\ C.c{1} = C.c{2} - size p{2} + prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2})))
+          /\ C.c{1} = C.c{2} - size p{2} + prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{2})))
           /\ pref{2} = Redo.prefixes{2}
           /\ all_prefixes pref{2}
           /\ prefix_inv C.queries{2} pref{2}
-          /\ 0 <= i{2} <= prefix p{2} (get_max_prefix p{2} (elems (dom C.queries{2})))
+          /\ 0 <= i{2} <= prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{2})))
           /\ Redo.prefixes{2}.[take i{2} p{2}] = Some (sa{2}, sc{2})).
       + rcondt{1}1;2:rcondt{2}1;auto;progress.
         * rewrite/#. search get_max_prefix (<=) take mem.
         * rewrite(@prefix_inv_leq _ _ _ _ _ _ H H7 H0)//= 1:/#.
           cut:=H0=>[][h1 [h2 h3]].
-          cut:=h3 _ _ _ H7;last smt(memE).
+          cut:=h3 _ _ _ H7;last smt(memE mem_fdom).
           smt(size_eq0 size_take).
-        * smt(get_oget in_dom).
+        * smt(domE).
       auto;progress.
       * rewrite/#.
       * smt(prefix_ge0).
@@ -374,18 +379,10 @@ section.
       * smt(prefix_sizel @Prefix memE).
       * smt(prefix_sizel @Prefix memE).
 
-    have p_ll := P_f_ll _ _.
-    + apply/dprod_ll; split.
-      + exact/Block.DBlock.dunifin_ll.
-      exact/Capacity.DCapacity.dunifin_ll.
-    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
-      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu. 
-    have pi_ll := P_fi_ll _ _.
-    + apply/dprod_ll; split.
-      + exact/Block.DBlock.dunifin_ll.
-      exact/Capacity.DCapacity.dunifin_ll.
-    + apply/fun_ext=>- [] a b; rewrite supp_dprod.
-      by rewrite/=/predT/=Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu. 
+    have p_ll := f_ll _.
+    + by move=> [b c]; rewrite supp_dprod /= Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu.
+    have pi_ll := fi_ll _.
+    + by move=> [b c]; rewrite supp_dprod /= Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu.
     have f_ll : islossless SqueezelessSponge(Perm).f.
     + proc; while true (size p - i)=> //=.
       * move=> z; wp;if;auto; 2:call p_ll; auto=>/#. 
@@ -422,16 +419,17 @@ section.
                       (true ==> ={y})=> //=.
       - by symmetry; call sample_sample2; skip=> /> [].
       by inline *; auto.
-    have /#:= Conclusion D' &m _.
-    move=> O O_f_ll O_fi_ll.
-    proc;inline*;sp;wp; call (_: true)=> //=. 
-    + apply D_ll.
-    + by proc; inline*; sp; if=> //=; auto; call O_f_ll; auto.
-    + by proc; inline*; sp; if=> //=; auto; call O_fi_ll; auto.
-    + proc; inline *; sp; if=> //=; auto; if; auto.
-      while true (size p - i);auto.
-      * sp; if; auto; 2:call O_f_ll; auto=> /#.
-      by auto; smt w=size_ge0.
+    have:= Conclusion D' &m _.
+    + move=> O O_f_ll O_fi_ll.
+      proc;inline*;sp;wp; call (_: true)=> //=. 
+      + apply D_ll.
+      + by proc; inline*; sp; if=> //=; auto; call O_f_ll; auto.
+      + by proc; inline*; sp; if=> //=; auto; call O_fi_ll; auto.
+      + proc; inline *; sp; if=> //=; auto; if; auto.
+        while true (size p - i);auto.
+        * sp; if; auto; 2:call O_f_ll; auto=> /#.
+        by auto; smt w=size_ge0.
+    smt(). (** This needs Cecile's improvements to Strong_RP_RF to be pushed to stdlib. **)
   qed.
 
 end section.
