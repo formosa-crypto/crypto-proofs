@@ -1,6 +1,6 @@
 pragma -oldip.
 require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
-require import List FSet NewFMap Utils Common SLCommon RndO FelTactic Mu_mem.
+require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
 require import DProd Dexcepted.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
@@ -16,17 +16,17 @@ module S(F : DFUNCTIONALITY) = {
   var paths               : (capacity, block list * block) fmap
 
   proc init() = {
-    m     <- map0;
-    mi    <- map0;
+    m     <- empty;
+    mi    <- empty;
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-    paths    <- map0.[c0 <- ([<:block>],b0)];
+    paths    <- empty.[c0 <- ([<:block>],b0)];
   }
 
   proc f(x : state): state = {
     var p, v, y, y1, y2;
 
-    if (!mem (dom m) x) {
-      if (mem (dom paths) x.`2) {
+    if (x \notin m) {
+      if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2]; 
         y1    <- F.f (rcons p (v +^ x.`1));
       } else {
@@ -36,7 +36,7 @@ module S(F : DFUNCTIONALITY) = {
       y <- (y1,y2);
       m.[x]             <- y;
       mi.[y]            <- x;
-      if (mem (dom paths) x.`2) {
+      if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2]; 
         paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
       }
@@ -49,7 +49,7 @@ module S(F : DFUNCTIONALITY) = {
   proc fi(x : state): state = {
     var y, y1, y2;
 
-    if (!mem (dom mi) x) {
+    if (x \notin mi) {
       y1       <$ bdistr;
       y2       <$ cdistr;
       y        <- (y1,y2);
@@ -78,11 +78,11 @@ local module G3(RO:F.RO) = {
       var h, i, counter <- 0; 
       sa <- b0;
       while (i < size p ) {
-        if (mem (dom G1.mh) (sa +^ nth witness p i, h)) {
+        if ((sa +^ nth witness p i, h) \in G1.mh) {
           RO.sample(take (i+1) p);
           (sa, h) <- oget G1.mh.[(sa +^ nth witness p i, h)];
         } else {
-          if (counter < size p - prefixe p (get_max_prefixe p (elems (dom C.queries)))) {
+          if (counter < size p - prefix p (get_max_prefix p (elems (fdom C.queries)))) {
             RRO.sample(G1.chandle);
             sa'                 <@ RO.get(take (i+1) p);
             sa                  <- sa +^ nth witness p i;
@@ -107,8 +107,8 @@ local module G3(RO:F.RO) = {
     proc f(x : state): state = {
       var p, v, y, y1, y2, hy2, hx2, handles_,t;
  
-      if (!mem (dom G1.m) x) {
-        if (mem (dom G1.paths) x.`2) {
+      if (x \notin G1.m) {
+        if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
           y1    <- RO.get (rcons p (v +^ x.`1));
         } else {
@@ -117,14 +117,14 @@ local module G3(RO:F.RO) = {
         y2 <$ cdistr;
         y <- (y1, y2);
         handles_ <@ RRO.restrK();
-        if (!mem (rng handles_) x.`2) {
+        if (!rng handles_ x.`2) {
           RRO.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
         handles_ <- RRO.restrK();
         hx2      <- oget (hinvc handles_ x.`2);
         t        <@ RRO.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
-        if (mem (dom G1.mh) (x.`1, hx2) /\ t) {
+        if ((x.`1, hx2) \in G1.mh /\ t) {
           hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
           FRO.m.[hy2]          <- (y2,Known);
           G1.m.[x]             <- y;
@@ -138,7 +138,7 @@ local module G3(RO:F.RO) = {
           G1.mi.[y]            <- x;
           G1.mhi.[(y.`1, hy2)] <- (x.`1, hx2);
         }
-        if (mem (dom G1.paths) x.`2) {
+        if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
           G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
         }
@@ -151,9 +151,9 @@ local module G3(RO:F.RO) = {
     proc fi(x : state): state = {
       var y, y1, y2, hx2, hy2, handles_, t;
  
-      if (!mem (dom G1.mi) x) {
+      if (x \notin G1.mi) {
         handles_ <@ RRO.restrK();
-        if (!mem (rng handles_) x.`2) {
+        if (!rng handles_ x.`2) {
           RRO.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
@@ -163,7 +163,7 @@ local module G3(RO:F.RO) = {
         y1       <$ bdistr;
         y2       <$ cdistr;
         y        <- (y1,y2);
-        if (mem (dom G1.mhi) (x.`1, hx2) /\ t) {
+        if ((x.`1, hx2) \in G1.mhi /\ t) {
           (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
           FRO.m.[hy2]          <- (y2,Known);
           G1.mi.[x]            <- y;
@@ -189,15 +189,15 @@ local module G3(RO:F.RO) = {
     var b;
  
     RO.init();
-    G1.m     <- map0;
-    G1.mi    <- map0;
-    G1.mh    <- map0;
-    G1.mhi   <- map0;
+    G1.m     <- empty;
+    G1.mi    <- empty;
+    G1.mh    <- empty;
+    G1.mhi   <- empty;
  
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
     RRO.init();
     RRO.set(0,c0);
-    G1.paths    <- map0.[c0 <- ([<:block>],b0)];
+    G1.paths    <- empty.[c0 <- ([<:block>],b0)];
     G1.chandle  <- 1;
     b        <@ DRestr(D,M,S).distinguish();
     return b;
@@ -222,19 +222,19 @@ proof.
     + seq 2 2:(={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}
                /\ (t = in_dom_with FRO.m (oget G1.mh.[(x.`1, hx2)]).`2 Unknown){1}).
       + by inline *;auto=> /> ? _;rewrite Block.DWord.bdistr_ll.
-      case ((mem (dom G1.mh) (x.`1, hx2) /\ t){1});
+      case (((x.`1, hx2) \in G1.mh /\ t){1});
           [rcondt{1} 3;2:rcondt{2} 3| rcondf{1} 3;2:rcondf{2} 3];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
       inline *;rcondt{1} 6;1:by auto=>/>. 
       wp;rnd;auto;progress[-split];rewrite DCapacity.dunifin_ll /= => ?_?->.
-      by rewrite !getP /= oget_some.
-    case ((mem (dom G1.mh) (x.`1, hx2) /\ t){1});
+      by rewrite !get_setE /= oget_some.
+    case (((x.`1, hx2) \in G1.mh /\ t){1});
           [rcondt{1} 4;2:rcondt{2} 4| rcondf{1} 4;2:rcondf{2} 4];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 7;1:by auto=>/>. 
     wp;rnd;auto;rnd{1};auto;progress[-split].
     rewrite Block.DBlock.supp_dunifin DCapacity.dunifin_ll /==> ?_?->.
-    by rewrite !getP /= oget_some.
+    by rewrite !get_setE /= oget_some.
     
   + proc;sp;if=>//;sim.
     call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
@@ -243,12 +243,12 @@ proof.
     seq 6 6 : (={y1,hx2,t,x,FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}
                /\ (t = in_dom_with FRO.m (oget G1.mhi.[(x.`1, hx2)]).`2 Unknown){1}).
     + by inline *;auto.
-    case ((mem (dom G1.mhi) (x.`1, hx2) /\ t){1});
+    case (((x.`1, hx2) \in G1.mhi /\ t){1});
           [rcondt{1} 3;2:rcondt{2} 3| rcondf{1} 3;2:rcondf{2} 3];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 6;1:by auto=>/>. 
     wp;rnd;auto;progress[-split];rewrite DCapacity.dunifin_ll /= => ?_?->.
-    by rewrite !getP /= oget_some.
+    by rewrite !get_setE /= oget_some.
 
   proc;sp;if=>//;auto;if;1:auto;sim.
   call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
@@ -277,8 +277,8 @@ local module G4(RO:F.RO) = {
     proc f(x : state): state = {
       var p, v, y, y1, y2;
  
-      if (!mem (dom G1.m) x) {
-        if (mem (dom G1.paths) x.`2) {
+      if (x \notin G1.m) {
+        if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
           y1    <- RO.get (rcons p (v +^ x.`1));
         } else {
@@ -288,7 +288,7 @@ local module G4(RO:F.RO) = {
         y <- (y1,y2);
         G1.m.[x]             <- y;
         G1.mi.[y]            <- x;
-        if (mem (dom G1.paths) x.`2) {
+        if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
           G1.paths.[y.`2] <- (rcons p (v +^ x.`1), y.`1);
         }
@@ -301,7 +301,7 @@ local module G4(RO:F.RO) = {
     proc fi(x : state): state = {
       var y, y1, y2;
  
-      if (!mem (dom G1.mi) x) {
+      if (x \notin G1.mi) {
         y1       <$ bdistr;
         y2       <$ cdistr;
         y        <- (y1,y2);
@@ -319,10 +319,10 @@ local module G4(RO:F.RO) = {
     var b;
  
     RO.init();
-    G1.m     <- map0;
-    G1.mi    <- map0;
+    G1.m     <- empty;
+    G1.mi    <- empty;
     (* the empty path is initially known by the adversary to lead to capacity 0^c *)
-    G1.paths    <- map0.[c0 <- ([<:block>],b0)];
+    G1.paths    <- empty.[c0 <- ([<:block>],b0)];
     b        <@ DRestr(D,C,S).distinguish();
     return b;
   }    
@@ -374,7 +374,7 @@ axiom D_ll :
 lemma Real_Ideal &m: 
   Pr[GReal(D).main() @ &m: res /\ C.c <= max_size] <=
   Pr[IdealIndif(IF,S,DRestr(D)).main() @ &m :res] +
-   (max_size ^ 2)%r / 2%r * mu dstate (pred1 witness) + 
+   (max_size ^ 2 - max_size)%r / 2%r * mu dstate (pred1 witness) + 
    max_size%r * ((2*max_size)%r / (2^c)%r) + 
    max_size%r * ((2*max_size)%r / (2^c)%r).
 proof.
