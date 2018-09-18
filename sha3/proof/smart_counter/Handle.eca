@@ -2465,7 +2465,10 @@ proof.
     by rewrite-rcons_cat (@take_nth witness);smt(prefix_ge0).
   * rewrite/#.
   * cut[]HINV[]H_bad[]H_m_p0[]Hp1[]Hp2[]->>[]H_counter[][]f H_h[]H_path[]H_F_RO H_i:=H3 H6.
-    split;cut[]//=:=H_m_p0; smt(get_setE domE take_take take_nth size_take 
+    split;cut[]//= hmp01 hmp02 hmp1 hmp2 hmp3:=H_m_p0.
+    move=> l l_in_pref i hisize.
+    have//[] sa sc [#] pref_sasc pm_pref:= hmp1 l l_in_pref i hisize.
+    by exists sa sc; smt(get_setE domE take_take take_nth size_take 
       prefix_ge0 nth_take take_oversize take_le0 mem_fdom fdom_set).
   + rewrite!get_setE/=oget_some;smt(domE).
   + smt(get_setE domE take_take size_take prefix_ge0 nth_take take_oversize take_le0).
