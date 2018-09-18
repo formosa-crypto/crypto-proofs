@@ -2,9 +2,13 @@
 
 require import AllCore List IntDiv StdOrder Distr SmtMap FSet.
 
-require import Common Sponge. import BIRO.
+require (*--*) Common Sponge SLCommon Gconcl_list BlockSponge.
 
-require SLCommon Gconcl_list BlockSponge.
+clone import IRO as BIRO with
+  type from <- bool list,
+  type to   <- bool,
+  op valid  <- predT,
+  op dto    <- {0,1}.
 
 (* FIX: would be nicer to define limit at top-level and then clone
    BlockSponge with it - so BlockSponge would then clone lower-level

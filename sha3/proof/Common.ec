@@ -98,13 +98,13 @@ proof. by move=> s_cs_r s_ds_r; split=> //=; exact/mkblock_pinj. qed.
 lemma last_drop_all_but_last (y : 'a, xs : 'a list) :
   xs = [] \/ drop (size xs - 1) xs = [last y xs].
 proof.
-elim xs=> // z zs ih /=; have -> : 1 + size zs - 1 = size zs by ring.
+elim xs=> // z zs ih /=.
 case (size zs <= 0)=> [le0_sz_zs | gt0_sz_zs].
 have sz_zs_eq0 : size zs = 0
   by rewrite (@ler_asym (size zs) 0); split=> // _; rewrite size_ge0.
 by have -> : zs = [] by rewrite -size_eq0.
-case (zs = [])=> // zs_non_nil. elim ih=> // ->.
-by rewrite (@last_nonempty y z).
+case (zs = [])=> // zs_non_nil. elim ih=> //.
+by rewrite addzC (@last_nonempty y z).
 qed.
 
 (*------------------------------ Primitive -----------------------------*)
