@@ -3,7 +3,7 @@
    independently. We obviously make it lazy. Inputs not satisfying
    a validity predicate are mapped to the empty list *)
 
-require import Core Int Bool List FSet NewFMap.
+require import Core Int Bool List FSet SmtMap.
 
 type to, from.
 
@@ -19,15 +19,15 @@ module type IRO = {
 
 pred prefix_closed (m : (from * int,to) fmap) =
   forall x n,
-    mem (dom m) (x,n) =>
+    (x,n) \in m =>
     (forall i, 0 <= i < n =>
-      mem (dom m) (x,i)).
+      (x,i) \in m).
 
 pred prefix_closed' (m : (from * int,to) fmap) =
   forall x n i,
-    mem (dom m) (x,n) =>
+    (x,n) \in m =>
     0 <= i < n =>
-    mem (dom m) (x,i).
+    (x,i) \in m.
 
 lemma prefix_closed_equiv m: prefix_closed m <=> prefix_closed' m.
 proof. smt(). qed.
@@ -38,11 +38,11 @@ module IRO : IRO = {
   var mp : (from * int, to) fmap
 
   proc init() = {
-    mp <- map0;
+    mp <- empty;
   }
 
   proc fill_in(x, n) = {
-    if (!mem (dom mp) (x, n)) {
+    if ((x,n) \notin mp) {
       mp.[(x,n)] <$ dto;
     }
     return oget mp.[(x,n)];
@@ -74,7 +74,7 @@ module IRO' : IRO = {
   proc resample_invisible() = {
     var work, x;
 
-    work <- dom mp `\` visible;
+    work <- fdom mp `\` visible;
     while (work <> fset0) {
       x <- pick work;
       mp.[x] <$ dto;
@@ -83,12 +83,12 @@ module IRO' : IRO = {
   }
 
   proc init() = {
-    mp <- map0;
+    mp <- empty;
     visible <- fset0;
   }
 
   proc fill_in(x,n) = {
-    if (!mem (dom mp) (x,n)) {
+    if ((x,n) \notin mp) {
       mp.[(x,n)] <$ dto;
     }
     return oget mp.[(x,n)];
