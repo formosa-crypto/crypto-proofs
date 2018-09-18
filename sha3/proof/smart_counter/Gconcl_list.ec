@@ -380,8 +380,6 @@ section Ideal.
   by auto;smt(parse_valid parseK formatK).
   qed.
 
-  require import JointFMap.
-
   inductive inv_L_L3 (m1 m2 m3 : (block list, block) fmap) =
   | INV of (m1 = m2 + m3)
          & (forall l, l \in m2 => valid (parse l).`1)

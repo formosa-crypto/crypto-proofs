@@ -1,6 +1,6 @@
 (* Top-level Proof of SHA-3 Security *)
 
-require import AllCore List IntDiv StdOrder Distr NewFMap FSet.
+require import AllCore List IntDiv StdOrder Distr SmtMap FSet.
 
 require import Common Sponge. import BIRO.
 
@@ -27,15 +27,15 @@ module Simulator (F : DFUNCTIONALITY) = {
   var mi : (state, state) fmap
   var paths : (capacity, block list * block) fmap
   proc init() = {
-    m <- map0;
-    mi <- map0;
-    paths <- map0.[c0 <- ([],b0)];
+    m <- empty;
+    mi <- empty;
+    paths <- empty.[c0 <- ([],b0)];
     Gconcl_list.BIRO2.IRO.init();
   }
   proc f (x : state) : state = {
     var p,v,z,q,k,cs,y,y1,y2;
-    if (! x \in dom m) {
-      if (x.`2 \in dom paths) {
+    if (x \notin m) {
+      if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2];
         z <- [];
         (q,k) <- parse (rcons p (v +^ x.`1));
@@ -53,7 +53,7 @@ module Simulator (F : DFUNCTIONALITY) = {
       y <- (y1,y2);
       m.[x]  <- y;
       mi.[y] <- x;
-      if (x.`2 \in dom paths) {
+      if (x.`2 \in paths) {
         (p,v) <-oget paths.[x.`2];
         paths.[y2] <- (rcons p (v +^ x.`1),y.`1);
       }
@@ -64,7 +64,7 @@ module Simulator (F : DFUNCTIONALITY) = {
   }
   proc fi (x : state) : state = {
     var y,y1,y2;
-    if (! x \in dom mi) {
+    if (! x \in mi) {
       y1 <$ bdistr;
       y2 <$ cdistr;
       y <- (y1,y2);
@@ -276,13 +276,13 @@ qed.
 lemma security &m :
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res]| <=
-  (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
+  (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
 rewrite -(replace_simulator &m).
 rewrite powS 1:addz_ge0 1:ge0_r 1:ge0_c -pow_add 1:ge0_r 1:ge0_c.
 have -> :
-  (limit ^ 2)%r / (2 * (2 ^ r * 2 ^ c))%r =
-  ((limit ^ 2)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
+  (limit ^ 2 - limit)%r / (2 * (2 ^ r * 2 ^ c))%r =
+  ((limit ^ 2 - limit)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
   rewrite (fromintM 2) StdRing.RField.invfM StdRing.RField.mulrA
            -!StdRing.RField.mulrA.
   congr.
@@ -325,7 +325,7 @@ lemma SHA3Security
         islossless Dist(F,P).distinguish) =>
   `|Pr[RealIndif(Sponge, Perm, DRestr(Dist)).main() @ &m : res] -
     Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res]| <=
-  (limit ^ 2)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
+  (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof. move=>h;apply (security Dist h &m). qed.
 
 
