@@ -4,6 +4,8 @@ require import AllCore List IntDiv StdOrder Distr SmtMap FSet.
 
 require (*--*) Common Sponge SLCommon Gconcl_list BlockSponge.
 
+(*---*) import Common Sponge BIRO.
+
 clone import IRO as BIRO with
   type from <- bool list,
   type to   <- bool,
