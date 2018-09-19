@@ -250,9 +250,9 @@ section Ideal.
     - smt(leq_add_in domE).
   rcondf{2}2;auto;progress.
   - smt(DBlock.dunifin_ll).
+  - smt(size_cat size_nseq size_eq0 size_ge0).
   - smt().
-  - smt().
-  - smt(). search "_.[_<-_]".
+  - smt(). 
   - by move: H11; rewrite domE; case: (SLCommon.C.queries{1}.[format bl{2} (i_R + 2)]).
   - smt().
   sp;conseq(:_==> ={F.RO.m,b}
@@ -513,14 +513,17 @@ section Ideal.
     wp;rnd;wp 2 2.
     conseq(:_==> F.RO.m{1}.[p{1}] = F.RO.m{2}.[p{2}]
         /\ inv_L_L3 F.RO.m{1} F.RO.m{2} F2.RO.m{2});progress.
-    + cut[]add_maps h1 h2:=H5;rewrite add_maps joinE//=;smt(parse_valid).
+    + cut[]add_maps h1 h2:=H5;rewrite add_maps joinE//=. 
+      by have:= h2 p{2}; rewrite parse_valid //= H2 /= => h; rewrite h.
     + smt().
     case(x5{1} \in F.RO.m{1}).
     - rcondf{1}2;2:rcondf{2}2;auto;progress. 
       * smt(lemma2 incl_dom parse_valid). 
       by cut[]add_maps h1 h2:=H1;rewrite add_maps joinE//=;smt(parse_valid).
     rcondt{1}2;2:rcondt{2}2;auto;progress.
-    - smt(lemma2 incl_dom parse_valid).
+    - move:H4;rewrite/format/=nseq0 !cats0 => p0_notin_ROm_m.
+      case: H1 => joint _ _; move: p0_notin_ROm_m.
+      by rewrite joint mem_join negb_or; smt(parse_valid).
     - cut[]add_maps h1 h2:=H1;rewrite add_maps !get_setE joinE//=;smt(parse_valid nseq0 cats0).
     - cut:=H;rewrite -H0=>//=[][]->>->>;apply lemma1=>//=;1:smt(parse_valid).
       cut[]add_maps h1 h2:=H1;smt(parse_valid formatK parseK incl_dom).
@@ -552,7 +555,12 @@ section Ideal.
     while(={i,n,p} /\ 0 <= i{1} /\ valid p{1} /\ inv_L_L3 F.RO.m{1} F.RO.m{2} F2.RO.m{2}).
     + sp;case(x2{1} \in F.RO.m{1}).
       - by rcondf{1}2;2:rcondf{2}2;auto;smt(lemma2).
-      by rcondt{1}2;2:rcondt{2}2;auto;progress;smt(incl_dom lemma1).
+      rcondt{1}2;2:rcondt{2}2;auto;progress. 
+      - smt(incl_dom lemma1).
+      - smt(incl_dom lemma1).
+      apply/lemma1=> //=.
+      - smt(). 
+      smt(incl_dom mem_join).
     auto;smt().
   seq 1 1 : (={x,p,n} /\ parse x{1} = (p,n){1} /\ ! valid p{1}
         /\ inv_L_L3 F.RO.m{1} F.RO.m{2} F2.RO.m{2});last first.
@@ -569,12 +577,17 @@ section Ideal.
     /\ inv_L_L3 F.RO.m{1} F.RO.m{2} F2.RO.m{2}).
   + sp;case(x2{1} \in F.RO.m{1}).
     - rcondf{1}2;2:rcondf{2}2;auto;progress. 
-      * cut[]:=H2;smt(incl_dom lemma2 formatK parse_not_valid).
+      * cut[]h_join h1 h2:=H2.
+        have:= H5; rewrite h_join mem_join.
+        have:= h1 (format p{hr} (i_R + 1)). 
+        have:=parse_not_valid x{hr}; rewrite H1 /= H0 /= => h.
+        by rewrite (h (i_R+1)) /= => ->. 
       smt().
     rcondt{1}2;2:rcondt{2}2;auto;progress. 
     * smt(incl_dom lemma1).
     * smt(). 
-    * by cut:=lemma3 _ _ _ _ r0L H2 _ H5;smt(parse_not_valid). 
+    * cut//=:=lemma3 _ _ _ _ r0L H2 _ H5. 
+      by have:= parse_not_valid x{2}; rewrite H1 /= H0 /= => h; exact/(h (i_R+1)).
   auto;smt().
   qed.
 
@@ -756,7 +769,10 @@ section Ideal.
   - by while(i+1<=n);auto;
     smt(parse_valid parse_gt0 parseK mem_set formatK).
   wp 8 5;rnd{1};wp 6 5.
-  conseq(:_==> ={F2.RO.m} /\ format pp{2} n{2} = x3{2});1:smt(DBlock.dunifin_ll last_rcons formatK parseK).
+  conseq(:_==> ={F2.RO.m} /\ format pp{2} n{2} = x3{2}).
+  + move=> /> &1 &2 H H0 /= /> [#] H1 H2 m lres. 
+    rewrite DBlock.dunifin_ll /= => ?; rewrite DBlock.supp_dunifin /=.
+    smt(last_rcons formatK parseK).
   seq 3 3 : (={F2.RO.m,i} /\ x2{1} = x3{2} /\ pp{2} = p{1} /\ format pp{2} n{2} = x3{2});
     last by conseq(:_==> ={F2.RO.m});progress;sim.
   auto;conseq(:_==> ={F2.RO.m,i,n} /\ i{1} + 1 = n{2});1:smt(formatK).
@@ -992,7 +1008,10 @@ section Real.
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
   proof. 
-  by move=>h; rewrite fun_ext=> x; rewrite domE rngE /=; have := h x; smt().
+  move=>h; rewrite fun_ext=> x; rewrite domE rngE /= eq_iff; have h2 := h x; split.
+  + move=> m_x_not_None; exists (oget m.[x]); rewrite -h2; move: m_x_not_None.
+    by case: (m.[x]).
+  by move=> [] a; rewrite -h2 => ->.
   qed.
 
   local lemma all_prefixes_of_INV_real c1 c2 m mi p:
@@ -1194,11 +1213,13 @@ section Real.
         smt(mem_set take_take size_take).
       - move=>l;rewrite!mem_set;case=>[H_dom i|->>]/=. 
         * by rewrite mem_set;smt().
-        move=>j; case(0 <= j)=>hj0;2:smt(domE take_le0 mem_set).
-        case(j < i0{2} + 1)=>hjiS;2:smt(domE take_take mem_set).
-        rewrite mem_set take_take/min hjiS//=;left.
-        cut:=(take_take bl{2} j i0{2});rewrite min_lel 1:/#=><-.
-        smt(all_prefixes_of_INV_real domE).
+        move=>j; case(0 <= j)=>hj0; rewrite mem_set.
+        * case: (j <= i0{2}) => hjmax; 2:smt(take_oversize size_take).
+          left; have-> : take j (take (i0{2}+1) bl{2}) = take j (take i0{2} bl{2}).
+          * by rewrite 2!take_take min_lel 1:/# min_lel.
+          by apply H8; rewrite domE H1.
+        rewrite take_le0 1:/#; left.
+        by rewrite-(take0 (take i0{2} bl{2})) H8 domE H1.
       - smt(get_setE domE mem_set).
       - smt(get_setE domE).
       - smt().
@@ -1214,7 +1235,9 @@ section Real.
         by rewrite (H8 _ h).
       - move=>l;rewrite!mem_set;case=>[H_dom|->>]/=;1:smt(mem_set).
         move=>j;rewrite mem_set.
-        case(0 <= j)=>hj0;2:smt(domE take_le0).
+        case(0 <= j)=>hj0; last first. 
+        * rewrite take_le0 1:/#; left.
+          by rewrite-(take0 (take i0{2} bl{2})) H8 domE H1.
         case(j < i0{2} + 1)=>hjiS;2:smt(domE take_take).
         rewrite take_take/min hjiS//=;left.
         cut:=(take_take bl{2} j i0{2});rewrite min_lel 1:/#=><-.
@@ -1280,8 +1303,9 @@ section Real.
   + if;auto;progress. 
     - by split;case:H3=>//=;smt().
     - by rewrite domE H2//=.
-    - move:H4;rewrite take_size /= domE.
-      by case: (Redo.prefixes{2}.[format bl{2} (i{2} + 1)])=>//=; smt().
+    - move:H4;rewrite take_size /= domE=> h.
+      exists (oget Redo.prefixes{2}.[format bl{2} (i{2} + 1)]).`2; move: h.
+      by case: (Redo.prefixes{2}.[format bl{2} (i{2} + 1)]); smt().
     sp;if;auto;progress.
     - move:H4 H5;rewrite!get_setE/=!oget_some nth_last/=take_size.
       rewrite last_cat last_nseq 1:/# Block.WRing.addr0;progress. 
@@ -1892,3 +1916,254 @@ section Real_Ideal_Abs.
 
 end section Real_Ideal_Abs.
 
+
+
+module Simulator (F : DFUNCTIONALITY) = {
+  var m  : (state, state) fmap
+  var mi : (state, state) fmap
+  var paths : (capacity, block list * block) fmap
+  var unvalid_map : (block list * int, block) fmap
+  proc init() = {
+    m <- empty;
+    mi <- empty;
+    paths <- empty.[c0 <- ([],b0)];
+    unvalid_map <- empty;
+  }
+  proc f (x : state) : state = {
+    var p,v,z,q,k,cs,y,y1,y2;
+    if (x \notin m) {
+      if (x.`2 \in paths) {
+        (p,v) <- oget paths.[x.`2];
+        z <- [];
+        (q,k) <- parse (rcons p (v +^ x.`1));
+        if (valid q) {
+          cs <@ F.f(q, k);
+          y1 <- last b0 z;
+        } else {
+          if ((q,k) \notin unvalid_map) {
+            unvalid_map.[(q,k)] <$ bdistr;
+          }
+          y1 <- oget unvalid_map.[(q,k)];
+        }
+      } else {
+        y1 <$ bdistr;
+      }
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      m.[x]  <- y;
+      mi.[y] <- x;
+      if (x.`2 \in paths) {
+        (p,v) <-oget paths.[x.`2];
+        paths.[y2] <- (rcons p (v +^ x.`1),y.`1);
+      }
+    } else {
+      y <- oget m.[x];
+    }
+    return y;
+  }
+  proc fi (x : state) : state = {
+    var y,y1,y2;
+    if (! x \in mi) {
+      y1 <$ bdistr;
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      mi.[x] <- y;
+      m.[y]  <- x;
+    } else {
+      y <- oget mi.[x];
+    }
+    return y;
+  }
+}.
+
+print BIRO2.IRO.
+section Simplify_Simulator.
+
+declare module D : DISTINGUISHER{Simulator, F.RO, BIRO.IRO, C, S, BIRO2.IRO}.
+
+axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  islossless P0.f => islossless P0.fi => islossless F0.f => 
+  islossless D(F0, P0).distinguish.
+
+module type FRO_While = {
+  proc init () : unit
+  proc f (p : block list, n : int) : block
+}.
+
+local module Simu (FRO : FRO_While) (F : DFUNCTIONALITY) = {
+  proc init() = {
+    Simulator(F).init();
+    FRO.init();
+  }
+  proc f (x : state) : state = {
+    var p,q,v,k,cs,y,y1,y2;
+    if (x \notin Simulator.m) {
+      if (x.`2 \in Simulator.paths) {
+        (p,v) <- oget Simulator.paths.[x.`2];
+        (q,k) <- parse (rcons p (v +^ x.`1));
+        if (valid q) {
+          cs <@ F.f(q, k);
+          y1 <- last b0 cs;
+        } else {
+          if (0 < k) {
+            y1 <- FRO.f(q,k);
+          } else {
+            y1 <- b0;
+          }
+        }
+      } else {
+        y1 <$ bdistr;
+      }
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      Simulator.m.[x]  <- y;
+      Simulator.mi.[y] <- x;
+      if (x.`2 \in Simulator.paths) {
+        (p,v) <-oget Simulator.paths.[x.`2];
+        Simulator.paths.[y2] <- (rcons p (v +^ x.`1),y.`1);
+      }
+    } else {
+      y <- oget Simulator.m.[x];
+    }
+    return y;
+  }
+  proc fi (x : state) : state = {
+    var y,y1,y2;
+    if (! x \in Simulator.mi) {
+      y1 <$ bdistr;
+      y2 <$ cdistr;
+      y <- (y1,y2);
+      Simulator.mi.[x] <- y;
+      Simulator.m.[y]  <- x;
+    } else {
+      y <- oget Simulator.mi.[x];
+    }
+    return y;
+  }
+}.
+
+local module Lator (F : F.RO) : FRO_While = {
+  proc init() = {
+    F.init();
+  }
+  proc f (p : block list, n : int) : block = {
+    var i;
+    i <- 0;
+    while (i < n) {
+      i <- i + 1;
+      F.sample(format p i);
+    }
+    Simulator.unvalid_map.[(p,n)] <@ F.get(format p n);
+    return oget Simulator.unvalid_map.[(p,n)];
+  }
+}.
+
+op inv_map2 (m1 : (block list, block) fmap) (m2 : (block list * int,
+  block) fmap) : bool =
+  (forall (p : block list) (n : int) (x : block list),
+    !valid (parse x).`1 =>
+    x = format p (n + 1) =>
+    (p, n) \in m2 <=> x \in m1) /\
+  (forall (p : block list) (n : int) (x : block list),
+    !valid (parse x).`1 =>
+    x = format p (n + 1) =>
+    x \in m1 <=> (p, n) \in m2) /\
+  (forall (p : block list) (n : int) (x : block list),
+    !valid (parse x).`1 =>
+    x = format p (n + 1) =>
+    m2.[(p, n)] = m1.[x]) /\
+  (forall (p : block list) (n : int) (x : block list),
+    !valid (parse x).`1 =>
+    x = format p (n + 1) =>
+    m1.[x] = m2.[(p, n)]).
+
+local lemma equal1 &m :
+  Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ] =
+  Pr [ IdealIndif(BIRO.IRO, Simu(Lator(F.RO)), DRestr(D)).main() @ &m : res ].
+proof.
+byequiv=>//=; proc; inline*; auto. 
+call (: ={BIRO.IRO.mp,C.c} /\ ={m,mi,paths}(S,Simulator) /\
+        inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
+        incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); first last.
++ by proc; inline*; conseq=>/>; sim.
++ by proc; inline*; conseq=>/>; sim.
++ by auto; progress; smt(mem_empty).
+proc;sp;if;auto.
+call(: ={BIRO.IRO.mp} /\ ={m,mi,paths}(S,Simulator) /\
+      inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
+      incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1});auto.
+if; 1,3: by auto.
+seq 1 1 : (={BIRO.IRO.mp,y1,x} /\ ={m,mi,paths}(S,Simulator) /\
+      inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
+      incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); last first.
+- by conseq=>/>; auto.
+if; 1,3: by auto.
+inline*; sp; if; 1,2: auto. 
+- move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8 h9 h10 h11 h12.
+  have:= h1; rewrite-h3 /= => [#] ->>->>. 
+  have:= h4; rewrite-h2 /= => [#] ->>->>. 
+  have->>/=: q{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
+  have->>/=: k{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`2 by smt().
+  move: h5; have-> h5:= formatK (rcons p{1} (v{1} +^ x{2}.`1)).
+  by have->>/=: q{1} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
+- sp; if; auto.
+ * move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8 h9 h10 h11 h12.
+    have:= h1; rewrite-h3 /= => [#] ->>->>. 
+    have:= h4; rewrite-h2 /= => [#] ->>->>. 
+    have->>/=: q{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
+    have->>/=: k{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`2 by smt().
+    move: h5; have-> h5:= formatK (rcons p{1} (v{1} +^ x{2}.`1)).
+    by have->>/=: q{1} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
+  by conseq(:_ ==> ={bs, BIRO.IRO.mp})=> />; sim=> />; smt(parseK formatK).
+sp; rcondt{1} 1; 1: auto; if{2}; last first.
++ by rcondf{1} 1; auto; smt(parseK formatK).
+sp; rcondf{2} 4; 1: auto.
++ conseq(:_ ==> format p0 n0 \in F.RO.m)=> />.
+  splitwhile 1 : i0 + 1 < n0.
+  rcondt 2; 1:(auto; while (i0 + 1 <= n0); auto; smt()).
+  rcondf 7; 1:(auto; while (i0 + 1 <= n0); auto; smt()).
+  seq 1 : (q = p0 /\ n0 = k /\ i0 + 1 = n0).
+  - by while(q = p0 /\ n0 = k /\ i0 + 1 <= n0); auto; smt().
+  by auto=> />; smt(mem_set).
+wp; rnd{2}; wp=> /=.
+(** TODO : reprendre ici !! **)
+conseq(:_==> ={BIRO.IRO.mp, i0, n0, p0, x} /\ i0{1} = n0{1} /\
+    (0 < i0{1} => last Block.b0 bs0{1} = oget F.RO.m{2}.[format p0{2} i0{2}]) /\
+    inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\
+    (0 < i0{1} => format p0{2} i0{2} \in F.RO.m{2}));progress.
++ exact/DBlock.dunifin_ll.
++ by rewrite get_set_sameE oget_some H10//=.
++ move=>z; rewrite get_setE; pose y := rcons p{1} (v{1} +^ x{2}.`1).
+  case: (z = (y,k{2}))=>//= />. 
+  - have[]h1[]h2[]h3 h4:= H4.
+    have/=:= h3 q{2} k{2} (format y (k{2} + 1)).
+    have:= H; rewrite -H1 => [#] />.
+    have:= H3.
+    have-> : q_L = (parse y).`1 by smt().
+    have-> : k_L = (parse y).`2 by smt().
+    rewrite (formatK y) => [#].
+    have:= H0; rewrite -H2 => [#] />.
+    have />: k{2} = (parse y).`2 by smt().
+    have {1}->: (rcons p{1} (v{1} +^ x{2}.`1)) = (parse y).`1 by smt().
+move: H3; have{1}-> H3: rcons p{1} (v{1} +^ x{2}.`1) = (parse (format(rcons p{1} (v{1} +^ x{2}.`1))  k{2})).`1 by smt().
+    have:= parse_not_valid (format q{2} k{2}) H8 (k{2}+1).
+    have-> : format (parse (format q{2} k{2})).`1 (k{2} + 1) = 
+      format (format (parse (format q{2} k{2})).`1 k{2}) 2.
+    - rewrite/(format _ 2)/=/format/=-catA; congr.
+      by rewrite nseq1 cats1 -nseqSr 1:/#.
+    have{2}-> : k{2} = (parse (format q{2} k{2})).`2 by smt().
+    rewrite (formatK (format q{2} k{2})).
+    have->: format (format q{2} k{2}) 2 = format q{2} (k{2} + 1).
+    - rewrite/(format _ 2)/=/format/=-catA; congr.
+      by rewrite nseq1 cats1 -nseqSr 1:/#.
+    by move=> -> /= ->; move: H11; rewrite domE; case: (m_R.[format q{2} k{2}]).
+  smt().
+
+while(i0{2} <= n0{2} /\ ={i0,p0,n0} /\ inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\
+    format p0{2} (i0{2} + 1) \in F.RO.m{2} /\ x1{1} = p0{1} /\
+    incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1} /\ ! valid p0{2} /\
+    (0 < i0{2} => last Block.b0 bs0{1} =
+      oget F.RO.m{2}.[format p0{2} (i0{2} + 1)])).
++ sp; if{1}; 2: rcondf{2} 2; 1: rcondt{2} 2; auto; progress.
+  
+qed.
