@@ -617,12 +617,16 @@ lemma lazy_invar_upd_lu_eq
 proof.
 move=> li mem_upd_mp1.
 case: ((cs, m) = (bs, n))=> [[-> ->] | cs_m_neq_bs_n].
-smt(get_setE).
++ by rewrite !get_set_sameE.
 rewrite mem_set in mem_upd_mp1.
 elim mem_upd_mp1=> [mem_mp1 | [-> ->]].
-case: ((pad2blocks bs, n) = (pad2blocks cs, m))=>
-  [[p2b_bs_p2b_cs eq_mn] | p2b_bs_n_neq_p2b_cs_m].
-smt(pad2blocks_inj). smt(get_setE). smt(get_setE).
++ case: ((pad2blocks bs, n) = (pad2blocks cs, m))=>
+    [[p2b_bs_p2b_cs ->>] | p2b_bs_n_neq_p2b_cs_m].
+  + move: (pad2blocks_inj _ _ p2b_bs_p2b_cs)=> ->>.
+    by move: cs_m_neq_bs_n=> //=.
+  rewrite !get_set_neqE 1:// 1:eq_sym //.
+  by move: li=> [] _ [] _ /(_ _ _ mem_mp1).
+by rewrite !get_set_sameE.
 qed.
 
 lemma LowerFun_IRO_HybridIROLazy_f :
@@ -916,7 +920,7 @@ lemma eager_eq_except_mem_iff
   eager_eq_except xs i j mp1 mp2 =>
   ys <> xs \/ k < i \/ j <= k =>
   dom mp1 (ys, k) <=> dom mp2 (ys, k).
-proof. smt(domE get_some). qed.
+proof. smt(domE). qed.
 
 lemma eager_eq_except_upd1_eq_in
       (xs : block list, i j k : int, y : bool,
