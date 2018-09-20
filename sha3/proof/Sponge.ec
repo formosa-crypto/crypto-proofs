@@ -2,7 +2,7 @@
 
 prover quorum=2 ["Z3" "Alt-Ergo"].
 
-require import Core Int IntDiv Real List FSet SmtMap MapAux.
+require import Core Int IntDiv Real List FSet SmtMap.
 (*---*) import IntExtra.
 require import Distr DBool DList.
 require import StdBigop StdOrder. import IntOrder.
@@ -162,7 +162,7 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
          Dist).main() @ &m : res]
 
    This step is proved using the eager sampling lemma provided by
-   RndO.
+   PROM.
 
    Step 3:
 
@@ -294,7 +294,7 @@ module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
   }
 }.
 
-(* we are going to use RndO.GenEager to prove:
+(* we are going to use PROM.GenEager to prove:
 
 lemma HybridIROExper_Lazy_Eager
       (D <: HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}) &m :
