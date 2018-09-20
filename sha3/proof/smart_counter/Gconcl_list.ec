@@ -1896,7 +1896,7 @@ section Real_Ideal_Abs.
   by proc;call(D_lossless F0 P0 H H0 H1);auto.
   qed.
 
-  lemma Real_Ideal &m : 
+  lemma Inefficient_Real_Ideal &m : 
       `|Pr [ RealIndif(Sponge,Perm,DRestr(D)).main() @ &m : res ] -
         Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ]| <=
       (max_size ^ 2 - max_size)%r / 2%r  / (2^r)%r  / (2^c)%r  + 
@@ -1930,20 +1930,23 @@ module Simulator (F : DFUNCTIONALITY) = {
     unvalid_map <- empty;
   }
   proc f (x : state) : state = {
-    var p,v,z,q,k,cs,y,y1,y2;
+    var p,v,q,k,cs,y,y1,y2;
     if (x \notin m) {
       if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2];
-        z <- [];
         (q,k) <- parse (rcons p (v +^ x.`1));
         if (valid q) {
           cs <@ F.f(q, k);
-          y1 <- last b0 z;
+          y1 <- last b0 cs;
         } else {
-          if ((q,k) \notin unvalid_map) {
-            unvalid_map.[(q,k)] <$ bdistr;
+          if (0 < k) {
+            if ((q,k-1) \notin unvalid_map) {
+              unvalid_map.[(q,k-1)] <$ bdistr;
+            }
+            y1 <- oget unvalid_map.[(q,k-1)];
+          } else {
+            y1 <- b0;
           }
-          y1 <- oget unvalid_map.[(q,k)];
         }
       } else {
         y1 <$ bdistr;
@@ -1976,7 +1979,6 @@ module Simulator (F : DFUNCTIONALITY) = {
   }
 }.
 
-print BIRO2.IRO.
 section Simplify_Simulator.
 
 declare module D : DISTINGUISHER{Simulator, F.RO, BIRO.IRO, C, S, BIRO2.IRO}.
@@ -1985,18 +1987,19 @@ axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
   islossless P0.f => islossless P0.fi => islossless F0.f => 
   islossless D(F0, P0).distinguish.
 
-module type FRO_While = {
-  proc init () : unit
-  proc f (p : block list, n : int) : block
-}.
+local clone import PROM.GenEager as IRO2 with
+  type from   <- block list * int,
+  type to     <- block,
+  op sampleto <- fun _, bdistr
+proof * by exact/DBlock.dunifin_ll.
 
-local module Simu (FRO : FRO_While) (F : DFUNCTIONALITY) = {
+local module Simu (FRO : IRO2.RO) (F : DFUNCTIONALITY) = {
   proc init() = {
     Simulator(F).init();
     FRO.init();
   }
   proc f (x : state) : state = {
-    var p,q,v,k,cs,y,y1,y2;
+    var p,q,v,k,i,cs,y,y1,y2;
     if (x \notin Simulator.m) {
       if (x.`2 \in Simulator.paths) {
         (p,v) <- oget Simulator.paths.[x.`2];
@@ -2006,7 +2009,12 @@ local module Simu (FRO : FRO_While) (F : DFUNCTIONALITY) = {
           y1 <- last b0 cs;
         } else {
           if (0 < k) {
-            y1 <- FRO.f(q,k);
+            i <- 0;
+            while (i < k) {
+              FRO.sample(q,i);
+              i <- i + 1;
+            }
+            y1 <- FRO.get(q,k-1);
           } else {
             y1 <- b0;
           }
@@ -2042,64 +2050,33 @@ local module Simu (FRO : FRO_While) (F : DFUNCTIONALITY) = {
   }
 }.
 
-local module Lator (F : F.RO) : FRO_While = {
-  proc init() = {
-    F.init();
-  }
-  proc f (p : block list, n : int) : block = {
-    var i;
-    i <- 0;
-    while (i < n) {
-      i <- i + 1;
-      F.sample(format p i);
-    }
-    Simulator.unvalid_map.[(p,n)] <@ F.get(format p n);
-    return oget Simulator.unvalid_map.[(p,n)];
-  }
+local module L (F : IRO2.RO) = {
+  proc distinguish = IdealIndif(BIRO.IRO, Simu(F), DRestr(D)).main
 }.
-
-op inv_map2 (m1 : (block list, block) fmap) (m2 : (block list * int,
-  block) fmap) : bool =
-  (forall (p : block list) (n : int) (x : block list),
-    !valid (parse x).`1 =>
-    x = format p (n + 1) =>
-    (p, n) \in m2 <=> x \in m1) /\
-  (forall (p : block list) (n : int) (x : block list),
-    !valid (parse x).`1 =>
-    x = format p (n + 1) =>
-    x \in m1 <=> (p, n) \in m2) /\
-  (forall (p : block list) (n : int) (x : block list),
-    !valid (parse x).`1 =>
-    x = format p (n + 1) =>
-    m2.[(p, n)] = m1.[x]) /\
-  (forall (p : block list) (n : int) (x : block list),
-    !valid (parse x).`1 =>
-    x = format p (n + 1) =>
-    m1.[x] = m2.[(p, n)]).
 
 local lemma equal1 &m :
   Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ] =
-  Pr [ IdealIndif(BIRO.IRO, Simu(Lator(F.RO)), DRestr(D)).main() @ &m : res ].
+  Pr [ L(IRO2.RO).distinguish() @ &m : res ].
 proof.
 byequiv=>//=; proc; inline*; auto. 
 call (: ={BIRO.IRO.mp,C.c} /\ ={m,mi,paths}(S,Simulator) /\
-        inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
+        BIRO2.IRO.mp{1} = IRO2.RO.m{2} /\ 
         incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); first last.
 + by proc; inline*; conseq=>/>; sim.
 + by proc; inline*; conseq=>/>; sim.
-+ by auto; progress; smt(mem_empty).
-proc;sp;if;auto.
++ by auto.
+proc; sp; if; auto.
 call(: ={BIRO.IRO.mp} /\ ={m,mi,paths}(S,Simulator) /\
-      inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
-      incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1});auto.
+        BIRO2.IRO.mp{1} = IRO2.RO.m{2} /\ 
+        incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1});auto.
 if; 1,3: by auto.
-seq 1 1 : (={BIRO.IRO.mp,y1,x} /\ ={m,mi,paths}(S,Simulator) /\
-      inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\ 
-      incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); last first.
+seq 1 1: (={BIRO.IRO.mp,y1,x} /\ ={m,mi,paths}(S,Simulator) /\
+          BIRO2.IRO.mp{1} = IRO2.RO.m{2} /\ 
+          incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); last first.
 - by conseq=>/>; auto.
 if; 1,3: by auto.
 inline*; sp; if; 1,2: auto. 
-- move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8 h9 h10 h11 h12.
+- move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8.
   have:= h1; rewrite-h3 /= => [#] ->>->>. 
   have:= h4; rewrite-h2 /= => [#] ->>->>. 
   have->>/=: q{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
@@ -2107,7 +2084,7 @@ inline*; sp; if; 1,2: auto.
   move: h5; have-> h5:= formatK (rcons p{1} (v{1} +^ x{2}.`1)).
   by have->>/=: q{1} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
 - sp; if; auto.
- * move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8 h9 h10 h11 h12.
+ * move=> /> &1 &2 h1 h2 bl n h3 h4 h5 h6 h7 h8 h9 h10.
     have:= h1; rewrite-h3 /= => [#] ->>->>. 
     have:= h4; rewrite-h2 /= => [#] ->>->>. 
     have->>/=: q{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
@@ -2118,52 +2095,99 @@ inline*; sp; if; 1,2: auto.
 sp; rcondt{1} 1; 1: auto; if{2}; last first.
 + by rcondf{1} 1; auto; smt(parseK formatK).
 sp; rcondf{2} 4; 1: auto.
-+ conseq(:_ ==> format p0 n0 \in F.RO.m)=> />.
-  splitwhile 1 : i0 + 1 < n0.
-  rcondt 2; 1:(auto; while (i0 + 1 <= n0); auto; smt()).
-  rcondf 7; 1:(auto; while (i0 + 1 <= n0); auto; smt()).
-  seq 1 : (q = p0 /\ n0 = k /\ i0 + 1 = n0).
-  - by while(q = p0 /\ n0 = k /\ i0 + 1 <= n0); auto; smt().
++ conseq(:_ ==> (q,k-1) \in RO.m)=> />.
+  splitwhile 1 : i + 1 < k.
+  rcondt 2; 1:(auto; while (i + 1 <= k); auto; smt()).
+  rcondf 7; 1:(auto; while (i + 1 <= k); auto; smt()).
+  seq 1 : (i + 1 = k).
+  - by while(i + 1 <= k); auto; smt().
   by auto=> />; smt(mem_set).
-wp; rnd{2}; wp=> /=.
-(** TODO : reprendre ici !! **)
-conseq(:_==> ={BIRO.IRO.mp, i0, n0, p0, x} /\ i0{1} = n0{1} /\
-    (0 < i0{1} => last Block.b0 bs0{1} = oget F.RO.m{2}.[format p0{2} i0{2}]) /\
-    inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\
-    (0 < i0{1} => format p0{2} i0{2} \in F.RO.m{2}));progress.
-+ exact/DBlock.dunifin_ll.
-+ by rewrite get_set_sameE oget_some H10//=.
-+ move=>z; rewrite get_setE; pose y := rcons p{1} (v{1} +^ x{2}.`1).
-  case: (z = (y,k{2}))=>//= />. 
-  - have[]h1[]h2[]h3 h4:= H4.
-    have/=:= h3 q{2} k{2} (format y (k{2} + 1)).
-    have:= H; rewrite -H1 => [#] />.
-    have:= H3.
-    have-> : q_L = (parse y).`1 by smt().
-    have-> : k_L = (parse y).`2 by smt().
-    rewrite (formatK y) => [#].
-    have:= H0; rewrite -H2 => [#] />.
-    have />: k{2} = (parse y).`2 by smt().
-    have {1}->: (rcons p{1} (v{1} +^ x{2}.`1)) = (parse y).`1 by smt().
-move: H3; have{1}-> H3: rcons p{1} (v{1} +^ x{2}.`1) = (parse (format(rcons p{1} (v{1} +^ x{2}.`1))  k{2})).`1 by smt().
-    have:= parse_not_valid (format q{2} k{2}) H8 (k{2}+1).
-    have-> : format (parse (format q{2} k{2})).`1 (k{2} + 1) = 
-      format (format (parse (format q{2} k{2})).`1 k{2}) 2.
-    - rewrite/(format _ 2)/=/format/=-catA; congr.
-      by rewrite nseq1 cats1 -nseqSr 1:/#.
-    have{2}-> : k{2} = (parse (format q{2} k{2})).`2 by smt().
-    rewrite (formatK (format q{2} k{2})).
-    have->: format (format q{2} k{2}) 2 = format q{2} (k{2} + 1).
-    - rewrite/(format _ 2)/=/format/=-catA; congr.
-      by rewrite nseq1 cats1 -nseqSr 1:/#.
-    by move=> -> /= ->; move: H11; rewrite domE; case: (m_R.[format q{2} k{2}]).
-  smt().
-
-while(i0{2} <= n0{2} /\ ={i0,p0,n0} /\ inv_map2 F.RO.m{2} BIRO2.IRO.mp{1} /\
-    format p0{2} (i0{2} + 1) \in F.RO.m{2} /\ x1{1} = p0{1} /\
-    incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1} /\ ! valid p0{2} /\
-    (0 < i0{2} => last Block.b0 bs0{1} =
-      oget F.RO.m{2}.[format p0{2} (i0{2} + 1)])).
-+ sp; if{1}; 2: rcondf{2} 2; 1: rcondt{2} 2; auto; progress.
-  
+wp; rnd{2}; wp=> /=; conseq=> />.
+conseq(:_==> i{2} = k{2} /\
+    (0 < i{2} => last Block.b0 bs0{1} = oget RO.m{2}.[(q{2}, i{2} -1)]) /\
+    BIRO2.IRO.mp{1} = RO.m{2} /\ incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}) =>/>.
++ smt(DBlock.dunifin_ll).
+while (i{2} <= k{2} /\ n0{1} = k{2} /\ i0{1} = i{2} /\ x1{1} = q{2} /\ ={k} /\
+  (0 < i{2} => last Block.b0 bs0{1} = oget RO.m{2}.[(q{2}, i{2} - 1)]) /\
+  BIRO2.IRO.mp{1} = RO.m{2} /\ incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}).
++ sp; wp 2 2=> /=; conseq=> />.
+  conseq(:_==> b0{1} = oget RO.m{2}.[(q{2}, i{2})] /\ 
+      BIRO2.IRO.mp{1} = RO.m{2} /\
+      incl Simulator.unvalid_map{2} BIRO2.IRO.mp{1}); 1: smt(last_rcons).
+  if{1}; 2: rcondf{2} 2; 1: rcondt{2} 2; 1,3: auto.
+  - by auto=> />; smt(incl_upd_nin).
+ by  auto; smt(DBlock.dunifin_ll).
+auto=> /> &1 &2 h1 h2 [#] q_L k_L h3 h4 h5 h6 h7 h8 h9 h10;split.
++ have:= h1; rewrite -h3 => [#] />; have:= h4; rewrite -h2 => [#] />.
+  have:= h5.
+  cut-> : q{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`1 by smt().
+  cut-> : k{2} = (parse (rcons p{1} (v{1} +^ x{2}.`1))).`2 by smt().
+  by rewrite (formatK (rcons p{1} (v{1} +^ x{2}.`1)))=> [#] />; smt().
+smt().
 qed.
+
+
+local lemma equal2 &m :
+  Pr [ IdealIndif(BIRO.IRO, Simulator, DRestr(D)).main() @ &m : res ] =
+  Pr [ L(IRO2.LRO).distinguish() @ &m : res ].
+proof.
+byequiv=>//=; proc; inline*; auto. 
+call (: ={BIRO.IRO.mp,C.c,Simulator.m,Simulator.mi,Simulator.paths} /\
+        Simulator.unvalid_map{1} = IRO2.RO.m{2}); first last.
++ by proc; inline*; conseq=> />; sim.
++ by proc; inline*; conseq=> />; sim.
++ by auto=> />.
+proc; sp; if; auto.
+call(: ={BIRO.IRO.mp,Simulator.m,Simulator.mi,Simulator.paths} /\
+        Simulator.unvalid_map{1} = IRO2.RO.m{2}); auto.
+if; 1,3: auto.
+seq 1 1: (={y1,x, BIRO.IRO.mp, Simulator.m, Simulator.mi, Simulator.paths} /\
+  Simulator.unvalid_map{1} = RO.m{2}); 2: by (conseq=> />; sim).
+if; 1,3: auto; sp. 
+conseq=> />.
+conseq(: ={q, k, BIRO.IRO.mp} /\ Simulator.unvalid_map{1} = RO.m{2} ==> _)=> />.
++ move=> &1 &2 h1 h2 h3 h4 h5 h6.
+  by have:= h1; rewrite -h3 => [#] /> /#.
+inline*; if; 1: auto; 1: sim.
+if; 1,3: auto; sp.
+swap{2} 4; while{2}((i<=k){2})(k{2}-i{2}); 1: by (auto; smt()).
+by sp; if{1}; 2: rcondf{2} 2; 1: rcondt{2} 2; auto; smt(DBlock.dunifin_ll).
+qed.
+
+
+
+lemma Simplify_simulator &m :
+  Pr [ IdealIndif(BIRO.IRO, Simulator, DRestr(D)).main() @ &m : res ] =
+  Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ].
+proof.
+rewrite (equal1 &m) (equal2 &m) eq_sym.
+by byequiv(RO_LRO_D L)=>//=.
+qed.
+
+
+end section Simplify_Simulator.
+
+
+
+
+
+section Real_Ideal.
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
+
+  axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+    islossless P0.f => islossless P0.fi => islossless F0.f => 
+    islossless D(F0, P0).distinguish.
+
+
+  lemma Real_Ideal &m : 
+      `|Pr [ RealIndif(Sponge,Perm,DRestr(D)).main() @ &m : res ] -
+        Pr [ IdealIndif(BIRO.IRO, Simulator, DRestr(D)).main() @ &m : res ]| <=
+      (max_size ^ 2 - max_size)%r / 2%r  / (2^r)%r  / (2^c)%r  + 
+      max_size%r * ((2*max_size)%r / (2^c)%r) + 
+      max_size%r * ((2*max_size)%r / (2^c)%r).
+  proof.
+  rewrite(Simplify_simulator D D_lossless &m).
+  exact/(Inefficient_Real_Ideal D D_lossless &m).
+  qed.  
+
+end section Real_Ideal.
