@@ -2,15 +2,8 @@
 
 require import AllCore List IntDiv StdOrder Distr SmtMap FSet.
 
-require (*--*) Common Sponge SLCommon Gconcl_list BlockSponge.
-
-(*---*) import Common Sponge BIRO.
-
-clone import IRO as BIRO with
-  type from <- bool list,
-  type to   <- bool,
-  op valid  <- predT,
-  op dto    <- {0,1}.
+require import Common Sponge. import BIRO.
+require (*--*) SLCommon Gconcl_list BlockSponge.
 
 (* FIX: would be nicer to define limit at top-level and then clone
    BlockSponge with it - so BlockSponge would then clone lower-level
@@ -158,7 +151,8 @@ declare module Dist :
   DISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
                 Simulator, BlockSponge.C, Gconcl.S,
                 SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO}.
+                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                Gconcl_list.Simulator}.
 
 axiom Dist_lossless (F <: DFUNCTIONALITY) (P <: DPRIMITIVE) :
   islossless P.f => islossless P.fi => islossless F.f =>
@@ -322,7 +316,8 @@ lemma SHA3Security
                  Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
                  Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
                  SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO})
+                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                 Gconcl_list.Simulator})
         &m :
       (forall (F <: DFUNCTIONALITY) (P <: DPRIMITIVE),
         islossless P.f => 
