@@ -87,10 +87,10 @@ abstract theory RO_Security.
     }.
 
     lemma RO_is_preimage_resistant &m (h : to) :
-      Pr [ Preimage(A,LRO).main(h) @ &m : res ] <= (bound + 1)%r * mu1 sampleto h.
+      Pr [ Preimage(A,RO).main(h) @ &m : res ] <= (bound + 1)%r * mu1 sampleto h.
     proof.
-    cut->: Pr [ Preimage (A,LRO).main(h) @ &m : res ] = 
-           Pr [ Preimage2(A,LRO).main(h) @ &m : res ].
+    cut->: Pr [ Preimage (A,RO).main(h) @ &m : res ] = 
+           Pr [ Preimage2(A,RO).main(h) @ &m : res ].
     + by byequiv=> //=; proc; inline*; sim.
     byphoare(: arg = h ==> _) => //=; proc.
     seq 1 : (rng RO.m h) (bound%r * mu1 sampleto h) 1%r 1%r (mu1 sampleto h)
@@ -103,7 +103,7 @@ abstract theory RO_Security.
       by auto=> />; rewrite fdom0 fcards0; smt(bound_gt0).
     + call(: true ==> rng RO.m h)=> //; bypr=> /> {&m} &m.
       fel 1 Bounder.counter (fun _, mu1 sampleto h) bound (rng RO.m h) 
-        [Bounder(LRO).get: (card (fdom RO.m) <= Bounder.counter < bound)]
+        [Bounder(RO).get: (card (fdom RO.m) <= Bounder.counter < bound)]
         (card (fdom RO.m) <= Bounder.counter <= bound)
         =>//.
       - rewrite StdBigop.Bigreal.BRA.big_const List.count_predT List.Range.size_range.
@@ -218,9 +218,12 @@ abstract theory RO_Security.
         
   
     lemma RO_is_second_preimage_resistant &m (mess1 : from) :
-      Pr [ SecondPreimage(A,LRO).main(mess1) @ &m : res ]
+      Pr [ SecondPreimage(A,RO).main(mess1) @ &m : res ]
         <= (bound + 1)%r * mu1 sampleto witness.
     proof.
+    have->: Pr [ SecondPreimage(A,RO).main(mess1) @ &m : res ] =
+            Pr [ SecondPreimage(A,LRO).main(mess1) @ &m : res ].
+    + by byequiv=> //=; proc; inline*; sim.
     have->: Pr [ SecondPreimage(A,LRO).main(mess1) @ &m : res ] =
             Pr [ SecondPreimage2(A,LRO).main(mess1) @ &m : res ].
     + by byequiv=> //=; proc; inline*; sim.
