@@ -74,7 +74,7 @@ have // : 2 < 2 by rewrite (@ler_lt_trans m).
 qed.
 
 lemma chunk_nil' ['a] r : BitChunking.chunk r [<:'a>] = [].
-proof. by rewrite /chunk /= div0z mkseq0. qed.
+proof. by rewrite /chunk /= mkseq0. qed.
 
 lemma chunk_sing' r (xs : bool list) :
   0 < r => size xs = r => BitChunking.chunk r xs = [xs].
@@ -274,7 +274,7 @@ lemma size_pad_dvd_r s : r %| size (pad s).
 proof. by rewrite size_pad dvdzD 1:dvdz_mull dvdzz. qed.
 
 lemma dvd_r_num0 (m : int) : r %| (m + num0 m + 2).
-proof. by rewrite /num0 /(%|) addrAC modzDmr subrr mod0z. qed.
+proof. by rewrite /num0 /(%|) addrAC modzDmr subrr. qed.
 
 lemma num0_ge0 (m : int) : 0 <= num0 m.
 proof. by rewrite /num0 modz_ge0 ?gtr_eqF ?gt0_r. qed.
@@ -328,12 +328,12 @@ have lt_is: i < size s by rewrite ltr_neqAle ne_is -size_rev index_size.
 have [ge0_i lt_siz_s_i] : 0 <= i < size s.
   have le_siz_s_i : i <= size s by rewrite /i - size_rev index_size.
   split=> [| _]; [rewrite index_ge0 | rewrite ltr_neqAle //].
-pose j := (size s + _ - _); case: (i = (-(j + 2)) %% r) => // iE.
+pose j := (size s + _ - _); case: (i = (-(j + 2)) %% r)=> iE; 2:done. (* => // iE. Loops in deploy-kms *)
 apply/eq_sym; rewrite -{1}(@cat_take_drop j (rcons _ _)); congr.
 have jE: j = size s - (i + 1) by rewrite /j #ring.
 have [ge0_j lt_js]: 0 <= j < size s by move=> /#.
 rewrite -cats1 drop_cat lt_js /= /mkpad -cats1 -cat_cons; congr=> //=.
-rewrite size_take // size_cat /= ltr_spsaddr //= -iE.
+rewrite size_take // size_cat /= ltr_spsaddr //= /num0 -iE.
 have sz_js: size (drop j s) = i+1; last apply/(eq_from_nth false).
 + by rewrite size_drop //= max_ler ?subr_ge0 ?ltrW // /j #ring.
 + by rewrite sz_js /= addrC size_nseq max_ler.
@@ -376,7 +376,7 @@ lemma chunkK bs : r %| size bs => flatten (chunk bs) = bs.
 proof. by apply/BitChunking.chunkK/gt0_r. qed.
 
 lemma chunk_nil : chunk [] = [].
-proof. by apply/chunk_nil'. qed.
+proof. by apply/(@chunk_nil' r). qed.
 
 lemma chunk_sing (xs : bool list) : size xs = r => chunk xs = [xs].
 proof. by apply/chunk_sing'/gt0_r. qed.
