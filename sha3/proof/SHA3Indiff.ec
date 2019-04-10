@@ -1,5 +1,3 @@
-(* Top-level Proof of SHA-3 Security *)
-
 require import AllCore List IntDiv StdOrder Distr SmtMap FSet.
 
 require import Common Sponge. import BIRO.
@@ -303,7 +301,13 @@ cut//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).
   cut hf:islossless RaiseFun(F).f.
   - proc;call hf';auto.
   exact(Dist_lossless (RaiseFun(F)) P hp hpi hf).
-by rewrite(drestr_commute1 &m) (drestr_commute2 &m);smt().
+rewrite(drestr_commute1 &m) (drestr_commute2 &m).
+cut->:=Gconcl_list.Simplify_simulator (LowerDist(Dist)) _ &m.
++ move=>F P hp hpi hf'//=.
+  cut hf:islossless RaiseFun(F).f.
+  - proc;call hf';auto.
+  exact(Dist_lossless (RaiseFun(F)) P hp hpi hf).
+smt().
 qed.
 
 
@@ -311,7 +315,7 @@ qed.
 
 end section.
 
-lemma SHA3Security
+lemma SHA3Indiff
       (Dist <: DISTINGUISHER{
                  Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
                  Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
@@ -328,5 +332,4 @@ lemma SHA3Security
     Pr[IdealIndif(IRO, Simulator, DRestr(Dist)).main() @ &m : res]| <=
   (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof. move=>h;apply (security Dist h &m). qed.
-
 
