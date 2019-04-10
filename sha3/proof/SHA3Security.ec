@@ -164,12 +164,12 @@ section Preimage.
 
 
   op same_ro (m1 : (bool list, f_out) fmap) (m2 : (bool list * int, bool) fmap) =
-      (forall m, m \in m1 => forall i, 0 <= i < size_out => (m,i) \in m2)
+       (forall m, m \in m1 => forall i, 0 <= i < size_out => (m,i) \in m2)
     && (forall m, (exists i, 0 <= i < size_out /\ (m,i) \in m2) => m \in m1)
     && (forall m, m \in m1 => to_list (oget m1.[m]) = map (fun i => oget m2.[(m,i)]) (range 0 size_out)).
 
   op same_ro2 (m1 : (bool list, bool list) fmap) (m2 : (bool list * int, bool) fmap) =
-      (forall m, m \in m1 => forall i, 0 <= i < size_out => (m,i) \in m2)
+       (forall m, m \in m1 => forall i, 0 <= i < size_out => (m,i) \in m2)
     && (forall m, (exists i, 0 <= i < size_out /\ (m,i) \in m2) => m \in m1)
     && (forall m, m \in m1 => oget m1.[m] = map (fun i => oget m2.[(m,i)]) (range 0 size_out)).
 
@@ -230,7 +230,7 @@ section Preimage.
   + move:H8; rewrite mem_set=>[][]//=h; 1:rewrite H3=>//=.
     - by have []h1 []h2 h3:= H2; have->//:=h1 _ h.
     by move:h => <<-; rewrite H6 //=.
-  + rewrite mem_set//=; have[]//=h:= H5 _ _ H11; left.
+  + rewrite mem_set //=; have [] //= h:= H5 _ _ H11; left.
     have []h1 []->//=:= H2.
     by exists i0=>//=.
   + move:H7; rewrite take_oversize 1:spec_dout//= => H7.
