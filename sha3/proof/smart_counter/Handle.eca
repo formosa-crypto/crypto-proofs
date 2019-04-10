@@ -497,7 +497,7 @@ split=> [xa0 xc0 ya0 yc0|xa0 hx0 ya0 hy0]; rewrite get_setE.
   by exists hx0 fx0 hy0 fy0; rewrite !get_setE /#.
 case: ((xa0,hx0) = (xa,hx))=> [[#] <*>> [#] <<*>|] /=.
 + by exists xc f yc f'; rewrite !get_setE /= /#.
-rewrite andaE=> /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
+move=> /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
 exists xc0 fx0 yc0 fy0; rewrite !get_setE; do !split=> [/#|/#|/=].
 move: xahx0_neq_xahx; case: (xa0 = xa)=> [/= <*>>|//=]; case: (xc0 = xc)=> [<*>>|//=].
 by move: hs_hx=> /(Hhuniq _ _ _ _ hs_hx0).
@@ -517,7 +517,7 @@ move=> [] Hm_mh Hmh_m yc_notin_rng1_hs hs_hx hs_hy; split.
   by exists hy0 fy0 hx0 fx0; rewrite !get_setE /#.
 move=> ya0 hy0 xa0 hx0; rewrite get_setE; case: ((ya0,hy0) = (ya,hy))=> [[#] <*>> [#] <<*>|].
 + by exists yc fy xc fx; rewrite !get_setE //= /#.
-rewrite /= andaE=> /negb_and yahy0_neq_yahy /Hmh_m [yc0 fy0 xc0 fx0] [#] hs_hy0 hs_hx0 mi_yayc0.
+move=> /= /negb_and yahy0_neq_yahy /Hmh_m [yc0 fy0 xc0 fx0] [#] hs_hy0 hs_hx0 mi_yayc0.
 exists yc0 fy0 xc0 fx0; rewrite !get_setE; do !split=> [/#|/#|].
 move: yahy0_neq_yahy; case: (ya0 = ya)=> [<<*> //=|/#]; case: (yc0 = yc)=> [<*>> /=|//=].
 by move: hs_hy0; rewrite yc_notin_rng1_hs.
@@ -1177,7 +1177,7 @@ split.
   case: {-1}(Gmi.[(ya,yc)]) (eq_refl Gmi.[(ya,yc)])=> [//|[xa' xc']].
   have /incli_of_INV + ^h - <- := HINV; 1:by rewrite h.
   move: Pm_xaxc; have [] -> -> /= := inv_mh_inv_Pm hs Pm Pmi mh mhi _ _ _; first 3 by case: HINV.
-  rewrite andaE -negP=> [#] <<*>.
+  rewrite -negP=> [#] <<*>.
   move: h; have /invG_of_INV [] <- := HINV.
   by rewrite Gm_xaxc.
 + by case: HINV.
@@ -1265,7 +1265,7 @@ proof.
   move=> p x Hrec v hx /build_hpath_prefix [v' h' [/Hrec{Hrec}]].
   rewrite get_setE /=;case (h' = ch) => [->> | ].
   + by rewrite (@eq_sym ch) Hha /= => _ /Hch.
-  case (v' +^ x = xa && h' = ha) => [[!<<-] /= ?? [!->>] /=| ].
+  case (v' +^ x = xa /\ h' = ha) => [[!<<-] /= ?? [!->>] /=| ].
   + by exists p v';rewrite xorwA xorwK xorwC xorw0.
   case (hx = ch)=> [->> _ _ _ /Hch //|??? Hbu Hg].
   by rewrite build_hpath_prefix;exists v' h'.
@@ -2040,7 +2040,8 @@ proof.
       cut[]b6 c6[]:=H_pref1 _ H12 i{2} _;1:smt(size_take).
       rewrite!take_take !min_lel 1,2:/# nth_take 1,2:/# H2/=H_Gmh oget_some=>[][]<<-<<-<-. 
       rewrite H_PFm oget_some/=.
-      by cut[]help1 help2/# :=m_mh_of_INV _ _ _ _  _ _ _ _ _ _ _ _ HINV.
+      cut [] help1 help2:= m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
+      + by have [] xc fx yc fy [#] /# := help2 _ _ _ _ H_Gmh.
     - cut[]HINV[]->>/=[]->>/=[]H_h[]H_path H_F_RO:=H6 H11.
       cut[]H01 H02 H_pref1 H_pref2:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
       cut//=:=lemma5 _ _ _ _ _ _ _ _ _ _ _ _ i{2} p{2} sa{2} sc{1} h{2} HINV _ _ _ _.
@@ -2405,7 +2406,7 @@ proof.
           rewrite eq_xor h_g1/=;move:h_neq;apply absurd=>//=.
           cut:=hh3 _ _ _ _ _ H_path h_build_hpath_p0. 
           cut->:bn = sa{2} +^ sa{2} +^ bn;smt(@Block).
-        move=>help;cut h_neq:! (v +^ bn = sa{2} +^ nth witness bs{1} i{2} && hx = h{2}) by rewrite/#.
+        move=>help;cut h_neq:! (v +^ bn = sa{2} +^ nth witness bs{1} i{2} /\ hx = h{2}) by rewrite/#.
         move:help;rewrite h_neq/==>h_g1_v_bn_hx.
         cut[]hh1 hh2 hh3:=H_mh_spec.
         cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
@@ -2573,7 +2574,7 @@ section AUX.
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
   + move=> _; proc; inline *; wp;sp;if;auto;sp;if;auto;sp. 
-    conseq(:_==> (G1.bcol \/ G1.bext));1:smt(@DBlock @DCapacity mem_set). 
+    conseq(:_==> (G1.bcol \/ G1.bext));1:smt(@DBlock @DCapacity mem_set).
     while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
     + if; 1:by auto=> /#.
       if;2:auto=>/#;wp; rnd predT; wp; rnd predT; auto.
@@ -2632,5 +2633,3 @@ section.
   qed.
 
 end section.
-
-

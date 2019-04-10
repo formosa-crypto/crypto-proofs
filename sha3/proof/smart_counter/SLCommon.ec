@@ -148,7 +148,7 @@ lemma build_hpathP mh p v h:
   build_hpath mh p = Some (v,h) <=> build_hpath_spec mh p v h.
 proof.
 elim/last_ind: p v h=> @/build_hpath //= [v h|p b ih v h].
-+ by rewrite andaE; split=> [!~#] <*>; [exact/Empty|move=> []]; smt(size_rcons size_ge0).
++ by split=> [!~#] <*>; [exact/Empty|move=> []]; smt(size_rcons size_ge0).
 rewrite -{1}cats1 foldl_cat {1}/step_hpath /=.
 case: {-1}(foldl _ _ _) (eq_refl (foldl (step_hpath mh) (Some (b0,0)) p))=> //=.
 + apply/implybN; case=> [|p' b0 v' h'].
