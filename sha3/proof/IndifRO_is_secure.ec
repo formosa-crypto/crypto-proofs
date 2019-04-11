@@ -84,11 +84,12 @@ module FM (C : CONSTRUCTION) (P : PRIMITIVE) = {
   proc rem (a : f_in) = {}
 }.
 
-module D (A : AdvCollision) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+
+module DColl (A : AdvCollision) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
   proc distinguish = Collision(A,FInit(F)).main
 }.
 
-section Proof.
+section Collision.
 
   declare module A : AdvCollision{Bounder, SRO.RO.RO, SRO.RO.FRO}.
   
@@ -100,25 +101,117 @@ section Proof.
       (P <: PRIMITIVE{C, A, Bounder}) &m :
       (exists (S <: SIMULATOR{Bounder, A}),
         (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
-        `|Pr[GReal(C,P,D(A)).main() @ &m : res] - 
-          Pr[GIdeal(RO,S,D(A)).main() @ &m : res]| <= bound) =>
+        `|Pr[GReal(C,P,DColl(A)).main() @ &m : res] - 
+          Pr[GIdeal(RO,S,DColl(A)).main() @ &m : res]| <= bound) =>
       Pr[Collision(A,FM(C,P)).main() @ &m : res] <= 
         bound + ((limit * (limit - 1) + 2)%r / 2%r * mu1 sampleto witness).
   proof.
   move=>[] S [] S_ll Hbound.
   cut->: Pr[Collision(A, FM(C,P)).main() @ &m : res] = 
-         Pr[GReal(C, P, D(A)).main() @ &m : res].
+         Pr[GReal(C, P, DColl(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sim.
     by swap{1} [1..2] 2; sim.
-  cut/#:Pr[GIdeal(RO, S, D(A)).main() @ &m : res] <= 
+  cut/#:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] <= 
          (limit * (limit - 1) + 2)%r / 2%r * mu1 sampleto witness.
-  cut->:Pr[GIdeal(RO, S, D(A)).main() @ &m : res] =
+  cut->:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] =
         Pr[Collision(A, SRO.RO.RO).main() @ &m : res].
-  + byequiv=>//=; proc; inline D(A, RO, S(RO)).distinguish; wp; sim.
+  + byequiv=>//=; proc; inline DColl(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp. 
     call{1} (S_ll RO); auto.
     by proc; auto; smt(sampleto_ll).
   exact(RO_is_collision_resistant A &m).
   qed.
 
-end section Proof.
+end section Collision.
+
+
+module DPre (A : AdvPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+  var h : f_out
+  proc distinguish () = {
+    var b;
+    b <@ Preimage(A,FInit(F)).main(h);
+    return b;
+  }
+}.
+
+section Preimage.
+
+  declare module A : AdvPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, DPre}.
+  
+  axiom D_ll (F <: Oracle) :
+    islossless F.get => islossless A(F).guess.
+
+  lemma preimage_resistant_if_indifferentiable
+      (C <: CONSTRUCTION{A, Bounder, DPre})
+      (P <: PRIMITIVE{C, A, Bounder, DPre}) &m hash :
+      (DPre.h{m} = hash) =>
+      (exists (S <: SIMULATOR{Bounder, A, DPre}),
+        (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
+        `|Pr[GReal(C,P,DPre(A)).main() @ &m : res] - 
+          Pr[GIdeal(RO,S,DPre(A)).main() @ &m : res]| <= bound) =>
+      Pr[Preimage(A,FM(C,P)).main(hash) @ &m : res] <= 
+        bound + (limit + 1)%r * mu1 sampleto hash.
+  proof.
+  move=>init_hash [] S [] S_ll Hbound.
+  cut->: Pr[Preimage(A, FM(C,P)).main(hash) @ &m : res] = 
+         Pr[GReal(C, P, DPre(A)).main() @ &m : res].
+  + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
+    by swap{2} [1..2] 4; sim; auto; smt(). 
+  cut/#:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] <= 
+         (limit + 1)%r * mu1 sampleto hash.
+  cut->:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] =
+        Pr[Preimage(A, SRO.RO.RO).main(hash) @ &m : res].
+  + byequiv=>//=; proc; inline DPre(A, RO, S(RO)).distinguish; wp; sim.
+    inline*; swap{2} 1 1; wp; sim; auto.
+    call{1} (S_ll RO); auto.
+    by proc; auto; smt(sampleto_ll).
+  exact(RO_is_preimage_resistant A &m hash).
+  qed.
+
+end section Preimage.
+
+
+module D2Pre (A : AdvSecondPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
+  var m2 : f_in
+  proc distinguish () = {
+    var b;
+    b <@ SecondPreimage(A,FInit(F)).main(m2);
+    return b;
+  }
+}.
+
+section SecondPreimage.
+
+  declare module A : AdvSecondPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, D2Pre}.
+  
+  axiom D_ll (F <: Oracle) :
+    islossless F.get => islossless A(F).guess.
+
+  lemma second_preimage_resistant_if_indifferentiable
+      (C <: CONSTRUCTION{A, Bounder, D2Pre})
+      (P <: PRIMITIVE{C, A, Bounder, D2Pre}) &m mess :
+      (D2Pre.m2{m} = mess) =>
+      (exists (S <: SIMULATOR{Bounder, A, D2Pre}),
+        (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
+        `|Pr[GReal(C,P,D2Pre(A)).main() @ &m : res] - 
+          Pr[GIdeal(RO,S,D2Pre(A)).main() @ &m : res]| <= bound) =>
+      Pr[SecondPreimage(A,FM(C,P)).main(mess) @ &m : res] <= 
+        bound + (limit + 1)%r * mu1 sampleto witness.
+  proof.
+  move=>init_mess [] S [] S_ll Hbound.
+  cut->: Pr[SecondPreimage(A, FM(C,P)).main(mess) @ &m : res] = 
+         Pr[GReal(C, P, D2Pre(A)).main() @ &m : res].
+  + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
+    by swap{2} [1..2] 3; sim; auto; smt(). 
+  cut/#:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] <= 
+         (limit + 1)%r * mu1 sampleto witness.
+  cut->:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] =
+        Pr[SecondPreimage(A, SRO.RO.RO).main(mess) @ &m : res].
+  + byequiv=>//=; proc; inline D2Pre(A, RO, S(RO)).distinguish; wp; sim.
+    inline*; swap{2} 1 1; wp; sim; auto.
+    call{1} (S_ll RO); auto.
+    by proc; auto; smt(sampleto_ll).
+  exact(RO_is_second_preimage_resistant A &m mess).
+  qed.
+
+end section SecondPreimage.
