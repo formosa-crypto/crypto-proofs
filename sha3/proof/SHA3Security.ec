@@ -28,6 +28,28 @@ axiom to_listK e l : to_list e = l <=> of_list l = Some e.
 
 axiom dout_equal_dlist : dmap dout to_list = dlist dbool size_out.
 
+lemma doutE1 x : mu1 dout x = inv (2%r ^ size_out).
+proof.
+cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x). 
++ rewrite dlist1E.
+  - smt(size_out_gt0).
+  rewrite spec_dout/=.
+  pose p:= StdBigop.Bigreal.BRM.big _ _ _.
+  cut->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
+  - rewrite /p =>{p}. print StdBigop.Bigreal.BRM.
+    apply StdBigop.Bigreal.BRM.eq_bigr.
+    by move=> i; rewrite//= dbool1E.
+  rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}. search 0 Int.(+) 1 (<=).
+  have:=size_out_gt0; move/ltzW.
+  move:size_out;apply intind=> //=. 
+  - by rewrite powr0 iter0 //= fromint1.
+  move=> i hi0 rec.
+  by rewrite powrS//iterS// -rec; smt().
+rewrite -dout_equal_dlist dmap1E.
+apply mu_eq.
+by move=> l; rewrite /pred1/(\o); smt(to_listK).
+qed.
+
 module CSetSize (F : CONSTRUCTION) (P : DPRIMITIVE) = {
   proc init = F(P).init
   proc f (x : bool list) = {
@@ -367,9 +389,10 @@ section Preimage.
       Pr[SRO.Preimage(A, FM(CSetSize(Sponge), Perm)).main(ha) @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
       (4 * limit ^ 2)%r / (2 ^ c)%r +
-      (sigma + 1)%r * mu1 dout ha.
+      (sigma + 1)%r / (2%r ^ size_out).
   proof.
   move=>init_ha.
+  rewrite -(doutE1 ha).
   rewrite(preimage_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m ha init_ha).
   exists (SimSetSize(Simulator))=>//=; split.
   + by move=> F _; proc; inline*; auto.
@@ -713,9 +736,10 @@ section SecondPreimage.
       Pr[SRO.SecondPreimage(A, FM(CSetSize(Sponge), Perm)).main(mess) @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
       (4 * limit ^ 2)%r / (2 ^ c)%r +
-      (sigma + 1)%r * mu1 dout witness.
+      (sigma + 1)%r / (2%r ^ size_out).
   proof.  
   move=> init_mess.
+  rewrite -(doutE1 witness).
   rewrite(second_preimage_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m mess init_mess).
   exists (SimSetSize(Simulator)); split.
   + by move=> F _; proc; inline*; auto.
@@ -1103,8 +1127,9 @@ section Collision.
       Pr[SRO.Collision(A, FM(CSetSize(Sponge), Perm)).main() @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
       (4 * limit ^ 2)%r / (2 ^ c)%r +
-      (sigma * (sigma - 1) + 2)%r / 2%r * mu1 dout witness.
+      (sigma * (sigma - 1) + 2)%r / 2%r / (2%r ^ size_out).
   proof. 
+  rewrite -(doutE1 witness).
   rewrite (coll_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m).
   exists (SimSetSize(Simulator)); split.
   + by move=> F _; proc; inline*; auto.
