@@ -131,11 +131,15 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
 
    We have lazy (HybridIROLazy) and eager (HybridIROEager) Hybrid
    IROs, both of which work with a finite map from block list * int to
-   bool. In both versions, f is defined in terms of g. In the lazy
-   version, g consults/randomly updates just those elements of the
-   map's domain needed to produce the needed bits. But the eager
-   version goes further, consulting/randomly updating enough extra
-   domain elements so that a multiple of r domain elements were
+   bool. In both versions, f is defined in terms of g, and, as in
+   BlockSponge.BIRO.IRO, g returns [] if x isn't a valid block. In
+   both versions, the input/output behavior of f is identical to that
+   of BlockSponge.BIRO.IRO.f.
+
+   In the lazy version, g consults/randomly updates just those
+   elements of the map's domain needed to produce the needed bits. But
+   the eager version goes further, consulting/randomly updating enough
+   extra domain elements so that a multiple of r domain elements were
    consulted/randomly updated (those extra bits are discarded)
 
    We have a parameterized module RaiseHybridIRO for turning a Hybrid
@@ -268,7 +272,7 @@ module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
 
   proc g(xs, n) = {
     var b, bs;
-    var m <- ((n + r - 1) %/ r) * r;
+    var m <- ((n + r - 1) %/ r) * r;  (* eager part *)
     var i <- 0;
 
     bs <- [];
@@ -2063,7 +2067,6 @@ proc (HIRO.eager_invar BlockSponge.BIRO.IRO.mp{2}
 proc (HIRO.eager_invar BlockSponge.BIRO.IRO.mp{2}
                        HIRO.HybridIROEager.mp{1})=> //;
   conseq HIRO.HybridIROEager_BlockIRO_f=> //.
-exists* n{1}; elim *=> n'.
 conseq RaiseHybridIRO_HybridIROEager_RaiseFun_BlockIRO_f=> //.
 auto.
 qed.
