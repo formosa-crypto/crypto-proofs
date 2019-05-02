@@ -2420,7 +2420,7 @@ proof.
         cut->/=:=ch_neq0 _ _ H_hs_spec.
         cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
         rewrite h_g1/=.
-        by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
+        by cut[]:=H_mh_spec; smt(dom_hs_neq_ch).
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p' v' hx.
       move:H13 H14;rewrite!get_setE/=!oget_some/==>H13 H14;rewrite H13 H14/=.
@@ -2574,12 +2574,18 @@ section AUX.
     smt (size_ge0).
   (* lossless and do not reset bad G1.C.f *)
   + move=> _; proc; inline *; wp;sp;if;auto;sp;if;auto;sp. 
-    conseq(:_==> (G1.bcol \/ G1.bext));1:smt(@DBlock @DCapacity mem_set).
-    while (G1.bcol \/ G1.bext) (size p - i)=> [z|].
+    conseq(:_==> true) (: _ ==> G1.bcol \/ G1.bext)=> //=.
+    + by move=> />.
+    + smt(@DBlock @DCapacity mem_set).
+    + while (G1.bcol \/ G1.bext)=> //=.
+      if; 1:by auto.
+      if;2:by auto.
+      by auto=> /> &hr [->|->].
+    while (true) (size p - i)=> [z|].
     + if; 1:by auto=> /#.
-      if;2:auto=>/#;wp; rnd predT; wp; rnd predT; auto.
-      smt (@Block.DBlock @Capacity.DCapacity).
-    by auto; smt (@Block.DBlock @Capacity.DCapacity).
+      if; 2:by auto=> /#.
+      by wp; rnd predT; wp; rnd predT; auto=> />; smt(@DBlock @DCapacity).
+    by auto=> /#.
   (* Init ok *)
   inline *; auto=> />; split=> [|/#].
   do !split. 
