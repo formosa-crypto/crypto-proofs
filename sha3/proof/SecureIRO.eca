@@ -1,0 +1,147 @@
+require import Core Int Real Distr List.
+
+require (****) IRO.
+
+
+(* Define the random function *)
+type from.
+type to.
+
+op dto : to distr.
+
+clone import IRO as URO with
+  type from <- from,
+  type to <- to,
+  op dto <- dto
+  proof *.
+
+(* Define module types for the preimage, second preimage and collision games *)
+
+module type OIRO = {
+  proc f (x : from, n : int) : to list
+}.
+module type Adversary (F : OIRO) = {
+  proc guess_preimage (h : to list) : from
+  proc guess_second_preimage (m1 : from, s : int) : from
+  proc guess_collision (s : int) : from * from
+}.
+
+(* Define the bound on the counter cost and the operator updating the cost *)
+module Cost = {
+  var counter : int
+}.
+
+op update_cost : int -> from -> int.
+axiom update_cost c m : c <= update_cost c m.
+
+op t : int.
+axiom t_gt0 : 0 < t.
+
+module Count (F : OIRO) = {
+  proc init() = {
+    Cost.counter <- 0;
+  }
+  proc f (m : from, n : int) = {
+    var r : to list;
+    r <- [];
+    if (update_cost Cost.counter m < t) {
+      r <- F.f(m,n);
+      Cost.counter <- update_cost Cost.counter m;
+    }
+    return r;
+  }
+}.
+
+
+(************************** Preimage Game *************************************)
+module PreImage (A : Adversary, F : IRO) = {
+  proc game (h : to list) : bool = {
+    var m, h2, b;
+    b <- false;
+    Cost.counter <- 0;
+    F.init();
+    m <@ A(Count(F)).guess_preimage(h);
+    if (update_cost Cost.counter m < t) {
+      h2 <- F.f(m, size h);
+      b <- h = h2;
+      Cost.counter <- update_cost Cost.counter m;
+    }
+    return b;
+  }
+}.
+
+(************************** Second Preimage Game ******************************)
+module SecondPreImage (A : Adversary, F : IRO) = {
+  proc game (m : from, s : int) : bool = {
+    var m2, h1, h2, b;
+    b <- false;
+    Cost.counter <- 0;
+    F.init();
+    m2 <@ A(Count(F)).guess_second_preimage(m,s);
+    if (update_cost Cost.counter m < t) {
+      h1 <- F.f(m,s);
+      Cost.counter <- update_cost Cost.counter m;
+      if (update_cost Cost.counter m2 < t) {
+        h2 <- F.f(m2,s);
+        b <- h1 = h2;
+        Cost.counter <- update_cost Cost.counter m2;
+      }
+    }
+    return b;
+  }
+}.
+
+(************************** Collision Game ************************************)
+module Collision (A : Adversary, F : IRO) = {
+  proc game (s : int) : bool = {
+    var m1, m2, h1, h2, b;
+    b <- false;
+    Cost.counter <- 0;
+    F.init();
+    (m1,m2) <@ A(Count(F)).guess_collision(s);
+    if (update_cost Cost.counter m1 < t) {
+      h1 <- F.f(m1,s);
+      Cost.counter <- update_cost Cost.counter m1;
+      if (update_cost Cost.counter m2 < t) {
+        h2 <- F.f(m2,s);
+        b <- h1 = h2;
+        Cost.counter <- update_cost Cost.counter m2;
+      }
+    }
+    return b;
+  }
+}.
+
+
+(*********************************** Proofs ***********************************)
+section Proof.
+
+  declare module A : Adversary{IRO, Cost}.
+  
+
+  lemma PreImage_Resistance &m (h : to list) :
+    Pr [ PreImage(A, IRO).game(h) @ &m : res ] <= mu1 dto witness<:to>.
+  proof.
+  admit.
+  qed.
+
+  lemma SecondPreImage_Resistance &m (m : from) (output_size : int) :
+    0 < output_size =>
+    Pr [ SecondPreImage(A, IRO).game(m, output_size) @ &m : res ]
+      <= mu1 dto witness<:to>.
+  proof.
+  admit.
+  qed.
+
+  lemma Collision_Resistance &m (output_size : int) :
+    0 < output_size =>
+    Pr [ Collision(A, IRO).game(output_size) @ &m : res ] <= mu1 dto witness<:to>.
+  proof.
+  admit.
+  qed.
+
+end section Proof.
+
+
+
+
