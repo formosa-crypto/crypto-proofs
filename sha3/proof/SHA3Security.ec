@@ -4,6 +4,14 @@ require import AllCore Distr DList DBool List IntExtra IntDiv Dexcepted DProd Sm
 require import Common SLCommon Sponge SHA3Indiff.
 require (****) IndifRO_is_secure.
 
+module SHA3 (P : DPRIMITIVE) = {
+  proc init() : unit = {}
+  proc f (bl : bool list, n : int) : bool list = {
+    var r : bool list;
+    r <@ Sponge(P).f(bl ++ [false; true], n);
+    return r;
+  }
+}.
 
 op    size_out     : int.
 axiom size_out_gt0 : 0 < size_out.
@@ -384,7 +392,7 @@ section Preimage.
   smt().
   qed.
 
-  lemma SHA3_preimage_resistant &m ha :
+  lemma Sponge_preimage_resistant &m ha :
       (DPre.h{m} = ha) =>
       Pr[SRO.Preimage(A, FM(CSetSize(Sponge), Perm)).main(ha) @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
@@ -731,7 +739,7 @@ section SecondPreimage.
   smt().
   qed.
 
-  lemma SHA3_second_preimage_resistant &m mess :
+  lemma Sponge_second_preimage_resistant &m mess :
       (D2Pre.m2{m} = mess) =>
       Pr[SRO.SecondPreimage(A, FM(CSetSize(Sponge), Perm)).main(mess) @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
@@ -1123,7 +1131,7 @@ section Collision.
   smt().
   qed.
 
-  lemma SHA3_coll_resistant &m :
+  lemma Sponge_coll_resistant &m :
       Pr[SRO.Collision(A, FM(CSetSize(Sponge), Perm)).main() @ &m : res] <=
       (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
       (4 * limit ^ 2)%r / (2 ^ c)%r +
@@ -1235,5 +1243,43 @@ section Collision.
   + by call F_ll; auto.
   sp; if; auto; sp; call F_ll; auto.
   qed.
+
+end section Collision.
+
+module X (F : SRO.Oracle) = {
+  proc get (bl : bool list) = {
+  var r;
+  r <@ F.get(bl ++ [ false ; true ]);
+  return r;
+  }
+}.
+
+module AdvCollisionSHA3 (A : SRO.AdvCollision) (F : SRO.Oracle) = {
+  proc guess () = {
+    var m1, m2;
+    (m1, m2) <@ A(X(F)).guess();
+    return (m1 ++ [ false ; true ], m2 ++ [ false ; true ]);
+  }
+}.
+
+section SHA3_Collision.
+
+  declare module A : SRO.AdvCollision{SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
+    Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
+    Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
+    Gconcl_list.F2.FRO, Gconcl_list.Simulator}.
+
+  axiom A_ll (F <: SRO.Oracle) : islossless F.get => islossless A(F).guess.
+
+  lemma SHA3_coll_resistant &m :
+      Pr[SRO.Collision(AdvCollisionSHA3(A), FM(CSetSize(Sponge), Perm)).main() @ &m : res] <=
+      (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r +
+      (4 * limit ^ 2)%r / (2 ^ c)%r +
+      (sigma * (sigma - 1) + 2)%r / 2%r / (2%r ^ size_out).
+  proof.
+  apply (Sponge_coll_resistant (AdvCollisionSHA3(A)) _ &m).
+  by move=> F F_ll; proc; inline*; call(A_ll (X(F))); auto; proc; call F_ll; auto.
+  qed.
+
 
 end section Collision.
