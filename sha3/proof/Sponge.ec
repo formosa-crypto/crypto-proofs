@@ -31,6 +31,34 @@ clone import IRO as BIRO with
 
 (*------------------------- Sponge Construction ------------------------*)
 
+module StdSponge (P : DPRIMITIVE) = {
+  proc init() : unit = {}
+
+  proc f(bs : bool list, n : int) : bool list = {
+    var z        <- [];
+    var (sa, sc) <- (b0, Capacity.c0);
+    var finished <- false;
+    var xs       <- pad2blocks bs;
+
+    (* absorption *)
+    while (xs <> []) {
+      (sa, sc) <@ P.f(sa +^ head b0 xs, sc);
+      xs       <- behead xs;
+    }
+    (* squeezing *)
+    while (!finished) {
+      z        <- z ++ ofblock sa;
+      if (size z < n) {
+        (sa, sc) <@ P.f(sa, sc);
+      } else {
+        finished <- true;
+      }
+    }
+
+    return take n z;
+  }
+}.
+
 module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
   proc init() : unit = {}
 
@@ -57,6 +85,50 @@ module (Sponge : CONSTRUCTION) (P : DPRIMITIVE) : FUNCTIONALITY = {
     return take n z;
   }
 }.
+
+lemma loop_cond i n: 0 <= i => 0 <= n => r * i < n <=> i < (n + r - 1) %/ r.
+proof.
+move=> ge0_i; elim: i ge0_i n=> /= [|i ge0_i ih n ge0_n].
++ smt(gt0_n).
+case: (r %| n).
++ move=> ^/dvdzE n_mod_r /needed_blocks_eq_div_r <-.
+  by rewrite -(ltr_pmul2r r gt0_r (i + 1)) divzE n_mod_r /#.
+move=> r_ndvd_n. rewrite -ltr_subr_addr -(addzC (-1)).
+rewrite -divzMDr 1:[smt(gt0_r)] Ring.IntID.mulN1r.
+have ->: n + r - 1 - r = (n - r) + r - 1 by smt().
+case: (0 <= n - r)=> [n_ge_r|/ltzNge n_lt_r /#].
+by rewrite -ih /#.
+qed.
+
+equiv Sponge_is_StdSponge (P <: DPRIMITIVE):
+  StdSponge(P).f ~ Sponge(P).f: ={glob P, bs, n} ==> ={glob P, res}.
+proof.
+proc; seq  5  5: (={glob P, z, sa, sc, xs, n} /\ !finished{1} /\ i{2} = 0 /\ z{1} = []).
++ while (={glob P, xs, sa, sc}); 2:by auto.
+  by auto; call (: true).
+case: (n{1} <= 0).
++ rcondt{1} 1=> //=; rcondf{1} 2.
+  + by auto; smt(size_ge0).
+  rcondf{1} 3; 1:by auto.
+  rcondf{2} 1.
+  + by auto=> /> &hr _ /needed_blocks_non_pos /#.
+  by auto=> /> &1 &2 _ n_le0; rewrite !take_le0.
+while (   ={glob P, z, n, sa, sc}
+       /\ (finished{1} <=> n{1} <= size z{1})
+       /\ size z{1} = r * i{2}
+       /\ 0 < n{1}
+       /\ 0 <= i{2}).
++ sp; if=> />.
+  + move=> &2 i z; rewrite size_cat size_block=> -> gt0_n ge0_i /ltzNge gt_ri_n gt_i_nbl.
+    by rewrite -(mulzDr r i 1) loop_cond /#.
+  + call (: true); auto=> /> &2 i z; rewrite size_cat size_block=> -> gt0_n ge0_i /ltzNge gt_ri_n gt_i_nbl.
+    move=> ^ + /ltzNge -> /=; rewrite mulzDr /=.
+    by rewrite -(mulzDr r i 1) loop_cond /#.
+  + auto=> /> &2 i z; rewrite size_cat size_block=> -> gt0_n ge0_i /ltzNge gt_ri_n gt_i_nbl.
+    move=> ^ + /lezNgt -> /=; rewrite mulzDr /=.
+    by rewrite -(mulzDr r i 1) loop_cond /#.
+by auto=> /> &1 &2 _ /ltrNge gt0_n; smt(gt0_r).
+qed.
 
 (*------------- Simulator and Distinguisher Constructions --------------*)
 
