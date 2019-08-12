@@ -1,4 +1,4 @@
-require import Core Int Real Distr List.
+require import AllCore Int Real Distr List SmtMap FSet FelTactic DList.
 
 require (****) IRO.
 
@@ -15,11 +15,15 @@ clone import IRO as URO with
   op dto <- dto
   proof *.
 
+axiom dto_ll : is_lossless dto.
+axiom dto_funi : is_funiform dto.
+
 (* Define module types for the preimage, second preimage and collision games *)
 
 module type OIRO = {
   proc f (x : from, n : int) : to list
 }.
+
 module type Adversary (F : OIRO) = {
   proc guess_preimage (h : to list) : from
   proc guess_second_preimage (m1 : from, s : int) : from
@@ -27,15 +31,32 @@ module type Adversary (F : OIRO) = {
 }.
 
 (* Define the bound on the counter cost and the operator updating the cost *)
+
 module Cost = {
   var counter : int
 }.
 
-op update_cost : int -> from -> int.
-axiom update_cost c m : c <= update_cost c m.
+op update_cost : int -> from -> int -> int.
+axiom update_cost c m i : c <= update_cost c m i.
+axiom update_costS c m i : 
+  update_cost c m i <= update_cost c m (i+1) <= update_cost c m i + 1.
+lemma update_cost_leq c m (i : int) j : 
+    i <= j => update_cost c m i <= update_cost c m j.
+proof.
+pose k := j - i.
+cut -> : j = k + i by smt().
+rewrite StdOrder.IntOrder.ler_addr. 
+by elim:k=>//= {j} k H0k; rewrite addzAC; smt(update_costS). 
+qed.
 
 op t : int.
 axiom t_gt0 : 0 < t.
+
+op map_cost (m : ('a, 'b) fmap) : int.
+axiom map_cost0 (m : ('a, 'b) fmap) : m = empty => 0 = map_cost m.
+axiom map_cost_update_cost (map : ('a * 'b, 'c) fmap) c m i x j y :
+  map_cost map <= update_cost c m i => 
+  map_cost map.[(x,j) <- y] <= update_cost c m (i+1).
 
 module Count (F : OIRO) = {
   proc init() = {
@@ -44,27 +65,71 @@ module Count (F : OIRO) = {
   proc f (m : from, n : int) = {
     var r : to list;
     r <- [];
-    if (update_cost Cost.counter m < t) {
+    if (0 <= n /\ update_cost Cost.counter m n < t) {
       r <- F.f(m,n);
-      Cost.counter <- update_cost Cost.counter m;
+      Cost.counter <- update_cost Cost.counter m n;
     }
     return r;
   }
 }.
 
+(***** Useful Material ********************************************************)
+op rngm (m : ('a * int, 'b) fmap) (l : 'b list) =
+  exists (x : 'a), forall i, 0 <= i < size l => m.[(x,i)] = Some (nth witness l i).
+
+lemma not_rngm (m : ('a * int, 'b) fmap) (l : 'b list) : 
+    ! rngm m l <=> forall x, exists i, 0 <= i < size l /\ m.[(x,i)] <> Some (nth witness l i).
+
+op set_at (l : 'a list) (i : int) (a : 'a) =
+  (take i l) ++ [a] ++ (drop (i+1) l).
+
+lemma nth_set_at_eq (a b : 'a) (l : 'a list) j :
+    0 <= j < size l => nth a (set_at l j b) j = b.
+proof.
+move=>[#] hj0 hjn.
+rewrite/set_at nth_cat size_cat/= size_take // hjn /=.
+have->/=: j < j + 1 by smt().
+by rewrite nth_cat size_take // hjn /=.
+qed.
+
+lemma nth_set_at_lt (a b : 'a) (l : 'a list) i j :
+    0 <= j < i < size l => nth a (set_at l i b) j = nth a l j.
+proof.
+move=>[#] hj0 hji hin.
+rewrite/set_at nth_cat size_cat/= size_take // 1:/# hin/=. 
+have->/=: j < i + 1 by smt().
+by rewrite nth_cat size_take // 1:/# hin /= hji /= nth_take /#.
+qed.
+
+lemma nth_set_at_gt (a b : 'a) (l : 'a list) i j :
+    0 <= i < j < size l => nth a (set_at l i b) j = nth a l j.
+proof.
+move=>[#] hi0 hji hjn.
+have hin : i < size l by smt().
+rewrite/set_at nth_cat size_cat/= size_take // hin /=. 
+have->/=: ! j < i + 1 by smt().
+by rewrite nth_drop; smt(). 
+qed.
+
+lemma size_set_at (l : 'a list) i a :
+    0 <= i < size l => size (set_at l i a) = size l.
+proof.
+move=> [#] hi0 hin; rewrite /set_at 2!size_cat /=.
+by rewrite size_take // hin /= size_drop /#.
+qed.
 
 (************************** Preimage Game *************************************)
 module PreImage (A : Adversary, F : IRO) = {
   proc game (h : to list) : bool = {
     var m, h2, b;
     b <- false;
-    Cost.counter <- 0;
+    Count(F).init();
     F.init();
     m <@ A(Count(F)).guess_preimage(h);
-    if (update_cost Cost.counter m < t) {
+    if (update_cost Cost.counter m (size h) < t) {
       h2 <- F.f(m, size h);
       b <- h = h2;
-      Cost.counter <- update_cost Cost.counter m;
+      Cost.counter <- update_cost Cost.counter m (size h);
     }
     return b;
   }
@@ -75,16 +140,16 @@ module SecondPreImage (A : Adversary, F : IRO) = {
   proc game (m : from, s : int) : bool = {
     var m2, h1, h2, b;
     b <- false;
-    Cost.counter <- 0;
+    Count(F).init();
     F.init();
     m2 <@ A(Count(F)).guess_second_preimage(m,s);
-    if (update_cost Cost.counter m < t) {
+    if (0 <= s /\ update_cost Cost.counter m s < t) {
       h1 <- F.f(m,s);
-      Cost.counter <- update_cost Cost.counter m;
-      if (update_cost Cost.counter m2 < t) {
+      Cost.counter <- update_cost Cost.counter m s;
+      if (update_cost Cost.counter m2 s < t) {
         h2 <- F.f(m2,s);
         b <- h1 = h2;
-        Cost.counter <- update_cost Cost.counter m2;
+        Cost.counter <- update_cost Cost.counter m2 s;
       }
     }
     return b;
@@ -96,16 +161,16 @@ module Collision (A : Adversary, F : IRO) = {
   proc game (s : int) : bool = {
     var m1, m2, h1, h2, b;
     b <- false;
-    Cost.counter <- 0;
+    Count(F).init();
     F.init();
     (m1,m2) <@ A(Count(F)).guess_collision(s);
-    if (update_cost Cost.counter m1 < t) {
+    if (0 <= s /\ update_cost Cost.counter m1 s < t) {
       h1 <- F.f(m1,s);
-      Cost.counter <- update_cost Cost.counter m1;
-      if (update_cost Cost.counter m2 < t) {
+      Cost.counter <- update_cost Cost.counter m1 s;
+      if (update_cost Cost.counter m2 s < t) {
         h2 <- F.f(m2,s);
         b <- h1 = h2;
-        Cost.counter <- update_cost Cost.counter m2;
+        Cost.counter <- update_cost Cost.counter m2 s;
       }
     }
     return b;
@@ -117,14 +182,297 @@ module Collision (A : Adversary, F : IRO) = {
 section Proof.
 
   declare module A : Adversary{IRO, Cost}.
-  
 
-  lemma PreImage_Resistance &m (h : to list) :
-    Pr [ PreImage(A, IRO).game(h) @ &m : res ] <= mu1 dto witness<:to>.
-  proof.
-  admit.
+
+  (***** Useful Material ******************************************************)
+  local lemma card_domS (m : ('a, 'b) fmap) x y :
+      card (fdom m) <= card (fdom m.[x <- y]) <= card (fdom m) + 1.
+  proof. 
+  rewrite fdom_set fcardU fcard1 fsetI1.
+  case: (x \in fdom m) => //=.
+  + by rewrite fcard1 /#.
+  by rewrite fcards0 /#.
   qed.
 
+  (****** Preimage Resistance ********)
+  local module FEL (A : Adversary, F : IRO) = {
+    proc main (hash : to list) : from = {
+      var m;
+      Count(F).init();
+      m <@ A(Count(F)).guess_preimage(hash);
+      return m;
+    }
+  }.
+  
+  local module PreImage2 (A : Adversary, F : IRO) = {
+    proc game (h : to list) : bool = {
+      var m, h2, b;
+      b <- false;
+      F.init();
+      m <@ FEL(A,F).main(h);
+      if (update_cost Cost.counter m (size h) < t) {
+        h2 <- F.f(m, size h);
+        b <- h = h2;
+        Cost.counter <- update_cost Cost.counter m (size h);
+      }
+      return b;
+    }
+  }.
+
+
+  local module DListIRO : IRO = {
+    proc init() = {
+      IRO.mp <- empty;
+    }
+    proc f (m : from, n : int) = {
+      var bs, i;
+      bs <- [];
+      if (valid m) {
+        bs <$ dlist dto n;
+        i <- 0;
+        while (i < n) {
+          if ((m,i) \notin IRO.mp) {
+            IRO.mp.[(m,i)] <- nth witness bs i;
+          } else {
+            bs <- set_at bs i (oget IRO.mp.[(m,i)]);
+          }
+          i <- i + 1;
+        }
+      }
+      return bs;
+    }
+  }.
+
+  local clone DList.Program as MyPr with
+    type t <- to,
+    op d   <- dto
+    proof *.
+
+  local equiv equiv_dlist_IRO :
+      DListIRO.f ~ IRO.f : ={arg, glob IRO} /\ 0 <= arg{2}.`2 ==> ={res, glob IRO}.
+  proof.
+  proc; sp; if; 1,3:auto; inline*.
+  transitivity{2} {
+      i <- 0;
+      bs <- [];
+      while (i < n) {
+        b <$ dto;
+        bs <- rcons bs b;
+        i <- i + 1;
+      }
+      i <- 0;
+      while (i < n) {
+        if ((x, i) \notin IRO.mp) {
+          IRO.mp.[(x,i)] <- nth witness bs i;
+        } else {
+          bs <- set_at bs i (oget IRO.mp.[(x,i)]);
+        }
+        i <- i + 1;
+      }
+    }
+    (={bs, n, glob IRO} /\ bs{1} = [] /\ m{1} = x{2} ==> ={bs, IRO.mp})
+    (={bs, n, x, glob IRO} /\ bs{1} = [] /\ i{2} = 0 /\ 0 <= n{1} ==> ={bs, IRO.mp})=>//=.
+  + smt().
+  + sim. 
+    conseq(:_==> ={bs})=> //=.
+    transitivity{1} {
+        bs <@ MyPr.Sample.sample(n);
+      }
+      (={n} ==> ={bs}) (={n} ==> ={bs})=> //=.
+    - smt().
+    - by inline*; sim.
+    transitivity{2} {
+        bs <@ MyPr.LoopSnoc.sample(n);
+      }
+      (={n} ==> ={bs}) (={n} ==> ={bs})=> //=.
+    - smt().
+    - by call MyPr.Sample_LoopSnoc_eq; auto.
+    inline*; sim.
+    by while( (i0, n1, l){1} = (i, n, bs){2}); auto; smt(cats1).
+  transitivity{2} {
+      i <- 0;
+      while (i < n) {
+        b <$ dto;
+        bs <- rcons bs b;
+        if ((x, i) \notin IRO.mp) {
+          IRO.mp.[(x,i)] <- nth witness bs i;
+        } else {
+          bs <- set_at bs i (oget IRO.mp.[(x,i)]);
+        }
+        i <- i + 1;
+      }
+    }
+    (={bs, n, x, glob IRO} /\ bs{1} = [] /\ 0 <= n{1} ==> ={bs, IRO.mp})
+    (={bs, n, x, glob IRO} /\ bs{1} = [] /\ i{2} = 0 ==> ={bs, IRO.mp})=>//=.
+  + smt().
+  + seq 3 2 : (={n, x} /\ size bs{1} = n{1} /\ size bs{2} = size bs{1} /\
+      (forall y j, (y,j) \in IRO.mp{1} => (y,j) \in IRO.mp{2}) /\
+      (forall y j, (y,j) \in IRO.mp{1} => 
+        IRO.mp{1}.[(y,j)] = IRO.mp{2}.[(y,j)]) /\
+      (forall y j, (y,j) \in IRO.mp{2} =>
+        (y,j) \in IRO.mp{1} \/ (y = x{1} /\ 0 <= j < n{1})) /\
+      (forall j, 0 <= j < n{1} => (x{1},j) \in IRO.mp{2} /\
+        nth witness bs{2} j = oget IRO.mp{2}.[(x{1},j)]) /\
+      (forall j, 0 <= j < n{1} => (x{1},j) \notin IRO.mp{1} =>
+        nth witness bs{2} j = nth witness bs{1} j)); last first.
+    - sp; while{1}(={n, x} /\ size bs{1} = n{1} /\ 0 <= i{1} <= n{1} /\ 
+          size bs{2} = size bs{1} /\
+          (forall x j, (x,j) \in IRO.mp{1} => (x,j) \in IRO.mp{2}) /\
+          (forall y j, (y,j) \in IRO.mp{1} => 
+            IRO.mp{1}.[(y,j)] = IRO.mp{2}.[(y,j)]) /\
+          (forall y j, (y,j) \in IRO.mp{2} =>
+            (y,j) \in IRO.mp{1} \/ (y = x{1} /\ i{1} <= j < n{1})) /\
+          (forall j, 0 <= j < n{1} => (x{1},j) \in IRO.mp{2} /\
+            nth witness bs{2} j = oget IRO.mp{2}.[(x{1},j)]) /\
+          (forall j, 0 <= j < i{1} => (x{1},j) \in IRO.mp{1} /\
+            nth witness bs{1} j = oget IRO.mp{1}.[(x{1},j)]) /\
+          (forall j, 0 <= j < n{1} => (x{1},j) \notin IRO.mp{1} =>
+            nth witness bs{2} j = nth witness bs{1} j)) (n{1} - i{1}).
+      + move=> &1 c; if; auto; 1:smt(mem_set get_setE);
+          smt(nth_set_at_eq nth_set_at_lt nth_set_at_gt size_set_at).
+      auto=> &1 &2 [#] 3->> <<- hs2 4?; do !split=> //=.
+      + exact size_ge0.
+      + smt().
+      move=> [#] map1 bs1 i1; split; 1: smt(). 
+      + move=> hnis [#] hs hi0 his /= 6?.
+        have ->>/=: map1 = IRO.mp{2}.
+        - apply fmap_eqP.
+          move=> [] y j.
+          case: ((y,j) \in map1)=> hin; 1:smt().
+          have := hin; rewrite domE /= => ->.
+          have := H7 y j; rewrite hin /=.
+          have -> /= : ! i1 <= j < size bs{1} by smt().
+          by rewrite domE /= => ->.
+        apply/(eq_from_nth witness)=> //=.
+        - by rewrite hs hs2.
+        move=> j [] hj0 hjs.
+        have [] h -> {h} := H9 j _; 1: smt().
+        by have [] h -> {h} := H8 j _; 1: smt().
+      while(={i, n, x} /\ 0 <= i{1} <= n{1} /\
+          size bs{1} = i{1} /\ size bs{1} = size bs{2} /\
+          (forall y j, (y,j) \in IRO.mp{1} => (y,j) \in IRO.mp{2}) /\
+          (forall y j, (y,j) \in IRO.mp{1} => 
+            IRO.mp{1}.[(y,j)] = IRO.mp{2}.[(y,j)]) /\
+          (forall y j, (y,j) \in IRO.mp{2} =>
+            (y,j) \in IRO.mp{1} \/ (y = x{1} /\ 0 <= j < i{1})) /\
+          (forall j, 0 <= j < i{1} => (x{1},j) \in IRO.mp{2} /\
+            nth witness bs{2} j = oget IRO.mp{2}.[(x{1},j)]) /\
+          (forall j, 0 <= j < i{1} => (x{1},j) \notin IRO.mp{1} =>
+            nth witness bs{2} j = nth witness bs{1} j)).
+      wp; rnd; auto.
+      move=> &1 &2 [#] 3->> hi0 hin <<- hs 4? {hin} his h {h} b hbin //=.
+      rewrite hbin //; case: ((x{2}, size bs{1}) \in IRO.mp{2})=> hin//=.
+      + do !split.
+        - smt(size_ge0).
+        - smt().
+        - exact size_rcons.
+        - smt(size_set_at size_rcons).
+        - smt().
+        - smt().
+        - smt().
+        - move=> j [] hj0 hjs; split; 1:smt().
+          case: (j < size bs{1})=> hjs1.
+          + rewrite nth_set_at_lt 1:size_rcons 1:/#.
+            have//=[]_ <-:= H2 j _; 1: by done.
+            by rewrite nth_rcons -hs hjs1 /=.
+          have->>: j = size bs{1} by smt().
+          by rewrite nth_set_at_eq 1:size_rcons 1:-hs 1:/#.
+        - move=> j [] hj0 hjs hnin.
+          have hjs1: (j < size bs{1}) by smt().
+          rewrite nth_set_at_lt 1:size_rcons 1:/#.
+          rewrite !nth_rcons -hs hjs1 /=.
+          by apply H3=> //=.
+      do !split.
+      + smt(size_ge0).
+      + smt().
+      + exact size_rcons.
+      + smt(size_rcons).
+      + smt(mem_set).
+      + smt(get_setE).
+      + smt(mem_set).
+      + move=>j [] hj0 hjs1; split.
+        - rewrite mem_set; smt().
+        by rewrite nth_rcons get_setE /= nth_rcons; smt().
+      + smt(nth_rcons).
+    by auto; smt().
+  while(={i, n, IRO.mp, x, bs} /\ i{1} = size bs{1}); 2:auto.
+  + sp; if{2}.
+    - rcondt{1} 3; 1: auto; wp; rnd; auto; progress.
+      + smt(size_rcons nth_rcons).
+      + smt(get_setE).
+      + smt(size_rcons).
+    rcondf{1} 3; auto; progress.
+    + exact dto_ll.
+    apply (eq_from_nth witness).
+    + rewrite size_set_at //= 1: size_rcons 1:size_ge0 1:/#.
+      by rewrite 2!size_rcons.
+    move=> i [] hi0; rewrite size_set_at 1:size_ge0 size_rcons//= 1:/# => his.
+    case: (i < size bs{2})=> his2.
+    + by rewrite nth_set_at_lt 1:size_rcons 1:/# 2!nth_rcons his2/=.
+    have->>: i = size bs{2} by smt().
+    rewrite nth_set_at_eq 1:size_rcons 1:size_ge0 1:/#.
+    by rewrite nth_rcons /=.
+  by rewrite size_set_at size_rcons 1:size_ge0 1:/#.
+  qed.
+
+
+  lemma PreImage_Resistance &m (ha : to list) :
+    Pr [ PreImage(A, IRO).game(ha) @ &m : res ]
+      <= mu1 (dlist dto (size ha)) ha.
+  proof.
+  have->: Pr [ PreImage (A, IRO).game(ha) @ &m : res ] =
+          Pr [ PreImage2(A, IRO).game(ha) @ &m : res ].
+  + by byequiv=>//=; proc; inline*; sp; sim.
+  have->: Pr [ PreImage2(A,      IRO).game(ha) @ &m : res ] =
+          Pr [ PreImage2(A, DListIRO).game(ha) @ &m : res ].
+  + byequiv=> //=; proc; inline{1} 2; inline{2} 2; sp.
+    seq 1 1 : (={b, m, h, glob IRO, glob Cost}).
+    + inline*; wp; call(: ={glob IRO, glob Cost}); auto.
+      by proc; sp; if; auto; symmetry; call equiv_dlist_IRO.
+    by if; auto; symmetry; call equiv_dlist_IRO; auto; smt(size_ge0).
+  byphoare(: arg = ha ==> _)=> //=; proc; inline 2; swap 1 2. 
+  sp; seq 1 : (rngm IRO.mp ha) (mu1 (dlist dto (size ha)) ha) 1%r 1%r
+          (mu1 (dlist dto (size ha)) ha)
+          (map_cost IRO.mp <= Cost.counter <= t /\ ha = h)=>//=.
+  + inline*; sp; auto.
+    conseq(: _ ==> map_cost IRO.mp <= Cost.counter <= t); 1: auto.
+    call(: map_cost IRO.mp <= Cost.counter <= t)=> //=; auto. 
+    + proc; inline*; sp; if; auto; sp; if; auto.
+      + conseq(:_==> map_cost IRO.mp <= update_cost Cost.counter m n0 <= t); 1: auto.
+        while(map_cost IRO.mp <= update_cost Cost.counter m i <= t
+            /\ update_cost Cost.counter m n0 < t /\ 0 <= i <= n0).
+        + auto; smt(map_cost_update_cost card_domS update_costS update_cost_leq).
+        by auto; smt(update_cost update_cost_leq).
+      smt(update_cost).
+    + smt(fdom0 fcards0 t_gt0 map_cost0).
+  + call(: true ==> rngm IRO.mp ha)=> //; bypr=> /> {&m} &m.
+    fel 1 Cost.counter (fun _, mu1 (dlist dto (size ha)) ha) t (rngm IRO.mp ha) 
+      [Count(IRO).f: (map_cost IRO.mp <= Cost.counter < t)]
+      (map_cost IRO.mp <= Cost.counter <= t)
+      =>//; admit.
+  + sp; if; last first.
+    - by hoare; auto; smt(mu_bounded size_ge0).
+    inline*; wp; sp; if; last first.
+    - by hoare; auto; smt(mu_bounded size_ge0).
+    case: (n = size ha); last first.
+    - hoare; conseq(:_==> size bs = n); progress.
+      by while(size bs = n /\ 0 <= i <= n); auto; smt(size_set_at). print rngm.
+    seq 1 : (bs = ha)  (mu1 (dlist dto (size ha)) ha) 1%r _ 0%r
+      (size ha = n /\ ! rngm IRO.mp ha)=>//=.
+    + by auto. 
+    + by rnd; auto.
+    hoare; auto; while(h <> bs /\ !rngm IRO.mp ha /\ 0 <= i /\ n = size ha /\
+      (forall j, 0 <= j < i => IRO.mp.[(m0,j)] = Some (nth witness bs j))); auto; progress.
+    + rewrite/rngm negb_exists/= => a; rewrite negb_forall /=.
+      case: (a = m0{hr}) => //=.
+      + move=> <<-.
+        have:=H0; rewrite negb_exists /= => /(_ a); rewrite negb_forall /= => [][] b.
+        case: (0 <= b < size ha) =>//=.
+      
+      exists i{hr}=> /=; rewrite H1 H2 /=.
+  qed.
+
+  (****** Second Preimage Resistance ********)
   lemma SecondPreImage_Resistance &m (m : from) (output_size : int) :
     0 < output_size =>
     Pr [ SecondPreImage(A, IRO).game(m, output_size) @ &m : res ]
@@ -133,6 +481,8 @@ section Proof.
   admit.
   qed.
 
+
+  (****** Collision Resistance ********)
   lemma Collision_Resistance &m (output_size : int) :
     0 < output_size =>
     Pr [ Collision(A, IRO).game(output_size) @ &m : res ] <= mu1 dto witness<:to>.
