@@ -193,36 +193,34 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
         (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res].
 
    into three steps, involving Hybrid IROs, which, in addition to
-   an init procedure, have procedures
+   an init procedure, have the procedure
 
      (* hashing block lists, giving n bits *)
-     proc g(x : block list, n : int) : bool list
-
-     (* hashing block lists, giving n blocks *)
-     proc f(x : block list, n : int) : block list
+     proc f(x : block list, n : int) : bool list
 
    We have lazy (HybridIROLazy) and eager (HybridIROEager) Hybrid
    IROs, both of which work with a finite map from block list * int to
-   bool. In both versions, f is defined in terms of g, and, as in
-   BlockSponge.BIRO.IRO, g returns [] if x isn't a valid block. In
-   both versions, the input/output behavior of f is identical to that
-   of BlockSponge.BIRO.IRO.f.
+   bool. In both versions, as in BlockSponge.BIRO.IRO, f returns [] if
+   x isn't a valid block list.
 
-   In the lazy version, g consults/randomly updates just those
+   In the lazy version, f consults/randomly updates just those
    elements of the map's domain needed to produce the needed bits. But
    the eager version goes further, consulting/randomly updating enough
-   extra domain elements so that a multiple of r domain elements were
+   extra domain elements so that a multiple of r domain elements are
    consulted/randomly updated (those extra bits are discarded)
 
    We have a parameterized module RaiseHybridIRO for turning a Hybrid
-   IRO into a FUNCTIONALITY in the obvious way (not using f), and we
-   split the proof of the Ideal side into three steps:
+   IRO into a FUNCTIONALITY in the obvious way, and we have a
+   parameterized module LowerHybridIRO for turning a Hybrid IRO into a
+   DFUNCTIONALITY in the obivous way. We split the proof of the Ideal
+   side into three steps:
 
    Step 1:
 
      Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
      Pr[Experiment
-        (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+        (RaiseHybridIRO(HybridIROLazy),
+         BlockSim(LowerHybridIRO(HybridIROLazy)),
          Dist).main() @ &m : res]
 
    This step is proved using a lazy invariant relating the
@@ -231,10 +229,12 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
    Step 2:
 
      Pr[Experiment
-        (RaiseHybridIRO(HybridIROLazy), BlockSim(HybridIROLazy),
+        (RaiseHybridIRO(HybridIROLazy),
+         BlockSim(LowerHybridIRO(HybridIROLazy)),
          Dist).main() @ &m : res] =
      Pr[Experiment
-        (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+        (RaiseHybridIRO(HybridIROEager),
+         BlockSim(LowerHybridIRO(HybridIROEager)),
          Dist).main() @ &m : res]
 
    This step is proved using the eager sampling lemma provided by
@@ -243,7 +243,8 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
    Step 3:
 
      Pr[Experiment
-        (RaiseHybridIRO(HybridIROEager), BlockSim(HybridIROEager),
+        (RaiseHybridIRO(HybridIROEager),
+         BlockSim(LowerHybridIRO(HybridIROEager)),
          Dist).main() @ &m : res] =
      Pr[BlockSponge.IdealIndif
         (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res]
@@ -263,16 +264,13 @@ module type HYBRID_IRO = {
   proc init() : unit
 
   (* hashing block lists, giving n bits *)
-  proc g(x : block list, n : int) : bool list
-
-  (* hashing block lists, giving n blocks *)
-  proc f(x : block list, n : int) : block list
+  proc f(x : block list, n : int) : bool list
 }.
 
 (* distinguisher for Hybrid IROs *)
 
 module type HYBRID_IRO_DIST(HI : HYBRID_IRO) = {
-  proc distinguish() : bool
+  proc distinguish() : bool {HI.f}
 }.
 
 (* experiments for Hybrid IROs *)
@@ -288,21 +286,21 @@ module HybridIROExper(HI : HYBRID_IRO, D : HYBRID_IRO_DIST) = {
 
 (* lazy implementation of Hybrid IROs *)
 
-module HybridIROLazy : HYBRID_IRO, BlockSponge.BIRO.IRO = {
+module HybridIROLazy : HYBRID_IRO = {
   var mp : (block list * int, bool) fmap
 
   proc init() : unit = {
     mp <- empty;
   }
 
-  proc fill_in(xs, i) = {
+  proc fill_in(xs : block list, i : int) = {
     if (! dom mp (xs, i)) {
       mp.[(xs, i)] <$ dbool;
     }
     return oget mp.[(xs, i)];
   }
 
-  proc g(xs, n) = {
+  proc f(xs : block list, n : int) = {
     var b, bs;
     var i <- 0;
 
@@ -316,18 +314,11 @@ module HybridIROLazy : HYBRID_IRO, BlockSponge.BIRO.IRO = {
     }
     return bs;
   }
-
-  proc f(xs, n) = {  (* implemented using g *)
-    var bs, ys;
-    bs <@ g(xs, n * r);
-    ys <- bits2blocks bs;
-    return ys;
-  }
 }.
 
 (* eager implementation of Hybrid IROs *)
 
-module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
+module HybridIROEager : HYBRID_IRO = {
   (* same as lazy implementation, except for indicated part *)
   var mp : (block list * int, bool) fmap
 
@@ -335,14 +326,14 @@ module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
     mp <- empty;
   }
 
-  proc fill_in(xs, i) = {
+  proc fill_in(xs : block list, i : int) = {
     if (! dom mp (xs, i)) {
       mp.[(xs, i)] <$ dbool;
     }
     return oget mp.[(xs, i)];
   }
 
-  proc g(xs, n) = {
+  proc f(xs : block list, n : int) = {
     var b, bs;
     var m <- ((n + r - 1) %/ r) * r;  (* eager part *)
     var i <- 0;
@@ -360,13 +351,6 @@ module HybridIROEager : HYBRID_IRO, BlockSponge.BIRO.IRO = {
       }
     }
     return bs;
-  }
-
-  proc f(xs, n) = {
-    var bs, ys;
-    bs <@ g(xs, n * r);
-    ys <- bits2blocks bs;
-    return ys;
   }
 }.
 
@@ -412,7 +396,7 @@ local module HIRO(RO : ERO.RO) : HYBRID_IRO = {
     RO.init();
   }
 
-  proc g(xs, n) = {
+  proc f(xs, n) = {
     var b, bs;
     var m <- ((n + r - 1) %/ r) * r;
     var i <- 0;
@@ -430,13 +414,6 @@ local module HIRO(RO : ERO.RO) : HYBRID_IRO = {
       }
     }
     return bs;
-  }
-
-  proc f(xs, n) = {
-    var bs, ys;
-    bs <@ g(xs, n * r);
-    ys <- bits2blocks bs;
-    return ys;
   }
 }.
 
@@ -458,8 +435,8 @@ rcondt{1} 1; first auto. rcondt{2} 2; first auto.
 wp; rnd; auto.
 qed.
 
-local lemma HybridIROLazy_HIRO_LRO_g :
-  equiv[HybridIROLazy.g ~ HIRO(ERO.LRO).g :
+local lemma HybridIROLazy_HIRO_LRO_f :
+  equiv[HybridIROLazy.f ~ HIRO(ERO.LRO).f :
         ={xs, n} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
         ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
 proof.
@@ -471,12 +448,6 @@ while (={xs, n, i, bs} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}).
 wp; call HybridIROLazy_fill_in_LRO_get; auto.
 auto; progress; smt().
 qed.
-
-local lemma HybridIROLazy_HIRO_LRO_f :
-  equiv[HybridIROLazy.f ~ HIRO(ERO.LRO).f :
-        ={xs, n} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
-        ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
-proof. proc; wp; call HybridIROLazy_HIRO_LRO_g; auto. qed.
 
 local lemma HIRO_RO_HybridIROEager_init :
   equiv[HIRO(ERO.RO).init ~ HybridIROEager.init :
@@ -509,8 +480,8 @@ rcondt{1} 2; first auto. rcondt{2} 1; first auto.
 wp; rnd; auto.
 qed.
 
-local lemma HIRO_RO_HybridIROEager_g :
-  equiv[HIRO(ERO.RO).g ~ HybridIROEager.g :
+local lemma HIRO_RO_HybridIROEager_f :
+  equiv[HIRO(ERO.RO).f ~ HybridIROEager.f :
         ={xs, n} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
         ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
 proof.
@@ -522,12 +493,6 @@ while (={i, n, xs, bs} /\ ERO.RO.m{1} = HybridIROEager.mp{2}).
 wp; call RO_get_HybridIROEager_fill_in; auto.
 auto.
 qed.
-
-local lemma HIRO_RO_HybridIROEager_f :
-  equiv[HIRO(ERO.RO).f ~ HybridIROEager.f :
-        ={xs, n} /\ ERO.RO.m{1} = HybridIROEager.mp{2} ==>
-        ={res} /\ ERO.RO.m{1} = HybridIROEager.mp{2}].
-proof. proc; wp; call HIRO_RO_HybridIROEager_g; auto. qed.
 
 (* make distinguisher for random oracles out of HIRO and D *)
 
@@ -546,8 +511,6 @@ proof.
 byequiv=> //; proc; inline*; wp.
 seq 1 1 : (={glob D} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}); first auto.
 call (_ : HybridIROLazy.mp{1} = ERO.RO.m{2}).
-conseq HybridIROLazy_HIRO_LRO_init.
-conseq HybridIROLazy_HIRO_LRO_g.
 conseq HybridIROLazy_HIRO_LRO_f.
 auto.
 qed.
@@ -559,8 +522,6 @@ proof.
 byequiv=> //; proc; inline*; wp.
 seq 1 1 : (={glob D} /\ ERO.RO.m{1} = HybridIROEager.mp{2}); first auto.
 call (_ : ERO.RO.m{1} = HybridIROEager.mp{2}).
-conseq HIRO_RO_HybridIROEager_init.
-conseq HIRO_RO_HybridIROEager_g.
 conseq HIRO_RO_HybridIROEager_f.
 auto.
 qed.
@@ -583,7 +544,7 @@ lemma HybridIROExper_Lazy_Eager
 proof. by apply (HybridIROExper_Lazy_Eager' D &m). qed.
 
 (* turn a Hybrid IRO implementation (lazy or eager) into top-level
-   ideal functionality; its f procedure only uses HI.g *)
+   ideal functionality *)
 
 module RaiseHybridIRO (HI : HYBRID_IRO) : FUNCTIONALITY = {
   proc init() = {
@@ -592,8 +553,20 @@ module RaiseHybridIRO (HI : HYBRID_IRO) : FUNCTIONALITY = {
 
   proc f(bs : bool list, n : int) = {
     var cs;
-    cs <@ HI.g(pad2blocks bs, n);
+    cs <@ HI.f(pad2blocks bs, n);
     return cs;
+  }
+}.
+
+(* turn a Hybrid IRO implementation (lazy or eager) into lower-level
+   ideal distinguisher functionality *)
+
+module LowerHybridIRO (HI : HYBRID_IRO) : BlockSponge.DFUNCTIONALITY = {
+  proc f(xs : block list, n : int) = {
+    var bs, ys;
+    bs <@ HI.f(xs, n * r);
+    ys <- bits2blocks bs;
+    return ys;
   }
 }.
 
@@ -706,11 +679,11 @@ by rewrite !get_set_sameE.
 qed.
 
 lemma LowerFun_IRO_HybridIROLazy_f :
-  equiv[LowerFun(IRO).f ~ HybridIROLazy.f :
+  equiv[LowerFun(IRO).f ~ LowerHybridIRO(HybridIROLazy).f :
         ={xs, n} /\ lazy_invar IRO.mp{1} HybridIROLazy.mp{2} ==>
         ={res} /\ lazy_invar IRO.mp{1} HybridIROLazy.mp{2}].
 proof.
-proc=> /=; inline HybridIROLazy.g.
+proc=> /=; inline HybridIROLazy.f.
 seq 0 1 :
   (={n} /\ xs{1} = xs0{2} /\
    lazy_invar IRO.mp{1} HybridIROLazy.mp{2}); first auto.
@@ -899,8 +872,8 @@ lemma block_bits_dom_first_out_imp_all_out
   block_bits_all_out_dom xs i mp.
 proof. smt(). qed.
 
-lemma HybridIROEager_f_g :
-  equiv[HybridIROEager.f ~ HybridIROEager.g :
+lemma Lower_HybridIROEager_f :
+  equiv[LowerHybridIRO(HybridIROEager).f ~ HybridIROEager.f :
         ={xs, HybridIROEager.mp} /\ n{1} * r = n{2} ==>
         res{1} = bits2blocks res{2} /\ ={HybridIROEager.mp}].
 proof.
@@ -1637,8 +1610,8 @@ wp; sp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; skip; smt().
 auto.
 qed.
 
-lemma HybridIROEager_g_BlockIRO_f (n1 : int) (x2 : block list) :
-  equiv[HybridIROEager.g ~ BlockSponge.BIRO.IRO.f :
+lemma HybridIROEager_f_BlockIRO_f (n1 : int) (x2 : block list) :
+  equiv[HybridIROEager.f ~ BlockSponge.BIRO.IRO.f :
         n1 = n{1} /\ x2 = x{2} /\ xs{1} = x{2} /\ 
         n{2} = (n{1} + r - 1) %/ r /\
         eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
@@ -1898,13 +1871,13 @@ auto.
 qed.
 
 lemma HybridIROEager_BlockIRO_f :
-  equiv[HybridIROEager.f ~ BlockSponge.BIRO.IRO.f :
+  equiv[LowerHybridIRO(HybridIROEager).f ~ BlockSponge.BIRO.IRO.f :
         xs{1} = x{2} /\ ={n} /\
         eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
         ={res} /\ eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1}].
 proof.
 transitivity
-  HybridIROEager.g
+  HybridIROEager.f
   (={xs, HybridIROEager.mp} /\ n{2} = n{1} * r /\
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1} ==>
    res{1} = bits2blocks res{2} /\ ={HybridIROEager.mp})
@@ -1916,9 +1889,9 @@ move=> |> &1 &2 ? n_eq inv.
 exists HybridIROEager.mp{1} BlockSponge.BIRO.IRO.mp{2} (xs{1}, n{1} * r).
 move=> |>; by rewrite n_eq.
 progress; apply blocks2bitsK.
-by conseq HybridIROEager_f_g=> |> &1 &2 ? -> ?.
+by conseq Lower_HybridIROEager_f=> |> &1 &2 ? -> ?.
 exists* n{1}; elim*=> n1; exists* xs{1}; elim*=> xs'.
-conseq (HybridIROEager_g_BlockIRO_f n1 xs')=> //.
+conseq (HybridIROEager_f_BlockIRO_f n1 xs')=> //.
 move=> |> &1 &2 ? -> inv; by rewrite needed_blocks_prod_r.
 move=> |> &1 &2 ? n1_eq ? res1 res2 ? ? ? vb_imp not_vb_imp.
 case: (valid_block xs{1})=> [vb_xs1 | not_vb_xs1].
@@ -1998,7 +1971,8 @@ qed.
 local lemma Ideal_IRO_Experiment_HybridLazy &m :
   Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res] =
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy), BlockSim(HIRO.HybridIROLazy),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROLazy)),
       Dist).main() @ &m : res].
 proof.
 byequiv=> //; proc.
@@ -2035,8 +2009,10 @@ qed.
 local module (HybridIRODist : HIRO.HYBRID_IRO_DIST) (HI : HIRO.HYBRID_IRO) = {
   proc distinguish() : bool = {
     var b : bool;
-    BlockSim(HI).init();
-    b <@ Dist(HIRO.RaiseHybridIRO(HI), BlockSim(HI)).distinguish();
+    BlockSim(HIRO.LowerHybridIRO(HI)).init();
+    b <@
+      Dist(HIRO.RaiseHybridIRO(HI),
+           BlockSim(HIRO.LowerHybridIRO(HI))).distinguish();
     return b;
   }
 }.
@@ -2045,7 +2021,8 @@ local module (HybridIRODist : HIRO.HYBRID_IRO_DIST) (HI : HIRO.HYBRID_IRO) = {
 
 local lemma Experiment_HybridIROExper_Lazy &m :
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy), BlockSim(HIRO.HybridIROLazy),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROLazy)),
       Dist).main() @ &m : res] =
   Pr[HIRO.HybridIROExper(HIRO.HybridIROLazy, HybridIRODist).main() @ &m : res].
 proof.
@@ -2061,7 +2038,8 @@ local lemma HybridIROExper_Experiment_Eager &m :
   Pr[HIRO.HybridIROExper(HIRO.HybridIROEager, HybridIRODist).main() @
      &m : res] =
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager), BlockSim(HIRO.HybridIROEager),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROEager)),
       Dist).main() @ &m : res].
 proof.
 byequiv=> //; proc; inline*.
@@ -2075,10 +2053,12 @@ qed.
 
 local lemma Experiment_Hybrid_Lazy_Eager &m :
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy), BlockSim(HIRO.HybridIROLazy),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROLazy),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROLazy)),
       Dist).main() @ &m : res] =
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager), BlockSim(HIRO.HybridIROEager),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROEager)),
       Dist).main() @ &m : res].
 proof.
 by rewrite (Experiment_HybridIROExper_Lazy &m)
@@ -2099,7 +2079,7 @@ proof.
 proc=> /=.
 exists* n{1}; elim*=> n'.
 exists* (pad2blocks bs{2}); elim*=> xs2.
-call (HIRO.HybridIROEager_g_BlockIRO_f n' xs2).
+call (HIRO.HybridIROEager_f_BlockIRO_f n' xs2).
 skip=> |> &1 &2 ? res1 res2 mp1 mp2 ? vb_imp not_vb_imp.
 case: (valid_block (pad2blocks bs{2}))=> [vb | not_vb].
 have [le0_n2_imp gt0_n2_imp] := vb_imp vb.
@@ -2114,7 +2094,8 @@ qed.
 
 local lemma Experiment_HybridEager_Ideal_BlockIRO &m :
   Pr[Experiment
-     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager), BlockSim(HIRO.HybridIROEager),
+     (HIRO.RaiseHybridIRO(HIRO.HybridIROEager),
+      BlockSim(HIRO.LowerHybridIRO(HIRO.HybridIROEager)),
       Dist).main() @ &m : res] =
   Pr[BlockSponge.IdealIndif
      (BlockSponge.BIRO.IRO, BlockSim, LowerDist(Dist)).main () @ &m : res].
