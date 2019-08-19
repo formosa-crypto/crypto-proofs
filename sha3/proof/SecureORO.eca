@@ -7,7 +7,7 @@ type from, to.
 op sampleto : to distr.
 
 op bound : int.
-axiom bound_gt0 : 0 < bound.
+axiom bound_ge0 : 0 <= bound.
 
 axiom sampleto_ll:   is_lossless sampleto.
 axiom sampleto_full: is_full     sampleto.
@@ -21,9 +21,6 @@ proof * by exact/sampleto_ll.
 
 op increase_counter (c : int) (m : from) : int.
 axiom increase_counter_spec c m : c <= increase_counter c m.
-
-op    bound_counter     : int.
-axiom bound_counter_ge0 : 0 <= bound_counter.
 
 module type RF = {
   proc init() : unit
@@ -117,7 +114,7 @@ section Preimage.
       wp; conseq(:_==> card (fdom RO.m) + 1 <= Bounder.bounder <= bound); 2: by auto;smt().
       move=> &h /> c H1 H2 c2 r x h1 h2; split; 2: smt().
       by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
-    by auto=> />; rewrite fdom0 fcards0; smt(bound_gt0).
+    by auto=> />; rewrite fdom0 fcards0; smt(bound_ge0).
   + seq 1 : true 1%r (bound%r * mu1 sampleto witness) 0%r _; auto.
     exists * Preimage2.hash; elim* => h.
     call(: Preimage2.hash = h /\ h = arg ==> rng RO.m h)=> //; bypr=> /> {&m} &m {h} <-.
@@ -131,11 +128,11 @@ section Preimage.
       (card (fdom RO.m) <= Bounder.bounder <= bound)
       =>//.
     - rewrite StdBigop.Bigreal.BRA.big_const List.count_predT List.Range.size_range.
-      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_gt0).
-      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_gt0).
+      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_ge0).
+      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_ge0).
       by rewrite StdRing.RField.intmulr; smt(). 
     - inline*; auto=> /> &h.
-      rewrite mem_rng_empty /= fdom0 fcards0 /=; smt(bound_gt0). 
+      rewrite mem_rng_empty /= fdom0 fcards0 /=; smt(bound_ge0). 
     - proc.
       sp; if; auto; sp; inline*; sp; wp=> /=.
       case: (x \in RO.m); wp => //=.
@@ -277,7 +274,7 @@ section SecondPreimage.
       auto=> /> &h c Hc Hdom Hc2 sample.
       by rewrite sampleto_full/=!fdom_set !fcardU !fcard1;smt(mem_set fcard_ge0).
     auto=> /> &h sample.
-    by rewrite mem_set mem_empty/= fdom_set fdom0 fset0U fcard1; smt(bound_gt0).
+    by rewrite mem_set mem_empty/= fdom_set fdom0 fset0U fcard1; smt(bound_ge0).
   + call(: arg = mess1 ==> rng (rem RO.m mess1) (oget RO.m.[mess1])); auto.
     bypr=> {&m} &m h; rewrite h.
     fel 2 Bounder.bounder (fun _, mu1 sampleto witness) bound 
@@ -286,12 +283,12 @@ section SecondPreimage.
         (card (fdom RO.m) - 1 <= Bounder.bounder <= bound /\ mess1 \in RO.m)=> {h}
       =>//.
     + rewrite StdBigop.Bigreal.BRA.big_const List.count_predT List.Range.size_range.
-      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_gt0).
-      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_gt0).
-      by rewrite StdRing.RField.intmulr; smt(mu_bounded bound_gt0). 
+      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_ge0).
+      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_ge0).
+      by rewrite StdRing.RField.intmulr; smt(mu_bounded bound_ge0). 
     + inline*; auto=> />.
       move=> &h r; rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
-      rewrite get_set_sameE//= fdom_set fdom0 fset0U fcard1 /= rngE /=; split; 2: smt(bound_gt0). 
+      rewrite get_set_sameE//= fdom_set fdom0 fset0U fcard1 /= rngE /=; split; 2: smt(bound_ge0). 
       by rewrite negb_exists/= => a; rewrite remE get_setE //= emptyE; smt().
     + proc; inline*; sp; if; last by hoare; auto.
       sp; case: (x \in RO.m)=> //=.
@@ -414,7 +411,7 @@ section Collision.
     case: (m1 = m2).
     - by hoare; 1: smt(mu_bounded); auto. 
     case: (m1 \in RO.m); case: (m2 \in RO.m).
-    - rcondf 3; 1: auto; rcondf 4; 1: auto; hoare; auto; 1: smt(bound_gt0 mu_bounded).
+    - rcondf 3; 1: auto; rcondf 4; 1: auto; hoare; auto; 1: smt(bound_ge0 mu_bounded).
       move=> /> &h d _ _ Hcoll _ _ neq12 in_dom1 in_dom2 _ _ _ _.
       move: Hcoll; rewrite /collision negb_exists /= => /(_ m1{h}).
       rewrite negb_exists /= => /(_ m2{h}).
@@ -442,7 +439,7 @@ section Collision.
       auto=> /> &h d Hbc Hcb sample _; split.
       * by move=> nin_dom1; rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
       by move=> in_dom1; smt().
-    by move=> />; rewrite fdom0 fcards0; smt(bound_gt0).
+    by move=> />; rewrite fdom0 fcards0; smt(bound_ge0).
   call(: true ==> collision RO.m); auto; bypr=> /> {&m} &m.
   fel 1 Bounder.bounder (fun i, i%r * mu1 sampleto witness) bound 
         (collision RO.m)
@@ -450,9 +447,9 @@ section Collision.
         (card (fdom RO.m) <= Bounder.bounder <= bound)=> //. 
   + rewrite -StdBigop.Bigreal.BRA.mulr_suml StdRing.RField.mulrAC.
     rewrite StdOrder.RealOrder.ler_wpmul2r; 1: smt(mu_bounded).
-    by rewrite StdBigop.Bigreal.sumidE //; smt(bound_gt0).
+    by rewrite StdBigop.Bigreal.sumidE //; smt(bound_ge0).
   + inline*; auto=> />.
-    rewrite fdom0 fcards0; split; 2: smt(bound_gt0). 
+    rewrite fdom0 fcards0; split; 2: smt(bound_ge0). 
     rewrite /collision negb_exists /= => a; rewrite negb_exists /= => b.
     by rewrite mem_empty.
   + bypr=> /> {&m} &m; pose c := Bounder.bounder{m}; move=> H0c Hcbound Hcoll Hmc _.
