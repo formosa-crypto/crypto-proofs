@@ -173,6 +173,11 @@ module (OSponge : OIndif.OCONSTRUCTION) (P : OIndif.ODPRIMITIVE) =
 section Preimage.
 (* TODO : stopped here *)
 
+  declare module A : SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, 
+    Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO, 
+    Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO, 
+    Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr, 
+    SORO.Bounder, RO.RO }.
 
   local module FInit (F : OIndif.ODFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
     proc init () = {}
@@ -195,16 +200,217 @@ section Preimage.
     }
   }.
 
-local lemma leq_ideal &m
-    (A <: SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, Redo, C, Gconcl.S,
-      BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO, Gconcl_list.BIRO2.IRO,
-      Gconcl_list.F2.RO, Gconcl_list.F2.FRO, Gconcl_list.Simulator, 
-      SHA3Indiff.Simulator, SHA3Indiff.Cntr }):
+
+local module OF (F : Oracle) : OIndif.ODFUNCTIONALITY = {
+  proc f = F.get
+}.
+
+
+local module Log = {
+  var m : (bool list * int, bool) fmap
+}.
+
+local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
+  proc f (x : bool list, k : int) = {
+    var o, l, prefix, suffix, i;
+    l <- None;
+    i <- 0;
+    prefix <- [];
+    suffix <- [];
+    o <@ F.get(x);
+    if (o <> None) {
+      prefix <- take k (to_list (oget o));
+      i <- size_out;
+    }
+    while (i < k) {
+      if ((x,i) \notin Log.m) {
+        Log.m.[(x,i)] <$ {0,1};
+      }
+      suffix <- rcons suffix (oget Log.m.[(x,i)]);
+      i <- i + 1;
+    }
+    l <- Some (prefix ++ suffix);
+    return l;
+  }
+}.
+
+local module OFC2 (F : Oracle) = OFC(ExtendOutputSize(F)).
+  
+
+local module (SORO_P1 (A : SH.AdvPreimage) : SORO.AdvPreimage) (F : Oracle) = {
+  proc guess (h : f_out) : bool list = {
+    var mi;
+    Log.m <- empty;
+    Counter.c <- 0;
+    OSimulator(ExtendOutputSize(F)).init();
+    mi <@ A(DFSetSize(OFC2(F)),OPC(OSimulator(ExtendOutputSize(F)))).guess(h);
+    return mi;
+  }
+}.
+
+local module RFList = {
+  var m : (bool list, f_out) fmap
+  proc init () = {
+    m <- empty;
+  }
+  proc get (x : bool list) : f_out option = {
+    var z;
+    if (x \notin m) {
+      z <$ dlist dbool size_out;
+      m.[x] <- oget (of_list z);
+    }
+    return m.[x];
+  }
+  proc sample (x: bool list) = {}
+}.
+
+local module RFWhile = {
+  proc init () = {
+    RFList.m <- empty;
+  }
+  proc get (x : bool list) : f_out option = {
+    var l, i, b;
+    if (x \notin RFList.m) {
+      i <- 0;
+      l <- [];
+      while (i < size_out) {
+        b <$ dbool;
+        l <- rcons l b;
+        i <- i + 1;
+      }
+      RFList.m.[x] <- oget (of_list l);
+    }
+    return RFList.m.[x];
+  }
+  proc sample (x: bool list) = {}
+}.
+
+module type TOTO (F : Oracle) = {
+  proc main () : bool
+}.
+
+clone import Program as PBool with
+  type t <- bool,
+  op d <- dbool
+proof *.
+
+
+local equiv rw_RF_List_While :
+    RFList.get ~ RFWhile.get : 
+    ={arg, glob RFList} ==> ={res, glob RFWhile}.
+proof.
+proc; if; 1, 3: auto; wp.
+conseq(:_==> z{1} = l{2})=> />.
+transitivity{1} {
+    z <@ Sample.sample(size_out);
+  }
+  (true ==> ={z})
+  (true ==> z{1} = l{2})=>/>.
++ by inline*; auto.
+transitivity{1} {
+    z <@ LoopSnoc.sample(size_out);
+  }
+  (true ==> ={z})
+  (true ==> z{1} = l{2})=>/>; last first.
++ inline*; auto; sim.
+  by while(={l, i} /\ n{1} = size_out); auto; smt(cats1).
+by call(Sample_LoopSnoc_eq); auto.
+qed.
+
+
+local lemma rw_ideal_2 &m:
+    Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
+      ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] <=
+    Pr[SORO.Preimage(SORO_P1(A), RFList).main() @ &m : res].
+proof.
+have->:Pr[SORO.Preimage(SORO_P1(A), RFList).main() @ &m : res] =
+       Pr[SORO.Preimage(SORO_P1(A), RFWhile).main() @ &m : res].
++ byequiv(: ={glob A} ==> _)=>//=; proc.
+  swap 1.
+  inline{1} 1; inline{2} 1; sp.
+  inline{1} 1; inline{2} 1; sp.
+  inline{1} 2; inline{2} 2; sp.
+  swap[1..2] 3; sp.
+  inline{1} 1; inline{2} 1; sp.
+  inline{1} 1; inline{2} 1; sp.
+  inline{1} 5; inline{2} 5; wp.
+  seq 3 3 : (={mi, h, hash, glob A, glob SORO.Bounder, glob RFList}); last first.
+  - sp; if; auto; call(rw_RF_List_While); auto.
+  call(: ={glob SORO.Bounder, glob RFList, glob OSimulator, glob OPC, glob Log}); auto.
+  - proc; sp; if; auto.
+    inline{1} 1; inline{2} 1; sp; if; 1, 3: auto; sim.
+    if; 1: auto; sim; sp; sim; if; auto=> />; 1: smt(); sim.
+    + inline{1} 1; inline{2} 1; sp; sim.
+      inline{1} 1; inline{2} 1; sp; if; auto=> />.
+      - by call(rw_RF_List_While); auto; smt(). 
+      smt().
+    smt().
+  - by sim. 
+  proc; sim; inline{1} 1; inline{2} 1; sp; if; auto.
+  inline{1} 1; inline{2} 1; sp; sim.
+  inline{1} 1; inline{2} 1; sp; if; auto; sim.
+  by call(rw_RF_List_While); auto.
+(* TODO : reprendre ici, avec le spit des domaines *)
+
+
+qed.
+
+local lemma rw_ideal &m:
+    Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
+      ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] <=
+    Pr[SORO.Preimage(SORO_P1(A),RF(RO.RO)).main() @ &m : res].
+proof.
+rewrite (StdOrder.RealOrder.ler_trans _ _ _ (rw_ideal_2 &m)).
+byequiv(: ={glob A} ==> _) => //=; proc; inline*; sp; wp.
+swap{2} 2; sp; swap{2}[1..2] 6; sp.
+swap{1} 2; sp; swap{1}[1..2] 6; sp.
+seq 2 2 : (
+  Log.m{1} = empty /\
+  SHA3Indiff.Simulator.m{1} = empty /\
+  SHA3Indiff.Simulator.mi{1} = empty /\
+  SHA3Indiff.Simulator.paths{1} = empty.[c0 <- ([], b0)] /\
+  Gconcl_list.BIRO2.IRO.mp{1} = empty /\
+  SORO.Bounder.bounder{1} = 0 /\
+  RFList.m{1} = empty /\
+  Counter.c{2} = 0 /\
+  ={Log.m, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter} /\
+  RO.RO.m{2} = empty /\ ={glob A, h, hash}); 1: auto=> />. 
+seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter, 
+    mi, h, hash} /\ RFList.m{1} = RO.RO.m{2}).
++ call(: ={glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter} /\ 
+    RFList.m{1} = RO.RO.m{2}); auto.
+  - admit.
+  - admit.    
+  - admit.
+sp; if; 1, 3: auto; sp; wp 1 2.
+if{1}.
++ wp=> />.
+  rnd (fun x => oget (of_list x)) to_list; auto=> />.
+  move=> &l c Hc Hnin; split.
+  - move=> ret Hret. search to_list. 
+    by have/= ->:= (to_listK ret (to_list ret)).
+  move=> h{h}; split.
+  - move=> ret Hret; rewrite -dout_equal_dlist.
+    rewrite dmapE /=; apply mu_eq=> //= x /=.
+    by rewrite /(\o) /pred1/=; smt(to_list_inj).
+  move=> h{h} l Hl. 
+  rewrite dout_full /=.
+  have:= spec2_dout l.
+  have:=supp_dlist dbool size_out l _; 1: smt(size_out_gt0).
+  rewrite Hl/==> [#] -> h{h} /= H.
+  have H1:=some_oget _ H.
+  have:=to_listK (oget (of_list l)) l; rewrite {2}H1/= => -> /= {H H1}.
+  by rewrite get_setE/=.
+by auto=> />; smt(dout_ll).
+qed.
+
+
+local lemma leq_ideal &m :
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
       ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] <= (sigma + 1)%r / 2%r ^ size_out.
 proof.
-print SORO.
-print SORO.RO_is_preimage_resistant.
+print SORO.RO_is_preimage_resistant. 
+have:=rw_ideal &m.
 admit.
 qed.
 
@@ -225,11 +431,7 @@ qed.
   by sp; if; auto=>/=; sim; auto.
   qed.
 
-lemma Sponge_preimage_resistant &m
-    (A <: SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, Redo, C, Gconcl.S,
-      BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO, Gconcl_list.BIRO2.IRO,
-      Gconcl_list.F2.RO, Gconcl_list.F2.FRO, Gconcl_list.Simulator, 
-      SHA3Indiff.Simulator, SHA3Indiff.Cntr }):
+lemma Sponge_preimage_resistant &m:
     (forall (F <: OIndif.ODFUNCTIONALITY) (P <: OIndif.ODPRIMITIVE),
       islossless F.f => islossless P.f => islossless P.fi => islossless A(F,P).guess) =>
     Pr[Preimage(A, OSponge, PSome(Perm)).main() @ &m : res] <=
@@ -244,9 +446,11 @@ have := SHA3OIndiff (Dist_of_P1Adv(A)) &m _.
   call(A_ll (DFSetSize(F)) P _ Hp Hpi); auto.
   - proc; inline*; auto; call Hf; auto.
   smt(dout_ll).
-by have/#:=leq_ideal &m A.
+by have/#:=leq_ideal &m.
 qed.
 
+
+(* old proof *)
 
   declare module A : SH.AdvPreimage{SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
     Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
