@@ -146,6 +146,7 @@ module FSetSize (F : OFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
     r <- (y <> None) ? of_list (oget y) : None;
     return r;
   }
+  proc get = f
 }.
 
 module DFSetSize (F : ODFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
@@ -190,16 +191,6 @@ section Preimage.
     proc fi = P.fi
   }.
 
-  local module (Dist_of_P1Adv (A : SH.AdvPreimage) : ODISTINGUISHER) (F : ODFUNCTIONALITY) (P : ODPRIMITIVE) = {
-    proc distinguish () = {
-      var hash, hash', m;
-      hash <$ dout;
-      m <@ A(DFSetSize(F),P).guess(hash);
-      hash' <@ DFSetSize(F).f(m);
-      return hash' = Some hash;
-    }
-  }.
-
 
 local module OF (F : Oracle) : OIndif.ODFUNCTIONALITY = {
   proc f = F.get
@@ -235,6 +226,26 @@ local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
 }.
 
 local module OFC2 (F : Oracle) = OFC(ExtendOutputSize(F)).
+
+local module ExtendOutput (F : RF) = {
+  proc init () = {
+    Log.m <- empty;
+    F.init();
+  }
+  proc f = ExtendOutputSize(F).f
+  proc get = f
+}.
+
+  local module (Dist_of_P1Adv (A : SH.AdvPreimage) : ODISTINGUISHER) (F : ODFUNCTIONALITY) (P : ODPRIMITIVE) = {
+    proc distinguish () = {
+      var hash, hash', m;
+      Log.m <- empty;
+      hash <$ dout;
+      m <@ A(DFSetSize(F),P).guess(hash);
+      hash' <@ DFSetSize(F).f(m);
+      return hash' = Some hash;
+    }
+  }.
   
 
 local module (SORO_P1 (A : SH.AdvPreimage) : SORO.AdvPreimage) (F : Oracle) = {
@@ -394,6 +405,22 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
 by auto; smt(size_out_gt0).
 qed.
 
+op eq_extend_size (m1 : (bool list * int, bool) fmap) (m2 : (bool list * int, bool) fmap)
+  (m3 : (bool list * int, bool) fmap) =
+  (forall x j, 0 <= j < size_out => m1.[(x,j)] = m2.[(x,j)]) /\
+  (forall x j, size_out <= j => m1.[(x,j)] = m3.[(x,j)]) /\
+  (forall x j, (x,j) \in m1 => 0 <= j).
+
+
+local equiv eq_extend :
+  FSome(BIRO.IRO).f ~ ExtendOutputSize(FSetSize(FSome(BIRO.IRO))).f :
+  ={arg} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2} ==>
+  ={res} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}.
+proof.
+proc; inline*; auto; sp.
+rcondt{1} 1; auto; rcondt{2} 1; auto.
+qed.
+
 
 local lemma rw_ideal_2 &m:
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
@@ -427,6 +454,32 @@ have->:Pr[SORO.Preimage(SORO_P1(A), RFList).main() @ &m : res] =
   inline{1} 1; inline{2} 1; sp; sim.
   inline{1} 1; inline{2} 1; sp; if; auto; sim.
   by call(rw_RF_List_While); auto.
+have->:Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO),
+         OSimulator(FSome(BIRO.IRO)),
+          ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] =
+       Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO),
+         OSimulator(ExtendOutputSize(FSetSize(FSome(BIRO.IRO)))),
+         ODRestr(Dist_of_P1Adv(A))).main() @ &m : res].
++ byequiv=> //=; proc; inline*; sp.
+  seq 2 2 : (={m, hash, glob OSimulator, glob OFC} /\
+         eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}); last first.
+  - sp; if; auto; sp; if; auto.
+    while(={i, n, x1, bs} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2} /\
+         n{1} = size_out /\ 0 <= i{1} <= n{1}); auto.
+    * by sp; if; auto; smt(domE get_setE). 
+    by move=> /> &l &r Heq1 Heq2 Heq3 Hc Hvalid; smt(size_out_gt0).
+  call(: ={glob OSimulator, glob OFC} /\
+         eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}); last first; auto.
+  + smt(mem_empty).
+  + proc; sp; if; auto. 
+    inline{1} 1; inline{2} 1; sp; if; 1, 3: auto.
+    if; 1, 3: auto; sp.
+    if; 1: auto; 1: smt(); last first.
+    - by conseq=> />; sim; smt().
+    wp=> />; 1: smt().
+    rnd; auto=> />; 1: smt().
+    call(: eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}); last by auto; smt().
+
 byequiv=> //=; proc.
 inline{1} 1; inline{2} 2; sp.
 inline{1} 1; inline{2} 3; swap{2}[1..2]1; sp.
@@ -434,7 +487,7 @@ inline{1} 1; inline{2} 3; sp.
 inline{1} 1; sp.
 inline{1} 1; sp.
 swap{2} 1 1; sp; swap{2}[1..2]3; sp.
-inline{1} 1; sp; auto.
+inline{1} 1; sp; auto. print ExtendOutputSize.
 seq 2 5 : (={glob A, glob OSimulator, glob Counter, hash, m} /\
          inv BIRO.IRO.mp{1} RFList.m{2} /\
          SORO.Bounder.bounder{2} <= Counter.c{1}); last first.
@@ -451,6 +504,7 @@ auto; call(: ={glob OSimulator, glob Counter} /\ inv BIRO.IRO.mp{1} RFList.m{2} 
 + smt().
 + proc; sp; if; auto=> />; 2: smt(); inline{1} 1; inline{2} 1; sp; auto.
   if; 1, 3: auto; -1: smt().
+  
   (* TODO : reprendre ici, avec le spit des domaines *)
 
 
