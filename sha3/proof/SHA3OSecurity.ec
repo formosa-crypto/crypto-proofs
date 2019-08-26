@@ -318,6 +318,83 @@ by call(Sample_LoopSnoc_eq); auto.
 qed.
 
 
+op inv (m1 : (bool list * int, bool) fmap) (m2 : (bool list, f_out) fmap) =
+  (forall l i, (l,i) \in m1 => 0 <= i < size_out) /\
+  (forall l i, (l,i) \in m1 => l \in m2) /\ 
+  (forall l, l \in m2 => forall i, 0 <= i < size_out => (l,i) \in m1) /\ 
+  (forall l i, (l,i) \in m1 => m1.[(l,i)] = Some (nth witness (to_list (oget m2.[l])) i)).
+
+local equiv eq_IRO_RFWhile :
+  BIRO.IRO.f ~ RFWhile.get :
+  arg{1} = (x{2}, size_out) /\ inv BIRO.IRO.mp{1} RFList.m{2}
+  ==>
+  res{2} = of_list res{1} /\ inv BIRO.IRO.mp{1} RFList.m{2}.
+proof.
+proc; inline*; sp.
+rcondt{1} 1; 1: by auto.
+if{2}; sp; last first.
++ alias{1} 1 mp = BIRO.IRO.mp.
+  conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
+        inv mp{1} RFList.m{2} /\
+        bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
+  - move=> &l &r 11?.
+    rewrite take_oversize 1:spec_dout 1:H4 //.
+    rewrite eq_sym to_listK => ->.
+    by have:=H3; rewrite domE; smt().
+  - smt(take_oversize spec_dout).
+  while{1}(BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ 
+        0 <= i{1} <= size_out /\ n{1} = size_out /\
+        inv mp{1} RFList.m{2} /\ x{1} \in RFList.m{2} /\
+        bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
+      auto=> />.
+  + sp; rcondf 1; auto=> />; 1: smt().
+    move=> &h 8?.
+    rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
+    rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
+    rewrite - H6; congr; rewrite H4=> //=.
+    by apply H3=> //=.
+  smt(size_out_gt0 size_ge0 take0).
+auto=> //=.
+conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\ n{1} = size_out /\
+  inv BIRO.IRO.mp{1} RFList.m{2}.[x{2} <- oget (of_list l{2})])=> />. 
++ smt(get_setE spec2_dout).
++ smt(get_setE spec2_dout).
+alias{1} 1 m = BIRO.IRO.mp; sp.
+conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\ 
+  n{1} = size_out /\ inv m{1} RFList.m{2} /\
+  (forall j, (x{1}, j) \in BIRO.IRO.mp{1} => 0 <= j < i{1}) /\
+  (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
+  (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
+  (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
++ move=> /> &l &r 11?; do!split; ..-2 : smt(domE mem_set).
+  move=> l j Hin.
+  rewrite get_setE/=.
+  case: (l = x{r}) => [<<-|].
+  - rewrite oget_some H8; 1:smt(); congr; congr.
+    by rewrite eq_sym to_listK; smt(spec2_dout).
+  move=> Hneq.
+  by rewrite -(H6 _ _ Hneq) H2; smt(domE).
+while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
+  n{1} = size_out /\ inv m{1} RFList.m{2} /\
+  (forall j, (x{1}, j) \in BIRO.IRO.mp{1} => 0 <= j < i{1}) /\
+  (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
+  (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
+  (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
++ sp; rcondt{1} 1; auto=> />.
+  - smt().
+  move=> &l &r 13?.
+  rewrite get_setE/=oget_some/=size_rcons/=; do!split; 1,2: smt(size_ge0).
+  - smt(mem_set).
+  - smt(get_setE).
+  - smt(mem_set).
+  - move=>j Hj0 Hjsize; rewrite get_setE/=nth_rcons.
+    case: (j = size bs{l})=>[->>//=|h].
+    have/=Hjs:j < size bs{l} by smt().
+    by rewrite Hjs/=H8//=.
+by auto; smt(size_out_gt0).
+qed.
+
+
 local lemma rw_ideal_2 &m:
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
       ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] <=
@@ -350,7 +427,31 @@ have->:Pr[SORO.Preimage(SORO_P1(A), RFList).main() @ &m : res] =
   inline{1} 1; inline{2} 1; sp; sim.
   inline{1} 1; inline{2} 1; sp; if; auto; sim.
   by call(rw_RF_List_While); auto.
-(* TODO : reprendre ici, avec le spit des domaines *)
+byequiv=> //=; proc.
+inline{1} 1; inline{2} 2; sp.
+inline{1} 1; inline{2} 3; swap{2}[1..2]1; sp.
+inline{1} 1; inline{2} 3; sp.
+inline{1} 1; sp.
+inline{1} 1; sp.
+swap{2} 1 1; sp; swap{2}[1..2]3; sp.
+inline{1} 1; sp; auto.
+seq 2 5 : (={glob A, glob OSimulator, glob Counter, hash, m} /\
+         inv BIRO.IRO.mp{1} RFList.m{2} /\
+         SORO.Bounder.bounder{2} <= Counter.c{1}); last first.
++ inline{1} 1; inline{2} 1; sp; inline{1} 1; sp; auto.
+  if{1}; sp; last first.
+  - conseq(:_==> true)=> />.
+    inline*; if{2}; auto; sp; if{2}; auto.
+    by while{2}(true)(size_out - i{2}); auto=>/>; smt(dbool_ll).
+  rcondt{2} 1; 1: by auto=> />; smt(divz_ge0 gt0_r size_ge0).
+  inline{1} 1; sp; auto.
+  auto; call(eq_IRO_RFWhile); auto.
+auto; call(: ={glob OSimulator, glob Counter} /\ inv BIRO.IRO.mp{1} RFList.m{2} /\
+        SORO.Bounder.bounder{2} <= Counter.c{1}); auto=> />.
++ smt().
++ proc; sp; if; auto=> />; 2: smt(); inline{1} 1; inline{2} 1; sp; auto.
+  if; 1, 3: auto; -1: smt().
+  (* TODO : reprendre ici, avec le spit des domaines *)
 
 
 qed.
