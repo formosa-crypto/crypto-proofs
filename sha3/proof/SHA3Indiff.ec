@@ -281,12 +281,7 @@ rewrite powS 1:addz_ge0 1:ge0_r 1:ge0_c -pow_add 1:ge0_r 1:ge0_c.
 have -> :
   (limit ^ 2 - limit)%r / (2 * (2 ^ r * 2 ^ c))%r =
   ((limit ^ 2 - limit)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
-  rewrite (fromintM 2) StdRing.RField.invfM StdRing.RField.mulrA
-           -!StdRing.RField.mulrA.
-  congr.
-  rewrite (fromintM (2 ^ r)) StdRing.RField.invfM StdRing.RField.mulrA
-          -!StdRing.RField.mulrA.
-  congr; by rewrite StdRing.RField.mul1r.
+  by rewrite (fromintM 2); smt().
 rewrite/=.
 have -> :
   (4 * limit ^ 2)%r / (2 ^ c)%r =
