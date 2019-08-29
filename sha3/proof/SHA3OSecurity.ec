@@ -50,10 +50,10 @@ cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x).
   rewrite spec_dout/=.
   pose p:= StdBigop.Bigreal.BRM.big _ _ _.
   cut->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
-  - rewrite /p =>{p}. print StdBigop.Bigreal.BRM.
+  - rewrite /p =>{p}. 
     apply StdBigop.Bigreal.BRM.eq_bigr.
     by move=> i; rewrite//= dbool1E.
-  rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}. search 0 Int.(+) 1 (<=).
+  rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}. 
   have:=size_out_gt0; move/ltzW.
   move:size_out;apply intind=> //=. 
   - by rewrite powr0 iter0 //= fromint1.
@@ -492,7 +492,6 @@ local module Fill_In (F : RO) = {
   }
 }.
 
-print module RO.
 
 local equiv eq_eager_ideal :
   BIRO.IRO.f ~ Fill_In(LRO).f :
@@ -841,7 +840,7 @@ if{1}.
 + wp=> />.
   rnd (fun x => oget (of_list x)) to_list; auto=> />.
   move=> &l c Hc Hnin; split.
-  - move=> ret Hret. search to_list. 
+  - move=> ret Hret. 
     by have/= ->:= (to_listK ret (to_list ret)).
   move=> h{h}; split.
   - move=> ret Hret; rewrite -dout_equal_dlist.
@@ -1206,7 +1205,6 @@ local module Fill_In (F : RO) = {
   }
 }.
 
-print module RO.
 
 local equiv eq_eager_ideal :
   BIRO.IRO.f ~ Fill_In(LRO).f :
@@ -1669,7 +1667,7 @@ seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
   - rcondt{2} 2; 1: auto.
     auto; rnd (fun t => oget (of_list t)) to_list; auto=> />.
     move=> &l c Hc Hnin; split.
-    - move=> ret Hret. search to_list. 
+    - move=> ret Hret. 
       by have/= ->:= (to_listK ret (to_list ret)).
     move=> h{h}; split.
     - move=> ret Hret; rewrite -dout_equal_dlist.
@@ -1689,7 +1687,7 @@ if{1}.
 - rcondt{2} 2; 1: auto.
   auto; rnd (fun t => oget (of_list t)) to_list; auto=> />.
   move=> &l c Hc Hnin; split.
-  - move=> ret Hret. search to_list. 
+  - move=> ret Hret. 
     by have/= ->:= (to_listK ret (to_list ret)).
   move=> h{h}; split.
   - move=> ret Hret; rewrite -dout_equal_dlist.
@@ -2086,7 +2084,6 @@ local module Fill_In (F : RO) = {
   }
 }.
 
-print module RO.
 
 local equiv eq_eager_ideal :
   BIRO.IRO.f ~ Fill_In(LRO).f :
@@ -2541,7 +2538,7 @@ seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
   - rcondt{2} 2; 1: auto.
     auto; rnd (fun t => oget (of_list t)) to_list; auto=> />.
     move=> &l c Hc Hnin; split.
-    - move=> ret Hret. search to_list. 
+    - move=> ret Hret. 
       by have/= ->:= (to_listK ret (to_list ret)).
     move=> h{h}; split.
     - move=> ret Hret; rewrite -dout_equal_dlist.
@@ -2561,7 +2558,7 @@ if{1}.
 - rcondt{2} 2; 1: auto.
   auto; rnd (fun t => oget (of_list t)) to_list; auto=> />.
   move=> &l c Hc Hnin; split.
-  - move=> ret Hret. search to_list. 
+  - move=> ret Hret. 
     by have/= ->:= (to_listK ret (to_list ret)).
   move=> h{h}; split.
   - move=> ret Hret; rewrite -dout_equal_dlist.
