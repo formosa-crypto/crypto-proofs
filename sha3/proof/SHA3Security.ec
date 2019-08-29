@@ -1282,4 +1282,4 @@ section SHA3_Collision.
   qed.
 
 
-end section Collision.
+end section SHA3_Collision.
