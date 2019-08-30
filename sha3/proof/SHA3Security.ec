@@ -128,7 +128,7 @@ section Preimage.
     Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
     Gconcl_list.F2.FRO, Gconcl_list.Simulator, DPre}.
 
-  axiom A_ll (F <: SRO.Oracle) : islossless F.get => islossless A(F).guess.
+  axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -468,7 +468,7 @@ section Preimage.
   have->//=:= SHA3Indiff (DSetSize(DPre(A))) &m _.
   move=> F P P_f_ll P_fi_ll F_ll; proc; inline*; auto; sp; auto.
   seq 1 : true; auto. 
-  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F))))); auto.
+  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F)))) _); auto.
     by proc; inline*; sp; if; auto; sp; if; auto; sp; call F_ll; auto.
   if; auto; sp.
   by call F_ll; auto.
@@ -485,7 +485,7 @@ section SecondPreimage.
     Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
     Gconcl_list.F2.FRO, Gconcl_list.Simulator, D2Pre}.
 
-  axiom A_ll (F <: SRO.Oracle) : islossless F.get => islossless A(F).guess.
+  axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -859,7 +859,7 @@ section SecondPreimage.
   have->//=:= SHA3Indiff (DSetSize(D2Pre(A))) &m _.
   move=> F P P_f_ll P_fi_ll F_ll; proc; inline*; auto; sp.
   seq 1 : true; auto.
-  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F))))); auto.
+  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F)))) _); auto.
     by proc; inline*; sp; if; auto; sp; if; auto; sp; call F_ll; auto.
   if; auto; sp.
   seq 1 : true; auto.
@@ -878,7 +878,7 @@ section Collision.
     Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
     Gconcl_list.F2.FRO, Gconcl_list.Simulator}.
 
-  axiom A_ll (F <: SRO.Oracle) : islossless F.get => islossless A(F).guess.
+  axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -1236,7 +1236,7 @@ section Collision.
   have->//=:= SHA3Indiff (DSetSize(DColl(A))) &m _.
   move=> F P P_f_ll P_fi_ll F_ll; proc; inline*; auto; sp.
   seq 1 : true; auto.
-  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F))))); auto.
+  + call (A_ll (SRO.Bounder(FInit(DFSetSize(F)))) _); auto.
     by proc; inline*; sp; if; auto; sp; if; auto; sp; call F_ll; auto.
   if; auto; sp.
   seq 1 : true; auto.
@@ -1269,7 +1269,7 @@ section SHA3_Collision.
     Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
     Gconcl_list.F2.FRO, Gconcl_list.Simulator}.
 
-  axiom A_ll (F <: SRO.Oracle) : islossless F.get => islossless A(F).guess.
+  axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
 
   lemma SHA3_coll_resistant &m :
       Pr[SRO.Collision(AdvCollisionSHA3(A), FM(CSetSize(Sponge), Perm)).main() @ &m : res] <=
@@ -1278,7 +1278,7 @@ section SHA3_Collision.
       (sigma * (sigma - 1) + 2)%r / 2%r / (2%r ^ size_out).
   proof.
   apply (Sponge_coll_resistant (AdvCollisionSHA3(A)) _ &m).
-  by move=> F F_ll; proc; inline*; call(A_ll (X(F))); auto; proc; call F_ll; auto.
+  by move=> F F_ll; proc; inline*; call(A_ll (X(F)) _); auto; proc; call F_ll; auto.
   qed.
 
 

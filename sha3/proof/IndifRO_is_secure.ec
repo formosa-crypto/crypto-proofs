@@ -93,7 +93,7 @@ section Collision.
 
   declare module A : AdvCollision{Bounder, SRO.RO.RO, SRO.RO.FRO}.
   
-  axiom D_ll (F <: Oracle) :
+  axiom D_ll (F <: Oracle { A }) :
     islossless F.get => islossless A(F).guess.
 
   lemma coll_resistant_if_indifferentiable
@@ -117,7 +117,7 @@ section Collision.
         Pr[Collision(A, SRO.RO.RO).main() @ &m : res].
   + byequiv=>//=; proc; inline DColl(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp. 
-    call{1} (S_ll RO); auto.
+    call{1}(S_ll RO _); auto.
     by proc; auto; smt(sampleto_ll).
   exact(RO_is_collision_resistant A &m).
   qed.
@@ -138,7 +138,7 @@ section Preimage.
 
   declare module A : AdvPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, DPre}.
   
-  axiom D_ll (F <: Oracle) :
+  axiom D_ll (F <: Oracle{A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma preimage_resistant_if_indifferentiable
@@ -163,7 +163,7 @@ section Preimage.
         Pr[Preimage(A, SRO.RO.RO).main(hash) @ &m : res].
   + byequiv=>//=; proc; inline DPre(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp; sim; auto.
-    call{1} (S_ll RO); auto.
+    call{1} (S_ll RO _); auto.
     by proc; auto; smt(sampleto_ll).
   exact(RO_is_preimage_resistant A &m hash).
   qed.
@@ -184,7 +184,7 @@ section SecondPreimage.
 
   declare module A : AdvSecondPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, D2Pre}.
   
-  axiom D_ll (F <: Oracle) :
+  axiom D_ll (F <: Oracle{A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma second_preimage_resistant_if_indifferentiable
@@ -209,7 +209,7 @@ section SecondPreimage.
         Pr[SecondPreimage(A, SRO.RO.RO).main(mess) @ &m : res].
   + byequiv=>//=; proc; inline D2Pre(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp; sim; auto.
-    call{1} (S_ll RO); auto.
+    call{1} (S_ll RO _); auto.
     by proc; auto; smt(sampleto_ll).
   exact(RO_is_second_preimage_resistant A &m mess).
   qed.

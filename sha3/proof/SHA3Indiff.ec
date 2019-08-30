@@ -152,7 +152,7 @@ declare module Dist :
                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
                 Gconcl_list.Simulator}.
 
-axiom Dist_lossless (F <: DFUNCTIONALITY) (P <: DPRIMITIVE) :
+axiom Dist_lossless (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }) :
   islossless P.f => islossless P.fi => islossless F.f =>
   islossless Dist(F,P).distinguish.
 
@@ -318,7 +318,7 @@ lemma SHA3Indiff
                  Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
                  Gconcl_list.Simulator})
         &m :
-      (forall (F <: DFUNCTIONALITY) (P <: DPRIMITIVE),
+      (forall (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }),
         islossless P.f => 
         islossless P.fi => 
         islossless F.f =>
