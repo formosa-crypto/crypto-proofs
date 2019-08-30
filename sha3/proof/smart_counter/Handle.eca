@@ -594,7 +594,12 @@ lemma hs_updh hs ch fx hx xc fx':
   => hs_spec hs.[hx <- (xc,fx')] ch.
 proof.
 move=> ^Hhs [] Hhuniq hs_0 dom_hs hx_neq0 hs_hx; split.
-+ by move=> h1 h2 [c1 f1] [c2 f2]; rewrite !get_setE /= /#.
++ move=> h1 h2 [c1 f1] [c2 f2]; rewrite !get_setE /= => />.
+  case : (h1 = hx) => />; case : (h2 = hx) => /> U1 U2.
+  + by have := (Hhuniq _ _ _ _ hs_hx U2 _).
+  + case (xc = c2) => />.
+    by have := (Hhuniq _ _ _ _ hs_hx U2 _) => // />.
+  + move=> H1 H2; by have := (Hhuniq _ _ _ _ H1 H2 _).
 + by rewrite get_setE hx_neq0.
 move=> cf h; rewrite get_setE; case: (h = hx)=> [<*> _|_ /dom_hs //].
 by move: hs_hx=> /dom_hs.
@@ -1882,7 +1887,11 @@ cut[]b1 c1 H_Pm1:exists b1 c1, Pm.[(b +^ nth witness p i, c)] = Some (b1,c1)
             (oget Pm.[(b +^ nth witness p i, c)]).`2;smt(domE).
 cut[]H_P_m H_Gmh:=m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ Hinv.
 cut:=H_P_m _ _ _ _ H_Pm1.
-by cut[]/#:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ _ Hinv.
+cut[] :=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ _ Hinv.
+move=> hun *.
+have /> := H_P_m _ _ _ _ H_Pm1.
+move=> hx fx hy fy H1 H2 H3; exists b1 c1 hy => />.
+case: H_hs_h => fh /(hun _ _ _ _ H1) />.
 qed.
 
 
@@ -2427,14 +2436,17 @@ proof.
         cut->/=:=ch_neq0 _ _ H_hs_spec.
         cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
         rewrite h_g1/=.
-        by cut[]:=H_mh_spec; smt(dom_hs_neq_ch).
+        cut[]:=H_mh_spec => *. 
+admit.
+(*smt(dom_hs_neq_ch).*)
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p' v' hx.
       move:H13 H14;rewrite!get_setE/=!oget_some/==>H13 H14;rewrite H13 H14/=.
       cut->/=:=ch_neq0 _ _ H_hs_spec.
       cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
       rewrite h_g1/=.
-      by cut[]:=H_mh_spec;smt(dom_hs_neq_ch).
+      admit.
+(*by cut[]:=H_mh_spec;smt(dom_hs_neq_ch). *)
   + rewrite!get_setE/=oget_some;exact H2_pi_spec. 
   + rewrite!get_setE/=!oget_some/=.
     cut H_m_p:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
