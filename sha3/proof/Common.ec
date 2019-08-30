@@ -53,7 +53,6 @@ export DBlock.
 
 op cdistr = DCapacity.dunifin.
 op bdistr = DBlock.dunifin.
-search c.
 
 
 (* ------------------------- Auxiliary Lemmas ------------------------- *)

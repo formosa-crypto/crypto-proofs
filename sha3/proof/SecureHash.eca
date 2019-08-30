@@ -29,7 +29,6 @@ axiom sampleto_fu:   is_funiform sampleto.
 op increase_counter (c : int) (m : from) : int.
 axiom increase_counter_spec c m : c <= increase_counter c m.
 
-print OIndif.
 
 (* module type RF = { *)
 (*   proc init() : unit *)

@@ -44,10 +44,10 @@ cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x).
   rewrite spec_dout/=.
   pose p:= StdBigop.Bigreal.BRM.big _ _ _.
   cut->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
-  - rewrite /p =>{p}. print StdBigop.Bigreal.BRM.
+  - rewrite /p =>{p}. 
     apply StdBigop.Bigreal.BRM.eq_bigr.
     by move=> i; rewrite//= dbool1E.
-  rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}. search 0 Int.(+) 1 (<=).
+  rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}.
   have:=size_out_gt0; move/ltzW.
   move:size_out;apply intind=> //=. 
   - by rewrite powr0 iter0 //= fromint1.
