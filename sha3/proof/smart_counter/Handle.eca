@@ -2436,17 +2436,54 @@ proof.
         cut->/=:=ch_neq0 _ _ H_hs_spec.
         cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
         rewrite h_g1/=.
-        cut[]:=H_mh_spec => *. 
-admit.
-(*smt(dom_hs_neq_ch).*)
+        cut[]:=H_mh_spec => HH1 HH2 HH3 HH4 HH5.
+        have toto:(forall (xa xb : block) (ha hb : int),
+               G1.mh{2}.[(xa, ha)] = Some (xb, hb) =>
+               ha <> G1.chandle{2} /\ hb <> G1.chandle{2}).
+        - move=> /> xa xb ha hb Hmhab. 
+          have:=dom_hs_neq_ch FRO.m{2} G1.chandle{2} ha.
+          have:=dom_hs_neq_ch FRO.m{2} G1.chandle{2} hb.
+          have/#:FRO.m{2}.[ha] <> None /\ FRO.m{2}.[hb] <> None.
+          have[] _ HH6:=H_m_mh.
+          by have/> g1 g2 g3 g4 -> -> />:=HH6 _ _ _ _ Hmhab.
+        have{HH4}:=HH4 toto.
+        have{HH5}:=HH5 toto.
+        case: (hx = G1.chandle{2})=>[->>|hx_neq_ch/>]. 
+        - move=>[] p1 x1 [#] hp11 ->> <<-.
+          move=>[] p2 x2 [#] hp21 ->> ->> /=.
+          pose y := (sa{2} +^ nth witness bs{1} i{2}).
+          pose y1:=x1+^y. pose y2:=x2+^y.
+          have[#]->>->>:=HH3 _ _ _ _ _ hp21 H_path.
+          by have[#]->><<-//=:=HH3 _ _ _ _ _ hp11 H_path.
+        move=>hp21 hp11.
+        by have[#]->>->>:=HH3 _ _ _ _ _ hp21 hp11.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p' v' hx.
       move:H13 H14;rewrite!get_setE/=!oget_some/==>H13 H14;rewrite H13 H14/=.
       cut->/=:=ch_neq0 _ _ H_hs_spec.
       cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
       rewrite h_g1/=.
-      admit.
-(*by cut[]:=H_mh_spec;smt(dom_hs_neq_ch). *)
+        cut[]:=H_mh_spec => HH1 HH2 HH3 HH4 HH5.
+        have toto:(forall (xa xb : block) (ha hb : int),
+               G1.mh{2}.[(xa, ha)] = Some (xb, hb) =>
+               ha <> G1.chandle{2} /\ hb <> G1.chandle{2}).
+        - move=> /> xa xb ha hb Hmhab. 
+          have:=dom_hs_neq_ch FRO.m{2} G1.chandle{2} ha.
+          have:=dom_hs_neq_ch FRO.m{2} G1.chandle{2} hb.
+          have/#:FRO.m{2}.[ha] <> None /\ FRO.m{2}.[hb] <> None.
+          have[] _ HH6:=H_m_mh.
+          by have/> g1 g2 g3 g4 -> -> />:=HH6 _ _ _ _ Hmhab.
+        have{HH4}:=HH4 toto.
+        have{HH5}:=HH5 toto.
+        case: (hx = G1.chandle{2})=>[->>|hx_neq_ch/>]. 
+        - move=>[] p1 x1 [#] hp11 ->> <<-.
+          move=>[] p2 x2 [#] hp21 ->> ->> /=.
+          pose y := (sa{2} +^ nth witness bs{1} i{2}).
+          pose y1:=x1+^y. pose y2:=x2+^y.
+          have[#]->>->>:=HH3 _ _ _ _ _ hp21 H_path.
+          by have[#]->><<-//=:=HH3 _ _ _ _ _ hp11 H_path.
+        move=>hp21 hp11.
+        by have[#]->>->>:=HH3 _ _ _ _ _ hp21 hp11.
   + rewrite!get_setE/=oget_some;exact H2_pi_spec. 
   + rewrite!get_setE/=!oget_some/=.
     cut H_m_p:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
