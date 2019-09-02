@@ -496,8 +496,7 @@ split=> [xa0 xc0 ya0 yc0|xa0 hx0 ya0 hy0]; rewrite get_setE.
   move=> xaxc0_neq_xaxc /Hm_mh [hx0 fx0 hy0 fy0] [#] hs_hx0 hs_hy0 mh_xahx0.
   by exists hx0 fx0 hy0 fy0; rewrite !get_setE /#.
 case: ((xa0,hx0) = (xa,hx))=> [[#] <*>> [#] <<*>|] /=.
-+ by exists xc f yc f'; rewrite !get_setE /= /#. search (&&) (/\).
-rewrite  andaE. 
++ by exists xc f yc f'; rewrite !get_setE /= /#.
 move=>/= /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
 exists xc0 fx0 yc0 fy0; rewrite !get_setE; do !split=> [/#|/#|/=].
 move: xahx0_neq_xahx; case: (xa0 = xa)=> [/= <*>>|//=]; case: (xc0 = xc)=> [<*>>|//=].
@@ -1275,7 +1274,7 @@ proof.
   case (v' +^ x = xa /\ h' = ha) => [[!<<-] /= ?? [!->>] /=| ].
   + by exists p v';rewrite xorwA xorwK xorwC xorw0.
   case (hx = ch)=> [->> |??? Hbu Hg].
-  + by rewrite andaE=> -> /= _ _ /Hch //.
+  + by move=> ??? /= /Hch.
   by rewrite build_hpath_prefix;exists v' h';smt().
 qed.
   
@@ -1805,7 +1804,7 @@ call(: !G1.bcol{2}
       by rewrite /in_dom_with domE hs_hy2.
     rcondt{2} 14; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite domE pi_x2.
     auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DBlock.dunifin_ll Capacity.DCapacity.dunifin_ll /=.
-    move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 3!oget_some //=.
+    move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // 10?oget_some.
     + by have /hs_of_INV []:= inv0.
     rewrite Hro G1mh_x1hx2 hs_hy2 ?oget_some //=domE.
@@ -2423,7 +2422,7 @@ proof.
           cut:=hh3 _ _ _ _ _ H_path h_build_hpath_p0. 
           cut->:bn = sa{2} +^ sa{2} +^ bn;smt(@Block).
         move=>help;cut h_neq:! (v +^ bn = sa{2} +^ nth witness bs{1} i{2} /\ hx = h{2}) by rewrite/#.
-        move:help. rewrite andaE h_neq/==>h_g1_v_bn_hx.
+        move:help. rewrite h_neq/==>h_g1_v_bn_hx.
         cut[]hh1 hh2 hh3:=H_mh_spec.
         cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
         rewrite h_build_hpath_set/=h_g1/=.
