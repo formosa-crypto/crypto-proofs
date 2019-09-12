@@ -3,7 +3,7 @@
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
 require import Core Int Real StdOrder Ring IntExtra.
-require import List FSet SmtMap Common PROM DProd Dexcepted.
+require import List FSet SmtMap Common PROM Distr DProd Dexcepted.
 
 require (*..*) Indifferentiability.
 (*...*) import Capacity IntOrder.
