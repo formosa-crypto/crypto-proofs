@@ -167,7 +167,6 @@ section Preimage.
     if; sp; wp; last by hoare;auto;progress; smt(mu_bounded).
     case: (x \in RO.m).
     - hoare; auto; progress. 
-      + smt(mu_bounded). 
       rewrite H3/=; move: H1; rewrite rngE /= negb_exists /=.
       by have:=H3; rewrite domE; smt().
     rnd (pred1 Preimage2.hash); auto=> /> &hr 6?.
@@ -317,16 +316,15 @@ section SecondPreimage.
   + by auto. 
   + inline*; sp; auto.
     if; sp; last first.  
-    + sp; hoare; auto; 1: smt(mu_bounded); if; auto.
+    + sp; hoare; auto; if; auto.
     case(Bounder.bounder < bound); last first.
-    - by rcondf 8; 1: auto; hoare; auto; smt(mu_bounded).
+    - by rcondf 8; 1: auto; hoare; auto. 
     rcondt 8; 1: auto.
     swap 11 -8; sp.
     swap [7..11] -6; sp.
     swap[5..6] 2; wp 6=> /=.
     case: (SecondPreimage2.m2 \in RO.m).
     - rcondf 5; 1: auto; hoare; auto=> /> &h d _ _ in_dom1 not_rng _ in_dom2.
-      + smt(mu_bounded).
       move=> sample2 _ sample1 _; rewrite negb_and/=.
       move: not_rng; rewrite rngE /= negb_exists /= => /(_ SecondPreimage2.m2{h}).
       rewrite remE; case: (SecondPreimage2.m2{h} = m1{h})=> //=.
@@ -400,18 +398,18 @@ section Collision.
   + auto.
   + inline*; sp.
     if; sp; last first.
-    - by wp; conseq(:_==> false)=> />; hoare; 1: smt(mu_bounded); auto. 
+    - by wp; conseq(:_==> false)=> />; hoare; auto. 
     case: (Bounder.bounder < bound); last first.
-    - rcondf 8; 1:auto; hoare; auto; smt(mu_bounded).
+    - rcondf 8; 1:auto; hoare; auto.
     rcondt 8; 1: auto.
     swap 11 -8.
     swap [7..11] -6; sp.
     swap [5..6] 1; wp 5=> /=.
     swap 3 -1.
     case: (m1 = m2).
-    - by hoare; 1: smt(mu_bounded); auto. 
+    - by hoare; auto. 
     case: (m1 \in RO.m); case: (m2 \in RO.m).
-    - rcondf 3; 1: auto; rcondf 4; 1: auto; hoare; auto; 1: smt(bound_ge0 mu_bounded).
+    - rcondf 3; 1: auto; rcondf 4; 1: auto; hoare; auto. 
       move=> /> &h d _ _ Hcoll _ _ neq12 in_dom1 in_dom2 _ _ _ _.
       move: Hcoll; rewrite /collision negb_exists /= => /(_ m1{h}).
       rewrite negb_exists /= => /(_ m2{h}).
@@ -474,7 +472,7 @@ section Collision.
       by rewrite neq in_dom1 in_dom2 /= => ->.
     rnd; skip=> /> &h bounder _ h _. 
     rewrite (mu_mem (frng RO.m{h}) sampleto (mu1 sampleto witness)); 1: smt(sampleto_fu).
-    rewrite StdOrder.RealOrder.ler_wpmul2r //; 1: smt(mu_bounded). 
+    rewrite StdOrder.RealOrder.ler_wpmul2r //. 
     by rewrite RealExtra.le_fromint; smt(le_card_frng_fdom). 
   + move=> c; proc; inline*; auto; sp; if; last by auto; smt().
     auto=> /> &h h1 h2 _ sample _.

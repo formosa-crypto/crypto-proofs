@@ -166,7 +166,7 @@ section.
       by rewrite -mem_fdom memE; apply/prefix_lt_size=> /#.
     + exact/prefix_ge0.
     + exact/prefix_sizel.
-    + case: H9=> //= - [j] [#] H42 H72. print take_take.
+    + case: H9=> //= - [j] [#] H42 H72.
       have ->: j = min j (prefix bs{2} (get_max_prefix bs{2} (elems (fdom C.queries{2})))) by smt().
       rewrite -(take_take bs{2} j (prefix bs{2} (get_max_prefix bs{2} (elems (fdom C.queries{2}))))).
       by move=> ->; rewrite H domE //= H8.
@@ -214,9 +214,7 @@ section.
 
   local clone import ProdSampling with
     type t1 <- block,
-      op d1 <- bdistr,
-    type t2 <- capacity,
-      op d2 <- cdistr.
+    type t2 <- capacity.
 
   lemma Real_Concrete &m : 
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
@@ -400,21 +398,21 @@ section.
     + rewrite -(DoubleBounding ARP &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
       * proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = x{2})=> //=.
-        transitivity{1} { (y1,y2) <@ S.sample2(); }
+        transitivity{1} { (y1,y2) <@ S.sample2(bdistr,cdistr); }
                         (true ==> ={y1,y2})
                         (true ==> (y1,y2){1} = x{2})=> //=.
         - by inline *; auto.
-        transitivity{2} { x <@ S.sample(); }
+        transitivity{2} { x <@ S.sample(bdistr,cdistr); }
                         (true ==> (y1,y2){1} = x{2})
                         (true ==> ={x})=> //=.
         - by symmetry; call sample_sample2; skip=> /> [].
         by inline *; auto.
       proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = y{2})=> //=.
-      transitivity{1} { (y1,y2) <@ S.sample2(); }
+      transitivity{1} { (y1,y2) <@ S.sample2(bdistr,cdistr); }
                       (true ==> ={y1,y2})
                       (true ==> (y1,y2){1} = y{2})=> //=.
       - by inline *; auto.
-      transitivity{2} { y <@ S.sample(); }
+      transitivity{2} { y <@ S.sample(bdistr,cdistr); }
                       (true ==> (y1,y2){1} = y{2})
                       (true ==> ={y})=> //=.
       - by symmetry; call sample_sample2; skip=> /> [].

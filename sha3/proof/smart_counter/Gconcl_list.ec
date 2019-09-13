@@ -1,7 +1,7 @@
 pragma -oldip.
 require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
 require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
-require import DProd Dexcepted BlockSponge Gconcl.
+require import Distr DProd Dexcepted BlockSponge Gconcl.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*--*) Handle.
@@ -224,7 +224,9 @@ section Ideal.
         /\ SLCommon.C.queries{1} <= F.RO.m{2});progress.
   sp;rcondt{1}1;2:rcondt{2}1;1,2:auto;sp.
   case((x0 \in F.RO.m){2});last first.
-  * rcondt{2}2;1:auto;rcondt{1}1;1:(auto;smt(leq_nin_dom size_cat size_eq0 size_nseq valid_spec)).
+  * rcondt{2}2;1:auto;rcondt{1}1.
+    + auto => /> &hr iR 9?; apply leq_nin_dom => //.
+      smt (leq_nin_dom size_cat size_eq0 size_nseq valid_spec).
     rcondt{1}1;1:auto.
     - move=> /> &hr i [#] h1 h2 h3 h4 h5 h6 h7 h8 h9 h10.
       have//= /#:= prefix_le1 bl{m} SLCommon.C.queries{hr} i h1 _.
@@ -1769,7 +1771,7 @@ section Real_Ideal.
   rewrite-(equiv_ideal D &m).
   cut:=Real_Ideal (A(D)) A_lossless &m.
   pose x:=witness;elim:x=>a b.
-  by rewrite/dstate DProd.dprod1E DBlock.dunifin1E DCapacity.dunifin1E/=
+  rewrite/dstate dprod1E DBlock.dunifin1E DCapacity.dunifin1E/=
     block_card capacity_card;smt(). 
   qed.
 

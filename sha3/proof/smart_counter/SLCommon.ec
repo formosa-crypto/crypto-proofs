@@ -79,9 +79,7 @@ module SqueezelessSponge (P:DPRIMITIVE): FUNCTIONALITY = {
 
 clone export DProd.ProdSampling as Sample2 with 
   type t1 <- block,
-  type t2 <- capacity,
-  op d1   <- bdistr,
-  op d2   <- cdistr.
+  type t2 <- capacity.
 
 (* -------------------------------------------------------------------------- *)
 (** TODO move this **)
