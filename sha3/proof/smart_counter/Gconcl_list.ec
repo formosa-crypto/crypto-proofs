@@ -1992,7 +1992,9 @@ axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
 local clone import PROM.GenEager as IRO2 with
   type from   <- block list * int,
   type to     <- block,
-  op sampleto <- fun _, bdistr
+  op sampleto <- fun _, bdistr,
+  type input  <- unit,
+  type output <- bool
 proof * by exact/DBlock.dunifin_ll.
 
 local module Simu (FRO : IRO2.RO) (F : DFUNCTIONALITY) = {

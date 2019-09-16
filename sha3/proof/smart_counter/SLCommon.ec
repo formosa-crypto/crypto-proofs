@@ -38,10 +38,13 @@ op bl_univ = FSet.oflist bl_enum.
 
 (* -------------------------------------------------------------------------- *)
 (* Random oracle from block list to block                                     *)
+
 clone import PROM.GenEager as F with
   type from <- block list,
   type to   <- block,
-  op sampleto <- fun (_:block list)=> bdistr
+  op sampleto <- fun (_:block list)=> bdistr,
+  type input <- unit,
+  type output <- bool
   proof * by exact Block.DBlock.dunifin_ll.
 
 module Redo = {

@@ -182,7 +182,9 @@ proof *.
 clone import GenEager as Eager with
   type from <- bool list * int,
   type to <- bool,
-  op sampleto <- fun _ => dbool
+  op sampleto <- fun _ => dbool,
+  type input <- unit,
+  type output <- bool
 proof * by smt(dbool_ll).
 
 section Preimage.

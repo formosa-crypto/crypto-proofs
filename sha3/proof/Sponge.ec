@@ -369,7 +369,10 @@ declare module D : HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}.
 local clone PROM.GenEager as ERO with
   type from   <- block list * int,
   type to     <- bool,
-  op sampleto <- fun _ => dbool.
+  op sampleto <- fun _ => dbool,
+  type input  <- unit,
+  type output <- bool
+  proof sampleto_ll by apply dbool_ll.
 
 local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
   proc main() : bool = {

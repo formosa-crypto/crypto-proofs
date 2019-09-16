@@ -9,7 +9,9 @@ require (*--*) ConcreteF PROM.
 clone export PROM.GenEager as ROhandle with
   type from   <- handle,
   type to     <- capacity,
-  op sampleto <- fun (_:int) => cdistr
+  op sampleto <- fun (_:int) => cdistr,
+  type input  <- unit,
+  type output <- bool
   proof sampleto_ll by apply DCapacity.dunifin_ll.
 
 clone export ConcreteF as ConcreteF1.

@@ -16,7 +16,9 @@ axiom sampleto_fu:   is_funiform sampleto.
 clone import PROM.GenEager as RO with
   type from <- from,
   type to   <- to,
-  op sampleto <- fun _ => sampleto
+  op sampleto <- fun _ => sampleto,
+  type input <- unit,
+  type output <- bool
 proof * by exact/sampleto_ll.
 
 op increase_counter (c : int) (m : from) : int.
