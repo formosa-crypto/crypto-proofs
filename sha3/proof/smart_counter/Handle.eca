@@ -1450,7 +1450,7 @@ case @[ambient]: {-1}(Pmi.[(xa,xc)]) (eq_refl Pmi.[(xa,xc)])=> [Pmi_xaxc|[ya yc]
     rewrite (@huniq_hinvK_h hx2) // oget_some /= => _ _ _ _.
     rewrite negb_and domE /=; left.
     by apply/(@notin_m_notin_mh hs Pmi _ _ xc _ Known)=> //; case: inv0.
-  auto=> ? ? [#] !<<- -> -> ->> _.
+  auto => ? ? [#] !<<- -> -> ->> _.
   rewrite (@huniq_hinvK_h hx2) // oget_some /= => y1 -> /= y2 -> /=.
   case: (hinvP hs y2)=> [_ y2_notrngE1_hs _ _|/#].
   rewrite get_setE /= oget_some /=.

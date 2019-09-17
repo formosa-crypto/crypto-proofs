@@ -350,7 +350,7 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 11?.
+  - move=> &l &r 12?.
     rewrite take_oversize 1:spec_dout 1:H4 //.
     rewrite eq_sym to_listK => ->.
     by have:=H3; rewrite domE; smt().
@@ -361,7 +361,7 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 8?.
+    move=> &h 9?.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
     rewrite - H6; congr; rewrite H4=> //=.
@@ -379,7 +379,7 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 11?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
@@ -395,7 +395,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
 + sp; rcondt{1} 1; auto=> />.
   - smt().
-  move=> &l &r 13?.
+  move=> &l &r *.
   rewrite get_setE/=oget_some/=size_rcons/=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
@@ -406,7 +406,6 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
     by rewrite Hjs/=H8//=.
 by auto; smt(size_out_gt0).
 qed.
-
 
 op eq_extend_size (m1 : (bool list * int, bool) fmap) (m2 : (bool list * int, bool) fmap)
   (m3 : (bool list * int, bool) fmap) =
@@ -776,7 +775,7 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 13?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
@@ -816,7 +815,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     sp; if{1}.
     * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 10?; split; 1: smt(of_listK).
+      move=> &l &r 11?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
@@ -830,7 +829,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     if{1}.
     * rcondt{2} 2; auto.
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l 4?; split=> ?; 1: smt(of_listK).
+      move=> &l *; split=> ?; 1: smt(of_listK).
       rewrite -dout_equal_dlist; split=> ?.
       * by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
@@ -858,7 +857,6 @@ if{1}.
   by rewrite get_setE/=.
 by auto=> />; smt(dout_ll).
 qed.
-
 
 local lemma leq_ideal &m :
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
@@ -1071,7 +1069,7 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 11?.
+  - move=> &l &r 12?.
     rewrite take_oversize 1:spec_dout 1:H4 //.
     rewrite eq_sym to_listK => ->.
     by have:=H3; rewrite domE; smt().
@@ -1082,7 +1080,7 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 8?.
+    move=> &h 9?.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
     rewrite - H6; congr; rewrite H4=> //=.
@@ -1100,7 +1098,7 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 11?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
@@ -1611,7 +1609,7 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 13?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
@@ -1640,7 +1638,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     sp; if{1}.
     * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 10?; split; 1: smt(of_listK).
+      move=> &l &r 11?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
@@ -1950,7 +1948,7 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 11?.
+  - move=> &l &r 12?.
     rewrite take_oversize 1:spec_dout 1:H4 //.
     rewrite eq_sym to_listK => ->.
     by have:=H3; rewrite domE; smt().
@@ -1961,7 +1959,7 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 8?.
+    move=> &h 9?.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
     rewrite - H6; congr; rewrite H4=> //=.
@@ -1979,7 +1977,7 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 11?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
@@ -2484,7 +2482,7 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 13?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
@@ -2511,7 +2509,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     sp; if{1}.
     * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 10?; split; 1: smt(of_listK).
+      move=> &l &r 11?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
