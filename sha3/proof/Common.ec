@@ -1,7 +1,4 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
-
-prover quorum=2 ["Z3" "Alt-Ergo"].
-
 require import Core Int IntExtra IntDiv Real List Distr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
 require (*--*) FinType BitWord IdealPRP Monoid.

@@ -1,7 +1,4 @@
 (*---------------------- Auxiliary Lemmas on Maps ----------------------*)
-
-prover [""].
-
 require import AllCore SmtMap FSet StdOrder.
 import IntOrder.
 

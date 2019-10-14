@@ -1,7 +1,4 @@
 (*------------------------- Sponge Construction ------------------------*)
-
-prover quorum=2 ["Z3" "Alt-Ergo"].
-
 require import Core Int IntDiv Real List FSet SmtMap.
 (*---*) import IntExtra.
 require import Distr DBool DList.
