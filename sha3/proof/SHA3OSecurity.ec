@@ -396,7 +396,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
 + sp; rcondt{1} 1; auto=> />.
   - smt().
   move=> &l &r *.
-  rewrite get_setE/=oget_some/=size_rcons/=; do!split; 1,2: smt(size_ge0).
+  rewrite get_setE /= size_rcons /=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
   - smt(mem_set).
@@ -645,9 +645,6 @@ rewrite eq_sym; byequiv=> //=; proc.
 call(RO_LRO_D Dist); inline*; auto=> />.
 qed.
 
-
-
-
 local lemma rw_ideal_2 &m:
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
       ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] <=
@@ -776,10 +773,10 @@ inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
 move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
-rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
+rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
-by rewrite eq_sym -to_listK; congr.
+by rewrite /= eq_sym -to_listK.
 qed.
 
 local lemma rw_ideal &m:
@@ -819,7 +816,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/=oget_some/=dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/=dout_full/= => h; split; 2: smt(). 
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
@@ -834,7 +831,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       * by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
-      by rewrite get_setE/=oget_some/= dout_full/=; congr; rewrite of_listK oget_some.
+      by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
   by auto; smt(dout_ll).
 sp; if; 1, 3: auto; sp; wp 1 2.
 if{1}.
@@ -1115,7 +1112,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
 + sp; rcondt{1} 1; auto=> />.
   - smt().
   move=> &l &r 13?.
-  rewrite get_setE/=oget_some/=size_rcons/=; do!split; 1,2: smt(size_ge0).
+  rewrite get_setE/=size_rcons/=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
   - smt(mem_set).
@@ -1448,7 +1445,7 @@ if{1}.
   sp; rcondt{1} 1; auto.
   inline{1} 1; sp; auto.
   call(eq_IRO_RFWhile); auto=> /> 15?. 
-  rewrite oget_some take_oversize 1:/# /=. 
+  rewrite take_oversize 1:/# /=. 
   have:=spec2_dout _ H5.
   move=>/(some_oget)-> /=; smt(divz_ge0 gt0_r size_ge0 spec2_dout).
 move=>/=.
@@ -1610,7 +1607,7 @@ inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
 move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
-rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
+rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
 by rewrite eq_sym -to_listK; congr.
@@ -1642,7 +1639,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/=oget_some/=dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/=dout_full/= => h; split; 2: smt(). 
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
@@ -1657,7 +1654,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       * by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
-      by rewrite get_setE/=oget_some/= dout_full/=; congr; rewrite of_listK oget_some.
+      by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
   by auto; smt(dout_ll).
 sp.
 seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
@@ -1716,40 +1713,38 @@ rewrite (StdOrder.RealOrder.ler_trans _ _ _ (RO_is_second_preimage_resistant (SO
 by rewrite doutE1.
 qed.
 
-
-
-  local lemma rw_real &m mess : 
-    Dist_of_P2Adv.m{m} = mess =>
-      Pr[SecondPreimage(A, OSponge, PSome(Perm)).main(mess) @ &m : res] =
-      Pr[SHA3_OIndiff.OIndif.OIndif(FSome(Sponge(Poget(PSome(Perm)))), PSome(Perm), 
-        ODRestr(Dist_of_P2Adv(A))).main() @ &m : res].
-  proof.
-  move=> Heq.
-  byequiv=>//=; proc.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; sp; wp=> />.
-  seq 1 1 : (={glob A, glob Perm} /\ m1{1} = Dist_of_P2Adv.m{2} /\
-    m2{1} = m'{2} /\ Bounder.bounder{1} = Counter.c{2}).
-  + auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-    - proc; inline*; sp; if; auto; sp=> />.
-      by conseq(:_==> ={z0, glob Perm})=> />; sim.
-    by auto; smt().
-  conseq(:_==> m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\ 
-    hash1{1} = hash{2} /\ hash2{1} = hash'{2})=> //=; 1: smt().
-  seq 1 1 : (m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\
-    hash1{1} = hash{2} /\ ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2}); last first.
-  + inline*; sp; if; auto; sp=> /=; sim.
-  inline*; sp; if; auto; swap{1} 9; auto; sp=> /=.
-  by conseq(:_==>  m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\
-    of_list (oget (Some (take n{1} z0{1}))) =
-    of_list (oget (Some (take n{2} z0{2}))) /\ ={Perm.mi, Perm.m})=> //=; sim.
-  qed.
+local lemma rw_real &m mess : 
+  Dist_of_P2Adv.m{m} = mess =>
+    Pr[SecondPreimage(A, OSponge, PSome(Perm)).main(mess) @ &m : res] =
+    Pr[SHA3_OIndiff.OIndif.OIndif(FSome(Sponge(Poget(PSome(Perm)))), PSome(Perm), 
+      ODRestr(Dist_of_P2Adv(A))).main() @ &m : res].
+proof.
+move=> Heq.
+byequiv=>//=; proc.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; sp; wp=> />.
+seq 1 1 : (={glob A, glob Perm} /\ m1{1} = Dist_of_P2Adv.m{2} /\
+  m2{1} = m'{2} /\ Bounder.bounder{1} = Counter.c{2}).
++ auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
+  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - proc; inline*; sp; if; auto; sp=> />.
+    by conseq(:_==> ={z0, glob Perm})=> />; sim.
+  by auto; smt().
+conseq(:_==> m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\ 
+  hash1{1} = hash{2} /\ hash2{1} = hash'{2})=> //=; 1: smt().
+seq 1 1 : (m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\
+  hash1{1} = hash{2} /\ ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2}); last first.
++ inline*; sp; if; auto; sp=> /=; sim.
+inline*; sp; if; auto; swap{1} 9; auto; sp=> /=.
+by conseq(:_==>  m1{1} = Dist_of_P2Adv.m{2} /\ m2{1} = m'{2} /\
+  of_list (oget (Some (take n{1} z0{1}))) =
+  of_list (oget (Some (take n{2} z0{2}))) /\ ={Perm.mi, Perm.m})=> //=; sim.
+qed.
 
 local module TOTO = {
   proc main (m : bool list) = {
@@ -1994,7 +1989,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
 + sp; rcondt{1} 1; auto=> />.
   - smt().
   move=> &l &r 13?.
-  rewrite get_setE/=oget_some/=size_rcons/=; do!split; 1,2: smt(size_ge0).
+  rewrite get_setE/=size_rcons/=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
   - smt(mem_set).
@@ -2286,7 +2281,6 @@ rewrite eq_sym; byequiv=> //=; proc.
 by call(RO_LRO_D Dist); inline*; auto=> />.
 qed.
 
-
 local equiv toto :
   DFSetSize(OFC(ExtendSample(FSome(BIRO.IRO)))).f ~
   DFSetSize(OFC(ExtendSample(FSome(BIRO.IRO)))).f :
@@ -2327,7 +2321,7 @@ if{1}.
   sp; rcondt{1} 1; auto.
   inline{1} 1; sp; auto.
   call(eq_IRO_RFWhile); auto=> /> 15?. 
-  rewrite oget_some take_oversize 1:/# /=. 
+  rewrite take_oversize 1:/# /=. 
   have:=spec2_dout _ H5.
   move=>/(some_oget)-> /=; smt(divz_ge0 gt0_r size_ge0 spec2_dout).
 move=>/=.
@@ -2483,7 +2477,7 @@ inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
 move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
-rewrite 2!oget_some cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
+rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
 have h:=spec2_dout result_L H5.
 have-> := some_oget _ h.
 by rewrite eq_sym -to_listK; congr.
@@ -2513,7 +2507,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/=oget_some/=dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/= dout_full/= => h; split; 2: smt(). 
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
@@ -2528,7 +2522,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       * by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
-      by rewrite get_setE/=oget_some/= dout_full/=; congr; rewrite of_listK oget_some.
+      by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
   by auto; smt(dout_ll). 
 sp.
 seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
@@ -2575,7 +2569,6 @@ if{1}.
 by auto=> />; smt(dout_ll).
 qed.
 
-
 local lemma leq_ideal &m :
     Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO), OSimulator(FSome(BIRO.IRO)), 
       ODRestr(Dist_of_CollAdv(A))).main() @ &m : res] <=
@@ -2586,33 +2579,31 @@ rewrite (StdOrder.RealOrder.ler_trans _ _ _ (RO_is_collision_resistant (SORO_Col
 by rewrite doutE1.
 qed.
 
-
-
-  local lemma rw_real &m : 
-      Pr[Collision(A, OSponge, PSome(Perm)).main() @ &m : res] =
-      Pr[SHA3_OIndiff.OIndif.OIndif(FSome(Sponge(Poget(PSome(Perm)))), PSome(Perm), 
-        ODRestr(Dist_of_CollAdv(A))).main() @ &m : res].
-  proof.
-  byequiv=>//=; proc.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; inline{2} 1; sp.
-  inline{1} 1; sp; wp=> />.
-  seq 1 1 : (={glob A, glob Perm, m1, m2} /\ Bounder.bounder{1} = Counter.c{2}).
-  + auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-    - proc; inline*; sp; if; auto; sp=> />.
-    by conseq(:_==> ={z0, glob Perm})=> />; sim.
-  conseq(:_==> ={hash1, hash2, m1, m2})=> //=; 1: smt(); sim.
-  seq 1 1 : (={m1, m2, hash1, glob Perm} /\ Bounder.bounder{1} = Counter.c{2}); last first.
-  + inline*; sp; if; auto; sp=> /=; sim.
-  inline*; sp; if; auto; swap{1} 9; auto; sp=> /=.
-  by conseq(:_==>  ={m1, m2} /\ of_list (oget (Some (take n{1} z0{1}))) =
-    of_list (oget (Some (take n{2} z0{2}))) /\ ={Perm.mi, Perm.m})=> //=; sim.
-  qed.
+local lemma rw_real &m : 
+    Pr[Collision(A, OSponge, PSome(Perm)).main() @ &m : res] =
+    Pr[SHA3_OIndiff.OIndif.OIndif(FSome(Sponge(Poget(PSome(Perm)))), PSome(Perm), 
+      ODRestr(Dist_of_CollAdv(A))).main() @ &m : res].
+proof.
+byequiv=>//=; proc.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; inline{2} 1; sp.
+inline{1} 1; sp; wp=> />.
+seq 1 1 : (={glob A, glob Perm, m1, m2} /\ Bounder.bounder{1} = Counter.c{2}).
++ auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
+  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - proc; inline*; sp; if; auto; sp=> />.
+  by conseq(:_==> ={z0, glob Perm})=> />; sim.
+conseq(:_==> ={hash1, hash2, m1, m2})=> //=; 1: smt(); sim.
+seq 1 1 : (={m1, m2, hash1, glob Perm} /\ Bounder.bounder{1} = Counter.c{2}); last first.
++ inline*; sp; if; auto; sp=> /=; sim.
+inline*; sp; if; auto; swap{1} 9; auto; sp=> /=.
+by conseq(:_==>  ={m1, m2} /\ of_list (oget (Some (take n{1} z0{1}))) =
+  of_list (oget (Some (take n{2} z0{2}))) /\ ={Perm.mi, Perm.m})=> //=; sim.
+qed.
 
 lemma Sponge_collision_resistant &m :
     (forall (F <: OIndif.ODFUNCTIONALITY) (P <: OIndif.ODPRIMITIVE),

@@ -227,14 +227,14 @@ proof.
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
       inline *;rcondt{1} 6;1:by auto=>/>. 
       wp;rnd;auto;progress[-split];rewrite DCapacity.dunifin_ll /= => ?_?->.
-      by rewrite !get_setE /= oget_some.
+      by rewrite !get_setE.
     case (((x.`1, hx2) \in G1.mh /\ t){1});
           [rcondt{1} 4;2:rcondt{2} 4| rcondf{1} 4;2:rcondf{2} 4];
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 7;1:by auto=>/>. 
     wp;rnd;auto;rnd{1};auto;progress[-split].
     rewrite Block.DBlock.supp_dunifin DCapacity.dunifin_ll /==> ?_?->.
-    by rewrite !get_setE /= oget_some.
+    by rewrite !get_setE.
     
   + proc;sp;if=>//;sim.
     call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.
@@ -248,7 +248,7 @@ proof.
           1,2,4,5:(by move=>?;conseq (_:true);auto);2:by sim.
     inline *;rcondt{1} 6;1:by auto=>/>. 
     wp;rnd;auto;progress[-split];rewrite DCapacity.dunifin_ll /= => ?_?->.
-    by rewrite !get_setE /= oget_some.
+    by rewrite !get_setE.
 
   proc;sp;if=>//;auto;if;1:auto;sim.
   call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries});2:by auto.

@@ -237,7 +237,7 @@ section Ideal.
     - by rewrite!get_setE/=.
     - have//= /#:= prefix_le1 bl{2} SLCommon.C.queries{1} i_R H _.
       by rewrite domE H1. 
-    - by rewrite!get_setE/=oget_some leq_add2//=.
+    - by rewrite!get_setE/= leq_add2//=.
   if{1}.
   * rcondt{1}1;1:auto.
     - move=> /> &hr i [#] h1 h2 h3 h4 h5 h6 h7 h8 h9 h10.
@@ -283,7 +283,7 @@ section Ideal.
   sp;auto;progress.
   + by rewrite!get_setE/=.
   + smt(prefix_ge0).
-  + rewrite get_setE/=oget_some leq_add2//=.
+  + rewrite get_setE/= leq_add2//=.
   + by rewrite!get_setE/=.
   + smt(prefix_ge0).
   + exact leq_add_in.
@@ -1309,12 +1309,12 @@ section Real.
       exists (oget Redo.prefixes{2}.[format bl{2} (i{2} + 1)]).`2; move: h.
       by case: (Redo.prefixes{2}.[format bl{2} (i{2} + 1)]); smt().
     sp;if;auto;progress.
-    - move:H4 H5;rewrite!get_setE/=!oget_some nth_last/=take_size.
+    - move:H4 H5;rewrite!get_setE/= nth_last/=take_size.
       rewrite last_cat last_nseq 1:/# Block.WRing.addr0;progress. 
       cut//=:=lemma2'(SLCommon.C.c{1} + 1)(C.c{2} + size bl{2} + i{2})
         Perm.m{2}.[(sa0_R, sc0{2}) <- y2L] Perm.mi{2}.[y2L <- (sa0_R, sc0{2})]
         Redo.prefixes{2} bl{2} (i{2}+1) sa0_R sc0{2}.
-      rewrite H1/=!mem_set/=H4/=H2/=get_setE/=oget_some/=.
+      rewrite H1/=!mem_set/=H4/=H2/=get_setE/=.
       cut->->//=:y2L = (y2L.`1, y2L.`2);1,-1:smt().
       rewrite INV_Real_addm_mi//=;2:smt(supp_dexcepted). 
       by cut:=H3=>hinv0;split;case:hinv0=>//=/#.
@@ -1559,11 +1559,11 @@ section Real.
       + smt().
       + by rewrite get_setE/=.
       + by rewrite behead_drop drop_add. 
-      + rewrite!get_setE/=oget_some.
+      + rewrite!get_setE/=.
         cut:=lemma_3 0 C.c{2}Perm.m{2}.[(sa{2} +^ nth witness p0{1} i0{1}, sc{2}) <- yL]
           Perm.mi{2}.[yL <- (sa{2} +^ nth witness p0{1} i0{1}, sc{2})] Redo.prefixes{1}
           (take i0{1} p0{1}) (nth witness p0{1} i0{1}) sa{2} sc{2}.
-        rewrite!mem_set/=-take_nth//=H5/=H1/=get_setE/=oget_some.
+        rewrite!mem_set/=-take_nth//=H5/=H1/=get_setE/=.
         cut->->//=:(yL.`1, yL.`2) = yL by smt().
         rewrite INV_Real_addm_mi=>//=;smt(supp_dexcepted).
       + smt(size_drop size_eq0).
@@ -1652,7 +1652,7 @@ section Real.
     + smt().
     + move:H5 H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
       cut->/=:!size p{1} + i{2} - 1 < size p{1} by smt().
-      rewrite Block.WRing.addr0 !get_setE/=oget_some take_oversize;1:rewrite size_cat size_nseq/#.
+      rewrite Block.WRing.addr0 !get_setE/= take_oversize;1:rewrite size_cat size_nseq/#.
       move=>H_dom_iS H_dom_p.
       cut:=lemma2' 0 C.c{2} Perm.m{2}.[(sa{2}, sc{2}) <- y0L]
           Perm.mi{2}.[y0L <- (sa{2}, sc{2})] Redo.prefixes{1}
@@ -1660,7 +1660,7 @@ section Real.
       + by rewrite INV_Real_addm_mi//=;smt(supp_dexcepted).
       + smt().
       + by rewrite mem_set.
-      by rewrite!get_setE/=oget_some/=H2/=;smt().
+      by rewrite!get_setE/=H2/=;smt().
     + by rewrite!get_setE/=take_oversize//=size_cat size_nseq/#.
     + rewrite nth_cat;cut->/=:! size p{1} + i{2} - 1 < size p{1} by smt().
       by rewrite nth_nseq//=1:/# Block.WRing.addr0.

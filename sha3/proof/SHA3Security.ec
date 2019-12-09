@@ -256,7 +256,7 @@ section Preimage.
         (forall j, 0 <= j < i{2} => (x0{2},j) \in BIRO.IRO.mp{2}) /\
         take i{2} (to_list r{1}) = bs0{2} /\
         take i{2} (to_list r{1}) = map (fun (j : int) => oget BIRO.IRO.mp{2}.[(x0{2}, j)]) (range 0 i{2})); progress=>//=.
-  + by rewrite get_set_sameE /= oget_some; smt(to_listK take_oversize spec_dout).
+  + by rewrite get_set_sameE /=; smt(to_listK take_oversize spec_dout).
   + move:H8; rewrite mem_set=>[][]//=h; 1:rewrite H3=>//=.
     - by have []h1 []h2 h3:= H2; have->//:=h1 _ h.
     by move:h => <<-; rewrite H6 //=.
@@ -603,7 +603,7 @@ section SecondPreimage.
         (forall j, 0 <= j < i{2} => (x0{2},j) \in BIRO.IRO.mp{2}) /\
         take i{2} (to_list r{1}) = bs0{2} /\
         take i{2} (to_list r{1}) = map (fun (j : int) => oget BIRO.IRO.mp{2}.[(x0{2}, j)]) (range 0 i{2})); progress=>//=.
-  + by rewrite get_set_sameE /= oget_some; smt(to_listK take_oversize spec_dout).
+  + by rewrite get_set_sameE /=; smt(to_listK take_oversize spec_dout).
   + move:H8; rewrite mem_set=>[][]//=h; 1:rewrite H3=>//=.
     - by have []h1 []h2 h3:= H2; have->//:=h1 _ h.
     by move:h => <<-; rewrite H6 //=.
@@ -995,7 +995,7 @@ section Collision.
         (forall j, 0 <= j < i{2} => (x0{2},j) \in BIRO.IRO.mp{2}) /\
         take i{2} (to_list r{1}) = bs0{2} /\
         take i{2} (to_list r{1}) = map (fun (j : int) => oget BIRO.IRO.mp{2}.[(x0{2}, j)]) (range 0 i{2})); progress=>//=.
-  + by rewrite get_set_sameE /= oget_some; smt(to_listK take_oversize spec_dout).
+  + by rewrite get_set_sameE /=; smt(to_listK take_oversize spec_dout).
   + move:H8; rewrite mem_set=>[][]//=h; 1:rewrite H3=>//=.
     - by have []h1 []h2 h3:= H2; have->//:=h1 _ h.
     by move:h => <<-; rewrite H6 //=.

@@ -626,7 +626,7 @@ section EXT.
         rcondt{2} 5;1:by auto;smt w=(size_ge0).
         rcondt{2} 10. by auto;progress;rewrite mem_set.
         wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3? -> /=. 
-        rewrite/Distr.is_lossless (sampleto_ll 0)/= => ? _;rewrite /bad_ext !get_setE /= !oget_some /= set_set_eqE //=.
+        rewrite/Distr.is_lossless (sampleto_ll 0)/= => ? _;rewrite /bad_ext !get_setE /= set_set_eqE //=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
@@ -648,7 +648,7 @@ section EXT.
         rcondt{2} 5;1:by auto;smt w=(size_ge0).
         rcondt{2} 10. by auto;progress;rewrite mem_set.
         wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3?->/=.
-        rewrite/Distr.is_lossless (sampleto_ll 0) /= => ? _;rewrite /bad_ext !get_setE /= !oget_some /= set_set_eqE //=.
+        rewrite/Distr.is_lossless (sampleto_ll 0) /= => ? _;rewrite /bad_ext !get_setE /= set_set_eqE //=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
@@ -684,9 +684,8 @@ section EXT.
     + smt().
     + smt().
     + smt().
-    + elim H7=>// [[x h] [#]];rewrite -memE mem_fdom dom_restr /in_dom_with domE=> _ ->/=.
-      by rewrite oget_some.
-    apply H10=>//.
+    + by elim H7=>// [[x h] [#]];rewrite -memE mem_fdom dom_restr /in_dom_with domE=> _ ->.
+    by apply H10.
   qed.
 
   axiom D_ll:

@@ -156,7 +156,7 @@ case: {-1}(foldl _ _ _) (eq_refl (foldl (step_hpath mh) (Some (b0,0)) p))=> //=.
   + smt(size_rcons size_ge0).
   move=> ^/rconssI <<- {p'} /rconsIs ->> {b}.
   by rewrite /build_hpath=> ->.
-move=> [v' h']; rewrite oget_some /= -/(build_hpath _ _)=> build. 
+move=> [v' h']; rewrite -/(build_hpath _ _)=> build. 
 split.
 + by move=> mh__; apply/(Extend mh (rcons p b) v h p b v' h' _ build mh__).
 case=> [| p' b' v'' h''].
@@ -442,7 +442,7 @@ lemma prefix_max_prefix_eq_size (l1 l2 : 'a list) (ll : 'a list list) :
 proof.
 move:l1 l2;elim:ll=>//=;1:smt(prefix_eq). 
 move=>l3 ll Hind l1 l2[->|[->|h1]].
-+ rewrite prefix_eq max_prefix_eq;smt(max_prefix_eq prefix_eq prefix_sizer).
++ by rewrite prefix_eq max_prefix_eq ltzNge prefix_sizel /= prefix_eq. 
 + rewrite prefix_eq max_prefix_eq. 
   case(prefix l3 l2 < size l3)=>//=h;1:by rewrite prefix_eq.
   cut h1:prefix l3 l2 = size l3 by smt(prefix_sizel).
@@ -799,156 +799,6 @@ case(a=x)=>//=hax.
 by rewrite Hinv/#.
 qed.
 
-(** ???? 
-op blocksponge (l : block list) (m : (state, state) fmap) (bc : state) =
-  with l = "[]" => (l,bc)
-  with l = (::) b' l' =>
-    let (b,c) = (bc.`1,bc.`2) in
-    if ((b +^ b', c) \in m) then blocksponge l' m (oget m.[(b +^ b', c)])
-    else (l,(b,c)).
-  
-op s0 : state = (b0,c0).
-
-lemma blocksponge_size_leq l m bc : 
-    size (blocksponge l m bc).`1 <= size l.
-proof.
-move:m bc;elim l=>//=.
-move=>e l Hind m bc/#.
-qed.
-
-
-lemma blocksponge_set l m bc x y :
-    (x \in m => y = oget m.[x]) =>
-    let bs1 = blocksponge l m bc in
-    let bs2 = blocksponge l m.[x <- y] bc in
-    let l1 = bs1.`1 in let l2 = bs2.`1 in let bc1 = bs1.`2 in let bc2 = bs2.`2 in
-    size l2 <= size l1 /\ (size l1 = size l2 => (l1 = l2 /\ bc1 = bc2)).
-proof.
-move=>Hxy/=;split.
-+ move:m bc x y Hxy;elim l=>//=.
-  move=>/=e l Hind m bc x y Hxy/=;rewrite dom_set in_fsetU1.
-  case((bc.`1 +^ e, bc.`2) = x)=>//=[->//=|hx]. 
-  + rewrite getP/=oget_some;case(x\in dom m)=>//=[/#|].
-    smt(blocksponge_size_leq getP).
-  rewrite getP hx/=.
-  case((bc.`1 +^ e, bc.`2) \in dom m)=>//=Hdom.
-  by cut//:=Hind m (oget m.[(bc.`1 +^ e, bc.`2)]) x y Hxy.
-move:m bc x y Hxy;elim l=>//=.
-move=>e l Hind m bx x y Hxy.
-rewrite!dom_set !in_fsetU1 !getP.
-case((bx.`1 +^ e, bx.`2) \in dom m)=>//=Hdom.
-+ case(((bx.`1 +^ e, bx.`2) = x))=>//=Hx.
-  + move:Hdom;rewrite Hx=>Hdom. 
-    cut:=Hxy;rewrite Hdom/==>Hxy2.
-    rewrite oget_some -Hxy2/=.
-    by cut:=Hind m y x y Hxy.
-  by cut:=Hind m (oget m.[(bx.`1 +^ e, bx.`2)]) x y Hxy.
-case(((bx.`1 +^ e, bx.`2) = x))=>//=;smt(blocksponge_size_leq).
-qed.
-
-
-lemma blocksponge_cat m l1 l2 bc :
-    blocksponge (l1 ++ l2) m bc =
-    let lbc = blocksponge l1 m bc in
-    blocksponge (lbc.`1 ++ l2) m (lbc.`2).
-proof.
-rewrite/=. 
-move:m bc l2;elim l1=>//= e1 l1 Hind m bc b.
-case((bc.`1 +^ e1, bc.`2) \in dom m)=>//=[|->//=]Hdom.
-by cut//:=Hind m (oget m.[(bc.`1 +^ e1, bc.`2)]) b.
-qed.
-
-
-lemma blocksponge_rcons m l bc b :
-    blocksponge (rcons l b) m bc = 
-    let lbc = blocksponge l m bc in
-    blocksponge (rcons lbc.`1 b) m (lbc.`2).
-proof.
-by rewrite/=-2!cats1 blocksponge_cat/=. 
-qed.
-
-
-(* lemma prefix_inv_bs_fst_nil queries prefixes m : *)
-(*     prefix_inv queries prefixes m => *)
-(*     forall l, l \in dom queries => *)
-(*     forall i, 0 <= i <= size l => *)
-(*     (blocksponge (take i l) m s0).`1 = []. *)
-(* proof. *)
-(* move=>[h2 [h3 Hinv]] l Hdom i [Hi0 Hisize];move:i Hi0 l Hisize Hdom;apply intind=>//=. *)
-(* + by move=>l;rewrite take0/=. *)
-(* move=>i Hi0 Hind l Hil Hldom. *)
-(* rewrite(take_nth b0)1:/#. *)
-(* rewrite blocksponge_rcons/=. *)
-(* cut->/=:=Hind l _ Hldom;1:rewrite/#. *)
-(* by cut/=->/=/#:=Hinv _ Hldom i. *)
-(* qed. *)
-
-
-(* lemma blocksponge_drop l m bc : *)
-(*     exists i, 0 <= i <= List.size l /\ (blocksponge l m bc).`1 = drop i l. *)
-(* proof. *)
-(* move:l bc=>l;elim:l=>//=;1:exists 0=>//=;progress. *)
-(* case((bc.`1 +^ x, bc.`2) \in dom m)=>//=h. *)
-(* + cut[i [[hi0 His] Hi]]:=H (oget m.[(bc.`1 +^ x, bc.`2)]). *)
-(*   exists(i+1)=>/#. *)
-(* cut[i [[hi0 His] Hi]]:=H (oget m.[(bc.`1 +^ x, bc.`2)]). *)
-(* exists 0=>/#. *)
-(* qed. *)
-
-
-(* lemma prefix_inv_set queries prefixes m x y : *)
-(*     !x \in dom m => *)
-(*     prefix_inv queries prefixes m => *)
-(*     prefix_inv queries prefixes m.[x <- y]. *)
-(* proof. *)
-(* move=>Hxdom Hpref;progress=>//=.  *)
-(* + rewrite/#. *)
-(* + rewrite/#. *)
-(* cut->:blocksponge (take i bs) m.[x <- y] s0 = blocksponge (take i bs) m s0. *)
-(* + move:i H2  bs H3 H1;apply intind=>//=i;first smt(take0). *)
-(*   move=>Hi0 Hind bs Hisize Hbsdom. *)
-(*   rewrite (take_nth b0)1:/#. *)
-(*   rewrite 2!blocksponge_rcons/=. *)
-(*   cut[?[? Hpre]]:=Hpref. *)
-(*   cut->/=:=prefix_inv_bs_fst_nil _ _ _ Hpref _ Hbsdom i _;1:rewrite/#. *)
-(*   cut/=->/=:=Hpre _ Hbsdom i _;1:rewrite/#. *)
-(*   cut->/=:=Hind bs _ Hbsdom;1:rewrite/#. *)
-(*   cut->/=:=prefix_inv_bs_fst_nil _ _ _ Hpref _ Hbsdom i _;1:rewrite/#. *)
-(*   rewrite dom_set in_fsetU1. *)
-(*   cut/=->/=:=Hpre _ Hbsdom i _;1:rewrite/#. *)
-(*   rewrite getP. *)
-(*   cut/#:=Hpre _ Hbsdom i _;1:rewrite/#. *)
-(* rewrite dom_set in_fsetU1. *)
-(* cut[?[? Hpre]]:=Hpref. *)
-(* cut/#:=Hpre _ H1 i _;1:rewrite/#. *)
-(* qed. *)
-
-
-(* lemma blocksponge_set_nil l m bc x y : *)
-(*     !x \in dom m => *)
-(*     let bs1 = blocksponge l m bc in *)
-(*     let bs2 = blocksponge l m.[x <- y] bc in *)
-(*     bs1.`1 = [] => *)
-(*     bs2 = ([], bs1.`2). *)
-(* proof. *)
-(* rewrite/==>hdom bs1. *)
-(* cut/=:=blocksponge_set l m bc x y. *)
-(* smt(size_ge0 size_eq0). *)
-(* qed. *)
-
-(* lemma size_blocksponge queries m l : *)
-(*     prefix_inv queries m => *)
-(*     size (blocksponge l m s0).`1 <= size l - prefix l (get_max_prefix l (elems (fdom queries))). *)
-(* proof. *)
-(* move=>Hinv. *)
-(* pose l2:=get_max_prefix _ _;pose p:=prefix _ _. search take drop. *)
-(* rewrite-{1}(cat_take_drop p l)blocksponge_cat/=. *)
-(* rewrite(prefix_take). *)
-(* qed. *)
-
-**)
-
-
 end Prefix.
 export Prefix.
 
@@ -1217,7 +1067,7 @@ lemma hinvP handles c:
 proof.
   cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
     findP (fun (_ : handle) => pred1 c \o fst) handles.
-  + exists (oget handles.[h]).`2;rewrite oget_some.
+  + exists (oget handles.[h]).`2.
     by move: Hmem; rewrite domE; case: (handles.[h])=> //= - [].
   by cut := H h;rewrite domE /#.
 qed.
@@ -1240,7 +1090,7 @@ lemma hinvKP handles c:
 proof.
   rewrite /hinvK.
   cut @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
-  + by rewrite oget_some domE restrP;case (handles.[h])=>//= /#.
+  + by rewrite domE restrP;case (handles.[h])=>//= /#.
   by move=>+h-/(_ h);rewrite domE restrP => H1/#. 
 qed.
 
@@ -1254,8 +1104,7 @@ qed.
 lemma huniq_hinvK_h h (handles:handles) c: 
   huniq handles => handles.[h] = Some (c,Known) => hinvK handles c = Some h.
 proof.
-  move=> Huniq;case: (hinvK _ _) (hinvKP handles c)=>/= [H|h'];1: by apply H. 
-  by rewrite oget_some=> /Huniq H/H. 
+  by move=> Huniq;case: (hinvK _ _) (hinvKP handles c)=>/= [ H | h' /Huniq H/H //]; apply H.
 qed.
 
 (* -------------------------------------------------------------------------- *)
