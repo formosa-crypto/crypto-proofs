@@ -251,7 +251,6 @@ section Ideal.
       by rewrite domE H1. 
     - smt(leq_add_in domE).
   rcondf{2}2;auto;progress.
-  - smt(DBlock.dunifin_ll).
   - smt(size_cat size_nseq size_eq0 size_ge0).
   - smt().
   - smt(). 
@@ -274,7 +273,6 @@ section Ideal.
       * smt(prefix_ge0).
       * smt(leq_add_in domE).
     auto;progress.
-    - exact DBlock.dunifin_ll.
     - smt(domE).
     - smt(domE).
     - smt(size_ge0).
@@ -750,7 +748,7 @@ section Ideal.
       smt(parse_valid parse_gt0 parseK mem_set formatK).
     wp 8 5;rnd{1};wp 6 5.
     conseq(:_==> ={F.RO.m} /\ p{2} = x0{2});progress.
-    + smt(DBlock.dunifin_ll). smt(last_rcons formatK parseK).
+    + smt(last_rcons formatK parseK).
     seq 3 3 : (={F.RO.m,i,x0} /\ x0{1} = p{2});
       last by conseq(:_==> ={F.RO.m});progress;sim.
     auto;conseq(:_==> ={F.RO.m,i,n} /\ p{1} = p0{2} /\ i{1} + 1 = n{2});1:smt(formatK).
@@ -772,8 +770,7 @@ section Ideal.
     smt(parse_valid parse_gt0 parseK mem_set formatK).
   wp 8 5;rnd{1};wp 6 5.
   conseq(:_==> ={F2.RO.m} /\ format pp{2} n{2} = x3{2}).
-  + move=> /> &1 &2 H H0 /= /> [#] H1 H2 m lres. 
-    rewrite DBlock.dunifin_ll /= => ?; rewrite DBlock.supp_dunifin /=.
+  + move=> /> &1 &2 H H0 /= /> [#] H1 H2 m lres /= ?. 
     smt(last_rcons formatK parseK).
   seq 3 3 : (={F2.RO.m,i} /\ x2{1} = x3{2} /\ pp{2} = p{1} /\ format pp{2} n{2} = x3{2});
     last by conseq(:_==> ={F2.RO.m});progress;sim.
@@ -867,7 +864,6 @@ section Ideal.
           - exact lemma5.
         rcondf{1}2;auto;progress.
         - cut[]h1 _ _ _:=H1;cut[]h'1 _:=h1;smt(parseK).
-        - smt(DBlock.dunifin_ll).
         - cut[]h1:=H1;cut[]:=h1;smt(parseK).
         smt().
       by if{1};auto;smt(parseK parse_gt0 formatK). 
@@ -889,7 +885,6 @@ section Ideal.
       - cut[]_ h1 _ _:=H2;cut[]:=h1;progress.
         cut:=H7 x0{m} i0{m} (format x0{m} (i0{m} + 1));rewrite H5/==>->//=.
         cut->/#:=parse_twice _ _ _ H.
-      - smt(DBlock.dunifin_ll).
       - cut[]_ h1 _ _:=H2;cut[]h'1 _:=h1;smt(parseK parse_twice).
       - smt().
     by rcondf{1}1;auto;smt(parseK formatK).
@@ -909,7 +904,6 @@ section Ideal.
     - exact lemma5.
   rcondf{1}2;auto;progress.
   - cut[]h1 _ _ _:=H1;cut[]h'1 _:=h1;smt(parseK).
-  - smt(DBlock.dunifin_ll).
   - cut[]h1:=H1;cut[]:=h1;smt(parseK).
   smt().
   qed.

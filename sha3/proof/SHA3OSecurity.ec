@@ -706,7 +706,7 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     if; 1: auto; 1: smt(); last first.
     - by conseq=> />; sim; smt().
     wp=> />; 1: smt().
-    rnd; auto=> />; 1: smt().
+    rnd; auto=> />. 
     call(eq_extend); last by auto; smt().
   + by proc; sp; if; auto; inline{1} 1; inline{2} 1; sp; if; auto.
   proc; sp; inline{1} 1; inline{2} 1; sp; if; auto.

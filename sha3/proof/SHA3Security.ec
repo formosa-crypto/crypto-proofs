@@ -364,17 +364,17 @@ section Preimage.
     - smt().
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
-    - rewrite get_setE (H4 _ _ H12).
+    - rewrite get_setE (H4 _ _ H11).
       cut/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
-    - move:H12; rewrite mem_set.
+    - move:H11; rewrite mem_set.
       case((l1, j) \in BIRO.IRO.mp{2})=>//= h; 1: smt().
       by move=> [#] <<- ->> //=; rewrite size_ge0; smt().
     - rewrite mem_set.
       case(j = size bs0{2})=>//=.
-      move=> h; rewrite h /=; have {H13} H13 {h} : j < size bs0{2} by smt().
+      move=> h; rewrite h /=; have {H12} H13 {h} : j < size bs0{2} by smt().
       by apply H6. 
     - by rewrite cats1 get_set_sameE oget_some. 
     - rewrite get_set_sameE oget_some H7 rangeSr.
@@ -711,17 +711,17 @@ section SecondPreimage.
     - smt().
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
-    - rewrite get_setE (H4 _ _ H12).
+    - rewrite get_setE (H4 _ _ H11).
       cut/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
-    - move:H12; rewrite mem_set.
+    - move:H11; rewrite mem_set.
       case((l1, j) \in BIRO.IRO.mp{2})=>//= h; 1: smt().
       by move=> [#] <<- ->> //=; rewrite size_ge0; smt().
     - rewrite mem_set.
       case(j = size bs0{2})=>//=.
-      move=> h; rewrite h /=; have {H13} H13 {h} : j < size bs0{2} by smt().
+      move=> h; rewrite h /=; have {H12} H12 {h} : j < size bs0{2} by smt().
       by apply H6. 
     - by rewrite cats1 get_set_sameE oget_some. 
     - rewrite get_set_sameE oget_some H7 rangeSr.
@@ -1103,17 +1103,17 @@ section Collision.
     - smt().
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
-    - rewrite get_setE (H4 _ _ H12).
+    - rewrite get_setE (H4 _ _ H11).
       cut/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
-    - move:H12; rewrite mem_set.
+    - move:H11; rewrite mem_set.
       case((l1, j) \in BIRO.IRO.mp{2})=>//= h; 1: smt().
       by move=> [#] <<- ->> //=; rewrite size_ge0; smt().
     - rewrite mem_set.
       case(j = size bs0{2})=>//=.
-      move=> h; rewrite h /=; have {H13} H13 {h} : j < size bs0{2} by smt().
+      move=> h; rewrite h /=; have {H12} H12 {h} : j < size bs0{2} by smt().
       by apply H6. 
     - by rewrite cats1 get_set_sameE oget_some. 
     - rewrite get_set_sameE oget_some H7 rangeSr.

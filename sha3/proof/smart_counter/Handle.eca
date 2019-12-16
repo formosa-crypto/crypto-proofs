@@ -1413,7 +1413,7 @@ case @[ambient]: {-1}(Pmi.[(xa,xc)]) (eq_refl Pmi.[(xa,xc)])=> [Pmi_xaxc|[ya yc]
       apply/(@notin_m_notin_mh hs.[ch <- (xc,Known)] Pmi _ _ xc ch Known)=> //.
       + by apply/m_mh_addh=> //; case: inv0.
       by rewrite get_setE.
-    auto=> ? ? [#] !<<- -> -> ->> _ /= ya -> /= yc -> /=.
+    auto=> ? ? [#] !<<- -> -> ->> _ /= ya ? /= yc ? /=.
     case: (hinvP (hs.[ch <- (xc,Known)]) yc)=> [_|-> //] yc_notrngE1_hs_addh _ _.
     rewrite get_setE /= (@huniq_hinvK_h ch) 3:oget_some /=.
     + by apply/huniq_addh=> //; have /hs_of_INV [] := inv0. 
@@ -1448,7 +1448,7 @@ case @[ambient]: {-1}(Pmi.[(xa,xc)]) (eq_refl Pmi.[(xa,xc)])=> [Pmi_xaxc|[ya yc]
     rewrite negb_and domE /=; left.
     by apply/(@notin_m_notin_mh hs Pmi _ _ xc _ Known)=> //; case: inv0.
   auto => ? ? [#] !<<- -> -> ->> _.
-  rewrite (@huniq_hinvK_h hx2) // oget_some /= => y1 -> /= y2 -> /=.
+  rewrite (@huniq_hinvK_h hx2) // oget_some /= => y1 ? /= y2 ? /=.
   case: (hinvP hs y2)=> [_ y2_notrngE1_hs _ _|/#].
   rewrite get_setE /=.
   apply/lemma2'=> //.
@@ -1673,7 +1673,7 @@ call(: !G1.bcol{2}
         have /m_mh_of_INV [] _ /(_ _ _ _ _ G1mh_x1hx2) := inv0.
         move=> [xc xf yc yf] [#]; rewrite hs_hx2=> [#] <*>.
         by rewrite PFm_x1x2.
-      auto => &m1 &m2 [#] !<- _ _ -> /= _ y1L -> y2L -> /=.
+      auto => &m1 &m2 [#] !<- _ _ -> /= _ y1L ? y2L ? /=.
       rewrite !get_set_sameE pi_x2 oget_some /=.
       have /hs_of_INV [] Hu _ _:= inv0; have -> := huniq_hinvK_h _ _ _ Hu hs_hx2.
       rewrite oget_some domE => /= ;cut[]_->_ _ _/=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0. 
@@ -1801,7 +1801,7 @@ call(: !G1.bcol{2}
       + by have /hs_of_INV []:= inv0.
       by rewrite /in_dom_with domE hs_hy2.
     rcondt{2} 14; first by auto=> &hr [#] !<<- _ _ ->> _ /=; rewrite domE pi_x2.
-    auto=> &1 &2 [#] !<<- -> -> ->> _ /=; rewrite Block.DBlock.dunifin_ll Capacity.DCapacity.dunifin_ll /=.
+    auto=> &1 &2 [#] !<<- -> -> ->> _ /=.
     move=> _ _ _ _; rewrite PFm_x1x2 pi_x2 !oget_some //=.
     rewrite (@huniq_hinvK_h hx2 hs0 x2) // 10?oget_some.
     + by have /hs_of_INV []:= inv0.
@@ -2285,7 +2285,7 @@ proof.
   * rewrite/#.  
   * by rewrite!get_setE/=.
   * cut[]HINV[]H_bad[]H_m_p0[]Hp1[]Hp2[]->>[]H_counter[][]f H_h[]H_path[]H_F_RO H_i:=H3 H6.
-    cut:=H12;rewrite !negb_or/==>[][][]bad1 hinv_none bad2.
+    cut:=H10;rewrite !negb_or/==>[][][]bad1 hinv_none bad2.
     cut H_hs_spec:=hs_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
     cut H_mh_spec:=mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
     cut H_m_mh:=m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
@@ -2300,11 +2300,11 @@ proof.
         G1.mh{2}.[(sa{2} +^ nth witness bs{1} i{2}, h{2}) <- (y1L, G1.chandle{2})]
         G1.paths{2}.
     + split;progress.
-      - cut[]h:=H_pi_spec;cut:=h c p0 v;rewrite H13/==>[][]h1[] h'1 h'2.
+      - cut[]h:=H_pi_spec;cut:=h c p0 v;rewrite H11/==>[][]h1[] h'1 h'2.
         exists h1;rewrite -h'2 get_setE/=.
         cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec h'2.
         by apply build_hpath_up=>//=.
-      move:H14;rewrite get_setE/==>hh0.
+      move:H12;rewrite get_setE/==>hh0.
       cut h0_neq_ch:h0 <> G1.chandle{2} by rewrite/#.
       cut[]->:=H_pi_spec;rewrite-hh0 h0_neq_ch/=;exists h0=>/=. 
       cut:=H;cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v h0.
@@ -2362,7 +2362,7 @@ proof.
         cut hbex:b +^ x = nth witness bs{1} i{2} by rewrite/#.
         by cut:=hb;rewrite H_path/==>[][->>->>]/=;rewrite-hbex Block.WRing.addKr/=.
       - progress. 
-        * move:H13;rewrite get_setE/=H_take_Si/=.
+        * move:H11;rewrite get_setE/=H_take_Si/=.
           case(p0 = (take i{2} bs{1}))=>[->>|hpp0];rewrite!get_setE/=. 
           + cut->/=:=build_hpath_up _ _ _ y1L G1.chandle{2} _ _ _ H_path h_g1.
             case(bn = (nth witness bs{1} i{2}))=>[->> /= ->>|hbni]/=.
@@ -2382,9 +2382,9 @@ proof.
           cut[]_ hh4 _:=H_mh_spec.
           cut:=hh4 p0 bn b0;rewrite h_ro_p_bn/==>[][];progress.
           cut help:(sa{2} +^ nth witness bs{1} i{2}, h{2}) <> (v +^ bn, hx) by rewrite/#.
-          exists v hx hy=>//=;rewrite get_setE;rewrite eq_sym in help;rewrite help/=H14/=.
+          exists v hx hy=>//=;rewrite get_setE;rewrite eq_sym in help;rewrite help/=H12/=.
           by apply build_hpath_up=>//=.
-        move:H13 H14;rewrite!get_setE/= =>h_build_hpath_set.
+        move:H11 H12;rewrite!get_setE/= =>h_build_hpath_set.
         case(hy = G1.chandle{2})=>//=[->>|hy_neq_ch]/=.
         + move=>h;cut h_eq:v +^ bn = sa{2} +^ nth witness bs{1} i{2} && hx = h{2}.
           + cut/#:G1.mh{2}.[(v +^ bn, hx)] <> Some (b0, G1.chandle{2}). 
@@ -2429,7 +2429,7 @@ proof.
       progress.
       + cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
         cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p' v' hx.
-        move:H13 H14;rewrite!get_setE/= =>H13 H14;rewrite H13 H14.
+        move:H11 H12;rewrite!get_setE/= =>H13 H14;rewrite H13 H14.
         cut->/=:=ch_neq0 _ _ H_hs_spec.
         cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
         rewrite h_g1/=.
@@ -2456,7 +2456,7 @@ proof.
         by have[#]->>->>:=HH3 _ _ _ _ _ hp21 hp11.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
       cut:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p' v' hx.
-      move:H13 H14;rewrite!get_setE/= =>H13 H14;rewrite H13 H14/=.
+      move:H11 H12;rewrite!get_setE/= =>H13 H14;rewrite H13 H14/=.
       cut->/=:=ch_neq0 _ _ H_hs_spec.
       cut->/=:=dom_hs_neq_ch _ _ _ _ _ H_hs_spec H_h.
       rewrite h_g1/=.

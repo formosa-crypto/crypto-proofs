@@ -209,7 +209,6 @@ section.
         + by move=> &m;auto;rewrite /in_dom_with.
 (*        auto=> |>.  (* Bug ???? *)  *)
         auto;progress. 
-        + by apply  sampleto_ll. 
         + rewrite /inv_ext1=>/H{H}[->//|[|[[x1 x2] h [Hx Hh]]]]. 
           + rewrite rngE/==>[][]h Hh.
             case (h = (oget G1.mh{2}.[(x0{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
@@ -220,7 +219,7 @@ section.
             by move=>[|]/(mem_image snd)->.
           right;exists (x1,x2) h; move:Hx.
           by rewrite !fdom_set !in_fsetU !in_fset1 //= => [][] -> //=; rewrite get_set_neqE.
-        by move:H6 H2;rewrite /in_dom_with mem_set /#.
+        by move:H5 H2;rewrite /in_dom_with mem_set /#.
       inline *;auto;progress;last by move:H3;rewrite mem_set /#.
       rewrite /inv_ext1=> /H [->//|[|[x' h [Hx Hh]]]].
       + rewrite rngE=> [][] h Hh.
@@ -242,7 +241,7 @@ section.
         x{1} \notin G1.mi{1}).
       + inline *;auto=> &ml&mr[#]-><-_ _9!-> Hi Hhand _ -> /=.
         rewrite -dom_restr rng_restr /=;progress; 3:by smt ml=0.
-        + rewrite rngE/=; case: H4 =>//= H4. 
+        + rewrite rngE/=; case: H2 =>//= H4. 
           + move:Hi; rewrite/inv_ext1 H4 /= => [][->|] //= [] x h.
             move=> [#] H5 Hh; right; right.
             exists x h; rewrite H5 get_set_neqE//=.
@@ -250,12 +249,11 @@ section.
           move: H4; rewrite rngE /= => [][] h Hh; right; left.
           exists h; rewrite get_set_neqE //=.
           by move:(Hhand h);rewrite domE Hh /#.
-        by move:H4;rewrite mem_set /#.
+        by move:H2;rewrite mem_set /#.
       if=>//.
       + inline *;rcondt{2} 4.
         + by move=> &m;auto;rewrite /in_dom_with.
         auto;progress. 
-        + by apply sampleto_ll.
         + rewrite /inv_ext1=>/H{H}[->//|[|[[x1 x2] h [Hx Hh]]]]. 
           + rewrite rngE => [][h]Hh.
             case (h = (oget G1.mhi{2}.[(x0{2}.`1, hx2{2})]).`2)=> [->>|Hneq].
@@ -268,7 +266,7 @@ section.
           right;exists (x1,x2) h;rewrite !in_fsetU !mem_fdom !mem_set /=.
           rewrite get_set_neqE //= Hh /=.
           by move: Hx; rewrite in_fsetU !mem_fdom=>[][] ->.
-        by move:H6 H2;rewrite /in_dom_with mem_set /#.
+        by move:H5 H1;rewrite /in_dom_with mem_set /#.
       inline *;auto;progress;last by move:H3;rewrite mem_set /#.
       rewrite /inv_ext1=> /H [->//|[|[x' h [Hx Hh]]]].
       + rewrite rngE => [][h]Hh.
@@ -593,7 +591,7 @@ section EXT.
              G1.bext{2})). 
     + rcondt{2} 3.  
       + move=> &m;auto=> &m'[#] 6!-> /= + _ _;case (l{m'})=>//=; smt w=List.size_ge0.
-      auto=> &ml&mr[#]6!->;case(l{mr})=>[//|h1 l1/=Hle Hext c->/=];split.
+      auto=> &ml&mr[#]6!->;case(l{mr})=>[//|h1 l1/=Hle Hext c ?/=];split.
       + smt w=(drop0 size_ge0).
       rewrite drop0=>-[H|[x h][#]];1:by rewrite Hext // H.
       rewrite get_setE;case (h=h1)=> [/=->Hin->_ | Hneq ???].
@@ -625,8 +623,8 @@ section EXT.
       + inline *;rcondt{1} 4;1:by auto=>/#. 
         rcondt{2} 5;1:by auto;smt w=(size_ge0).
         rcondt{2} 10. by auto;progress;rewrite mem_set.
-        wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3? -> /=. 
-        rewrite/Distr.is_lossless (sampleto_ll 0)/= => ? _;rewrite /bad_ext !get_setE /= set_set_eqE //=.
+        wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 4? /=. 
+        move => ? _;rewrite /bad_ext !get_setE /= set_set_eqE //=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
@@ -647,8 +645,8 @@ section EXT.
       + inline *;rcondt{1} 4;1:by auto=>/#.
         rcondt{2} 5;1:by auto;smt w=(size_ge0).
         rcondt{2} 10. by auto;progress;rewrite mem_set.
-        wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 3?->/=.
-        rewrite/Distr.is_lossless (sampleto_ll 0) /= => ? _;rewrite /bad_ext !get_setE /= set_set_eqE //=.
+        wp;rnd{2};auto=> /= ??[#]!-> @/inv_lt @/inv_le [#] mlt milt clt cle Hin 5? _.
+        rewrite /bad_ext !get_setE /= set_set_eqE //=.
         rewrite !(imageU,inE) restr_set /= size_rem dom_restr Hin //=; smt w=size_set_le.
       by call RROset_inv_lt;auto;smt w=size_set_le.
 
