@@ -669,7 +669,7 @@ lemma build_hpath_prefix mh p b v h:
 proof.
 rewrite build_hpathP; split=> [[|p' b' v' h' [#] + Hhpath Hmh]|[v' h'] [] Hhpath Hmh].
 + smt(size_rcons size_ge0).
-+ by move=> ^/rconsIs <<- {b'} /rconssI <<- {p'}; exists v' h'.
++ by move=> ^/rconsIs <<- /rconssI <<-; exists v' h'.
 exact/(Extend _ _ _ _ _ Hhpath Hmh).
 qed.
 
@@ -1194,7 +1194,7 @@ split.
   by have /incl_of_INV H /H {H}:= HINV.
 + move: mh_xahx; have /inv_of_INV [] H /H {H}:= HINV.
   have /mi_mhi_of_INV [] _ H /H {H} [xct fxt yct fyt] [#] := HINV.
-  rewrite hs_hx hs_hy=> /= [#] 2!<<- {xct fxt} [#] 2!<<- {yct fyt} Pmi_yayc.
+  rewrite hs_hx hs_hy=> /= [#] 2!<<- [#] 2!<<- Pmi_yayc.
   move=> [za zc]; rewrite get_setE; case: ((za,zc) = (ya,yc))=> // _.
   by have /incli_of_INV H /H {H}:= HINV.
 + split; last 2 by have /mh_of_INV [] _:= HINV.
@@ -1658,7 +1658,7 @@ call(: !G1.bcol{2}
         + by have /hs_of_INV []:= inv0.
         rewrite domE; case: {-1}(G1mh.[(x1,hx2)]) (eq_refl (G1mh.[(x1,hx2)]))=> [//=|[xa xc] G1mh_x1hx2].
         have /m_mh_of_INV [] _ /(_ _ _ _ _ G1mh_x1hx2) [xc0 xf0 yc0 yf0] := inv0.
-        by move=> [#]; rewrite hs_hx2=> [#] !<<- {xc0 xf0}; rewrite PFm_x1x2.
+        by move=> [#]; rewrite hs_hx2=> [#] !<<-; rewrite PFm_x1x2.
       rcondt{2} 15.
       + auto; inline *; auto=> &hr [#] !<<- _ _ !->> _ /= _ _ _ _ /=.
         by rewrite domE pi_x2.
@@ -1776,7 +1776,7 @@ call(: !G1.bcol{2}
     move=> x1x2_notin_G1m; rcondt{2} 1; 1:by auto=> &hr [#] !<<- _ _ ->>; rewrite domE x1x2_notin_G1m.
     have <*>: fy2 = Unknown.
     + have /mh_of_INV [] /(_ _ _ _ _ G1mh_x1hx2) + _ := inv0.
-      move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<- {xc0 xf0 yc0 yf0}.
+      move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<-.
       by case: fy2 hs_hy2 G1mh_x1hx2=> //=; rewrite x1x2_notin_G1m.
     case @[ambient]: fx2 hs_hx2=> hs_hx2.
     + swap{2} 3 -2; seq  0  1: (queries = C.queries{2} /\ G1.bext{2}). 
@@ -1788,7 +1788,7 @@ call(: !G1.bcol{2}
       - by rewrite domE;cut[]_->_ _ _/=:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0.
       by inline*; if{2}; auto=> &1 &2 />; smt(F.sampleto_ll sampleto_ll).
     have /mh_of_INV []/(_ _ _ _ _ G1mh_x1hx2) + _ _:= inv0.
-    move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<- {xc0 xf0 yc0 yf0} /= [p0 v0] [#] Hro Hpath.
+    move=> [xc0 xf0 yc0 yf0] [#]; rewrite hs_hx2 hs_hy2=> [#] !<<- [#] !<<- /= [p0 v0] [#] Hro Hpath.
     have /pi_of_INV [] /(_ x2 p0 v0) /iffRL /(_ _) := inv0.
     + by exists hx2=>/#.
     move=> pi_x2; rcondt{2} 1; 1:by auto=> &hr [#] <*>; rewrite domE pi_x2.

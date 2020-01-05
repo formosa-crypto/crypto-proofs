@@ -1393,7 +1393,7 @@ skip=>
 split. split. split=> [// | _]; rewrite i1_eq_i2_tim_r; smt(ge0_r).
 split=> //. split; first smt(). split=> //.
 split; first by rewrite /= take0 cats0. split=> //.
-clear bs1; move=> bs1 i1'.
+move=> bs1 i1'.
 split=> [| not_i1'_lt_m]; first smt().
 move=> [# i1_le_i1' i1'_le_m _ sz_bs1_eq_i1' _ bs1_eq mem_mp2_xs_i2 _].
 split.
