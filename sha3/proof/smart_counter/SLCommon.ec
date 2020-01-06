@@ -154,14 +154,14 @@ rewrite -{1}cats1 foldl_cat {1}/step_hpath /=.
 case: {-1}(foldl _ _ _) (eq_refl (foldl (step_hpath mh) (Some (b0,0)) p))=> //=.
 + apply/implybN; case=> [|p' b0 v' h'].
   + smt(size_rcons size_ge0).
-  move=> ^/rconssI <<- {p'} /rconsIs ->> {b}.
+  move=> ^/rconssI <<- /rconsIs ->>.
   by rewrite /build_hpath=> ->.
 move=> [v' h']; rewrite -/(build_hpath _ _)=> build. 
 split.
 + by move=> mh__; apply/(Extend mh (rcons p b) v h p b v' h' _ build mh__).
 case=> [| p' b' v'' h''].
 + smt(size_rcons size_ge0).
-move=> ^/rconssI <<- {p'} /rconsIs <<- {b'}.
+move=> ^/rconssI <<- /rconsIs <<-.
 by rewrite build /= => [#] <*>.
 qed.
 
