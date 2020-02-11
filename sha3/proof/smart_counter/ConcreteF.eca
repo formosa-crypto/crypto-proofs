@@ -77,7 +77,7 @@ section.
   lemma size_behead (l : 'a list) : l <> [] => size (behead l) = size l - 1.
   proof. by case l=> // ?? /=; ring. qed.
 
-  local module (D': PRPt.Distinguisher) (P' : PRPt.Oracles) = {
+  local module (D': PRPSec.Distinguisher) (P' : PRPSec.SPRP_Oracles) = {
     proc distinguish () : bool = {
       var b : bool;
       Redo.init();
@@ -86,9 +86,9 @@ section.
     }
   }.
 
-  local lemma DoubleBounding (P <: PRPt.StrongPRP {D, C, DBounder, Redo}) &m:
-    Pr[PRPt.IND(P,D').main() @ &m: res]
-    = Pr[PRPt.IND(P,DBounder(D')).main() @ &m: res].
+  local lemma DoubleBounding (P <: PRPSec.PRP {D, C, DBounder, Redo}) &m:
+    Pr[PRPSec.IND(P,D').main() @ &m: res]
+    = Pr[PRPSec.IND(P,DBounder(D')).main() @ &m: res].
   proof.
   byequiv=> //=; proc; inline *.
   wp.
@@ -388,13 +388,13 @@ section.
     apply (@ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).
     have ->: Pr[Indif(SqueezelessSponge(Perm), Perm, DRestr(D)).main() @ &m: res]
-             = Pr[PRPt.IND(PRPi.PRPi,DBounder(D')).main() @ &m: res].
+             = Pr[PRPSec.IND(PRPi.PRPi,DBounder(D')).main() @ &m: res].
     + rewrite -(DoubleBounding PRPi.PRPi &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(Perm,PRPi.PRPi) /\ ={glob C}).
       * by proc; if=> //=; auto.
       by proc; if=> //=; auto.
     have ->: Pr[CF(DRestr(D)).main() @ &m: res]
-             = Pr[PRPt.IND(ARP,DBounder(D')).main() @ &m: res].
+             = Pr[PRPSec.IND(ARP,DBounder(D')).main() @ &m: res].
     + rewrite -(DoubleBounding ARP &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(PF,ARP)).
       * proc; if=> //=; auto; conseq (_: true ==> (y1,y2){1} = x{2})=> //=.
