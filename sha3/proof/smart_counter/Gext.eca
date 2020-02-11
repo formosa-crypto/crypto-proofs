@@ -319,7 +319,7 @@ section EXT.
          /\ ReSample.count < max_size) {
         G1.bext   <- G1.bext \/ mem (image snd (fdom G1.m `|` fdom G1.mi)) c;
         FRO.m.[h] <- (c,Unknown);
-        count = count + 1 ; 
+        count <- count + 1 ; 
       }
     }
 
@@ -329,7 +329,7 @@ section EXT.
       if (card (fdom G1.m) < max_size /\ card (fdom G1.mi) < max_size /\ ReSample.count < max_size) {
         G1.bext   <- G1.bext \/ mem (image snd (fdom G1.m `|` fdom G1.mi) `|` fset1 x) c;
         FRO.m.[h] <- (c,Unknown);
-        count = count + 1;
+        count <- count + 1;
       }
     }
   

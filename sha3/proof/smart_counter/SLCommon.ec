@@ -893,7 +893,7 @@ module FC(F:FUNCTIONALITY) = {
 module DFRestr(F:DFUNCTIONALITY) = {
 
   proc f (bs:block list) = {
-    var b= b0;
+    var b <- b0;
     if (bs \notin C.queries) {
       if (C.c + size bs - prefix bs (get_max_prefix bs (elems (fdom C.queries))) <= max_size) {
         C.c <- C.c + size bs - prefix bs (get_max_prefix bs (elems (fdom C.queries)));

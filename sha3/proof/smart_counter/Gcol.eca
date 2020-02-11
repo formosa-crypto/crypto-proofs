@@ -35,7 +35,7 @@ section PROOF.
     var count : int
 
     proc sample_c () = {
-      var c=c0;
+      var c <- c0;
       if (card (image fst (frng FRO.m)) <= 2*max_size /\
           count < max_size) {
         c <$ cdistr;
