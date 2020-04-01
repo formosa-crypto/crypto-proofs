@@ -359,7 +359,7 @@ section Preimage.
       have:=h2 x0{hr}; rewrite H2/= negb_exists/= =>/(_ (size bs0{hr})).
       rewrite size_ge0 H9/=; apply absurd =>/= h.
       by have //=:= H5 _ _ h.
-    rnd; auto; progress.
+    wp; rnd; auto; progress.
     - smt(size_ge0).
     - smt().
     - by rewrite size_cat/=.
@@ -706,7 +706,7 @@ section SecondPreimage.
       have:=h2 x0{hr}; rewrite H2/= negb_exists/= =>/(_ (size bs0{hr})).
       rewrite size_ge0 H9/=; apply absurd =>/= h.
       by have //=:= H5 _ _ h.
-    rnd; auto; progress.
+    wp; rnd; auto; progress.
     - smt(size_ge0).
     - smt().
     - by rewrite size_cat/=.
@@ -1098,7 +1098,7 @@ section Collision.
       have:=h2 x0{hr}; rewrite H2/= negb_exists/= =>/(_ (size bs0{hr})).
       rewrite size_ge0 H9/=; apply absurd =>/= h.
       by have //=:= H5 _ _ h.
-    rnd; auto; progress.
+    wp; rnd; auto; progress.
     - smt(size_ge0).
     - smt().
     - by rewrite size_cat/=.

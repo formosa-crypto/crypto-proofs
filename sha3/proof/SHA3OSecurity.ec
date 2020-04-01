@@ -218,7 +218,7 @@ local module Log = {
 
 local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
   proc f (x : bool list, k : int) = {
-    var o, l, suffix, prefix, i;
+    var o, l, suffix, prefix, i, r;
     l <- None;
     prefix <- [];
     suffix <- [];
@@ -227,7 +227,8 @@ local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
     i <- size_out;
     while (i < k) {
       if ((x,i) \notin Log.m) {
-        Log.m.[(x,i)] <$ {0,1};
+        r             <$ {0,1};
+        Log.m.[(x,i)] <- r;
       }
       suffix <- rcons suffix (oget Log.m.[(x,i)]);
       i <- i + 1;
@@ -937,7 +938,7 @@ local module Log = {
 
 local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
   proc f (x : bool list, k : int) = {
-    var o, l, suffix, prefix, i;
+    var o, l, suffix, prefix, i, r;
     l <- None;
     prefix <- [];
     suffix <- [];
@@ -946,7 +947,8 @@ local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
     i <- size_out;
     while (i < k) {
       if ((x,i) \notin Log.m) {
-        Log.m.[(x,i)] <$ {0,1};
+        r             <$ {0,1};
+        Log.m.[(x,i)] <- r;
       }
       suffix <- rcons suffix (oget Log.m.[(x,i)]);
       i <- i + 1;
@@ -1815,7 +1817,7 @@ local module Log = {
 
 local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
   proc f (x : bool list, k : int) = {
-    var o, l, suffix, prefix, i;
+    var o, l, suffix, prefix, i, r;
     l <- None;
     prefix <- [];
     suffix <- [];
@@ -1824,7 +1826,8 @@ local module ExtendOutputSize (F : Oracle) : ODFUNCTIONALITY = {
     i <- size_out;
     while (i < k) {
       if ((x,i) \notin Log.m) {
-        Log.m.[(x,i)] <$ {0,1};
+        r             <$ {0,1};
+        Log.m.[(x,i)] <- r;
       }
       suffix <- rcons suffix (oget Log.m.[(x,i)]);
       i <- i + 1;

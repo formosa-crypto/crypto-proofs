@@ -42,8 +42,11 @@ module IRO : IRO = {
   }
 
   proc fill_in(x, n) = {
+    var r;
+
     if ((x,n) \notin mp) {
-      mp.[(x,n)] <$ dto;
+      r          <$ dto;
+      mp.[(x,n)] <- r;
     }
     return oget mp.[(x,n)];
   }
@@ -72,12 +75,13 @@ module IRO' : IRO = {
   var visible : (from * int) fset
 
   proc resample_invisible() = {
-    var work, x;
+    var work, x, r;
 
     work <- fdom mp `\` visible;
     while (work <> fset0) {
       x <- pick work;
-      mp.[x] <$ dto;
+      r <$ dto;
+      mp.[x] <- r;
       work <- work `\` fset1 x;
     }
   }
@@ -88,8 +92,11 @@ module IRO' : IRO = {
   }
 
   proc fill_in(x,n) = {
+    var r;
+
     if ((x,n) \notin mp) {
-      mp.[(x,n)] <$ dto;
+      r          <$ dto;
+      mp.[(x,n)] <- r;
     }
     return oget mp.[(x,n)];
   }

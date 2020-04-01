@@ -1926,7 +1926,7 @@ module Simulator (F : DFUNCTIONALITY) = {
     unvalid_map <- empty;
   }
   proc f (x : state) : state = {
-    var p,v,q,k,cs,y,y1,y2;
+    var p,v,q,k,cs,y,y1,y2,r;
     if (x \notin m) {
       if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2];
@@ -1937,7 +1937,8 @@ module Simulator (F : DFUNCTIONALITY) = {
         } else {
           if (0 < k) {
             if ((q,k-1) \notin unvalid_map) {
-              unvalid_map.[(q,k-1)] <$ bdistr;
+              r                     <$ bdistr;
+              unvalid_map.[(q,k-1)] <- r;
             }
             y1 <- oget unvalid_map.[(q,k-1)];
           } else {

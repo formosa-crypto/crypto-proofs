@@ -291,8 +291,11 @@ module HybridIROLazy : HYBRID_IRO = {
   }
 
   proc fill_in(xs : block list, i : int) = {
+    var r;
+
     if (! dom mp (xs, i)) {
-      mp.[(xs, i)] <$ dbool;
+      r            <$ dbool;
+      mp.[(xs, i)] <- r;
     }
     return oget mp.[(xs, i)];
   }
@@ -324,8 +327,11 @@ module HybridIROEager : HYBRID_IRO = {
   }
 
   proc fill_in(xs : block list, i : int) = {
+    var r;
+
     if (! dom mp (xs, i)) {
-      mp.[(xs, i)] <$ dbool;
+      r            <$ dbool;
+      mp.[(xs, i)] <- r;
     }
     return oget mp.[(xs, i)];
   }
@@ -709,13 +715,12 @@ progress;
              HybridIROLazy.mp{2} x{1} i{2}) |
    by apply (lazy_invar_mem_pad2blocks_r2l IRO.mp{1}
              HybridIROLazy.mp{2} x{1} i{2})].
-rnd; auto; progress;
-  [by rewrite !get_setE |
-   by rewrite -(lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
-   by rewrite (lazy_invar_upd_mem_dom_iff IRO.mp{1} HybridIROLazy.mp{2}) |
-   by rewrite (lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
-               x{1} xs2 i{2} n2 mpL) |
-   by rewrite (lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
+wp; rnd; auto=> |> &1 &2 inv i_lt_n0 xi_notin_m r _.
+rewrite !get_set_sameE //=; split=> [bs n|].
++ exact/(lazy_invar_upd_mem_dom_iff _ _ _ _ _ _ _ inv).
+split=> [xs n|bs n].
++ by move=>/(lazy_invar_upd2_vb _ _ _ _ _ _ _ inv).
+by move=>/(lazy_invar_upd_lu_eq _ _ _ _ _ _ _ inv).
 auto; progress [-delta].
 by rewrite (lazy_invar_lookup_eq IRO.mp{1} HybridIROLazy.mp{2} x{1} i{2}).
 auto.
@@ -746,13 +751,12 @@ progress;
              HybridIROLazy.mp{2} x{1} i{2}) |
    by apply (lazy_invar_mem_pad2blocks_r2l IRO.mp{1}
              HybridIROLazy.mp{2} x{1} i{2})].
-rnd; auto; progress;
-  [by rewrite !get_setE |
-   by rewrite -(lazy_invar_upd_mem_dom_iff IRO.mp{1}) |
-   by rewrite (lazy_invar_upd_mem_dom_iff IRO.mp{1} HybridIROLazy.mp{2}) |
-   by rewrite (lazy_invar_upd2_vb IRO.mp{1} HybridIROLazy.mp{2}
-               x{1} xs1 i{2} n1 mpL) |
-   by rewrite (lazy_invar_upd_lu_eq IRO.mp{1} HybridIROLazy.mp{2})].
+wp; rnd; auto=> |> &1 &2 inv i_lt_n0 xi_notin_m r _.
+rewrite !get_set_sameE=> //=; split=> [bs n|].
++ exact/(lazy_invar_upd_mem_dom_iff _ _ _ _ _ _ _ inv).
+split=> [xs n|bs n].
++ by move=>/(lazy_invar_upd2_vb _ _ _ _ _ _ _ inv).
+by move=>/(lazy_invar_upd_lu_eq _ _ _ _ _ _ _ inv).
 auto; progress [-delta];
   by rewrite (lazy_invar_lookup_eq IRO.mp{1} HybridIROLazy.mp{2} x{1} i{2}).
 auto.
@@ -887,12 +891,12 @@ while
   (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\
    m{2} = n{2}).
-sp; wp; if=> //; rnd; auto.
+sp; wp; if=> //; wp; rnd; auto.
 while
   (={i, HybridIROEager.mp} /\ xs0{1} = xs{2} /\
    bs0{1} = bs{2} /\ n0{1} = n{2} /\ m{1} = n0{1} /\
    m{2} = n{2})=> //.
-sp; wp; if=> //; rnd; auto.
+sp; wp; if=> //; wp; rnd; auto.
 auto.
 qed.
 
@@ -1546,7 +1550,7 @@ transitivity{1}
    eager_invar BlockSponge.BIRO.IRO.mp{2} HybridIROEager.mp{1})=> //.
 progress; exists HybridIROEager.mp{1} n' xs{2}=> //.
 while (={xs, i, bs, HybridIROEager.mp} /\ n{1} = n' + 1 /\ n{2} = n').
-wp. call (_ : ={HybridIROEager.mp}). if=> //; rnd; auto.
+wp. call (_ : ={HybridIROEager.mp}). if=> //; wp; rnd; auto.
 skip; progress; smt(ge0_r).
 auto; smt().
 transitivity{2}
@@ -1568,7 +1572,7 @@ progress; exists BlockSponge.BIRO.IRO.mp{2} n{1} xs{2}=> //.
 conseq IH=> //.
 while
   (={xs, bs, i, BlockSponge.BIRO.IRO.mp} /\ n{1} = n' /\ n{2} = n' + 1).
-wp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; auto.
+wp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; wp; rnd; auto.
 auto; smt().
 auto; smt().
 unroll{2} 1. rcondt{2} 1; first auto; progress; smt().
@@ -1590,7 +1594,7 @@ while
   (xs{1} = xs0{2} /\ i{1} = i0{2} /\ n{1} = n' + 1 /\
    m{2} = (n' + 1) * r /\ bs{1} = bs0{2} /\
    ={HybridIROEager.mp}).
-wp. call (_ : ={HybridIROEager.mp}). if=> //; rnd; auto.
+wp. call (_ : ={HybridIROEager.mp}). if=> //; wp; rnd; auto.
 auto. auto.
 transitivity{2}
   { (bs, i) <@ BlockSpongeTrans.next_block(xs, i, bs); }
@@ -1606,7 +1610,7 @@ progress; exists BlockSponge.BIRO.IRO.mp{2} bs{2} (size bs{2}) xs{2}=> //.
 call (HybridIROEagerTrans_BlockSpongeTrans_next_block n').
 skip; progress; smt().
 inline BlockSpongeTrans.next_block.
-wp; sp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; skip; smt().
+wp; sp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; wp; rnd; skip; smt().
 auto.
 qed.
 
@@ -1738,7 +1742,7 @@ inline HybridIROEagerTrans.loop; sp; wp.
 while
   (={HybridIROEager.mp} /\ i{1} = i0{2} /\ bs{1} = bs0{2} /\
    xs{1} = xs0{2} /\ n0{2} = n1 %/ r).
-wp. call (_ : ={HybridIROEager.mp}). if=> //; rnd; auto.
+wp. call (_ : ={HybridIROEager.mp}). if=> //; wp; rnd; auto.
 auto. auto.
 (transitivity{2}
    { (i, bs) <@ BlockSpongeTrans.loop(n1 %/ r, x); }
@@ -1755,7 +1759,7 @@ inline BlockSpongeTrans.loop; sp; wp.
 while
   (={BlockSponge.BIRO.IRO.mp} /\ i0{1} = i{2} /\ n0{1} = n1 %/ r /\
    xs{1} = x{2} /\ bs0{1} = bs{2}).
-wp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; rnd; auto.
+wp. call (_ : ={BlockSponge.BIRO.IRO.mp}). if=> //; wp; rnd; auto.
 auto. auto.
 call (HybridIROEagerTrans_BlockSpongeTrans_loop (n1 %/ r)).
 skip; progress; smt(divz_ge0 gt0_r).
@@ -1823,14 +1827,14 @@ seq 1 1 :
 while
   (={HybridIROEager.mp, xs, bs, i, m} /\ n{1} = n1 /\ n1 <= m{1} /\
    i{1} <= n1 /\ size bs{1} = i{1}).
-wp; call (_ : ={HybridIROEager.mp}); first if => //; rnd; auto.
+wp; call (_ : ={HybridIROEager.mp}); first if => //; wp; rnd; auto.
 skip; smt(size_rcons).
 skip; smt().
 while
   (={HybridIROEager.mp, xs, i, m} /\ n1 <= m{1} /\
    n1 <= i{1} <= m{1} /\ n1 <= size bs{2} /\
    bs{1} = take n1 bs{2}).
-wp; call (_ : ={HybridIROEager.mp}); first if => //; rnd; auto.
+wp; call (_ : ={HybridIROEager.mp}); first if => //; wp; rnd; auto.
 skip; progress;
   [smt() | smt() | smt(size_rcons) |
    rewrite -cats1 take_cat;

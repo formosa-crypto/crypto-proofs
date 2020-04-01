@@ -284,7 +284,7 @@ proof. by rewrite /num0 ltz_pmod gt0_r. qed.
 lemma index_true_behead_mkpad n :
   index true (behead (mkpad n)) = num0 n.
 proof.
-rewrite /mkpad -cats1 index_cat mem_nseq size_nseq.
+rewrite /mkpad -cats1 //= index_cat mem_nseq size_nseq.
 by rewrite max_ler // /num0 modz_ge0 gtr_eqF ?gt0_r.
 qed.
 
