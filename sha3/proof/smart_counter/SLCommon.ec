@@ -3,7 +3,8 @@
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
 require import Core Int Real StdOrder Ring IntExtra.
-require import List FSet SmtMap Common PROM Distr DProd Dexcepted.
+require import List FSet SmtMap Common Distr DProd Dexcepted.
+require import PROM.
 
 require (*..*) Indifferentiability.
 (*...*) import Capacity IntOrder.
@@ -39,13 +40,13 @@ op bl_univ = FSet.oflist bl_enum.
 (* -------------------------------------------------------------------------- *)
 (* Random oracle from block list to block                                     *)
 
-clone import PROM.GenEager as F with
-  type from <- block list,
-  type to   <- block,
-  op sampleto <- fun (_:block list)=> bdistr,
-  type input <- unit,
-  type output <- bool
-  proof * by exact Block.DBlock.dunifin_ll.
+clone import FullRO as F with
+  type in_t    <- block list,
+  type out_t   <- block,
+  op   dout  _ <- bdistr,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+import FullEager.
 
 module Redo = {
   var prefixes : (block list, state) fmap

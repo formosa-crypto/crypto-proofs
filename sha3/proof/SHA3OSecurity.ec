@@ -179,13 +179,13 @@ clone import Program as PBool with
   op d <- dbool
 proof *.
 
-clone import GenEager as Eager with
-  type from <- bool list * int,
-  type to <- bool,
-  op sampleto <- fun _ => dbool,
-  type input <- unit,
-  type output <- bool
-proof * by smt(dbool_ll).
+clone import FullRO as Eager with
+  type in_t    <- bool list * int,
+  type out_t   <- bool,
+  op   dout _  <- dbool,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+import FullEager.
 
 section Preimage.
 
@@ -643,7 +643,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-call(RO_LRO_D Dist); inline*; auto=> />.
+call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
 qed.
 
 local lemma rw_ideal_2 &m:
@@ -1403,7 +1403,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-by call(RO_LRO_D Dist); inline*; auto=> />.
+by call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
 qed.
 
 
@@ -2281,7 +2281,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-by call(RO_LRO_D Dist); inline*; auto=> />.
+by call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
 qed.
 
 local equiv toto :

@@ -327,9 +327,9 @@ section Ideal.
   }.
 
   local equiv Ideal_equiv_valid (D <: DISTINGUISHER{SLCommon.C, C, IF, S}) :
-      L(D,F.LRO).distinguish
+      L(D,F.FullEager.LRO).distinguish
       ~
-      L2(D,F.LRO).distinguish
+      L2(D,F.FullEager.LRO).distinguish
       :
       ={glob D} ==> ={glob D, res}.
   proof.
@@ -339,7 +339,7 @@ section Ideal.
     call(: ={glob S,glob F.RO});auto.
     sp;if;auto;if;auto;sp.
     call(: ={glob F.RO});2:auto;2:smt(). 
-    inline F.LRO.sample;call(: ={glob IF});auto;progress.
+    inline F.FullEager.LRO.sample;call(: ={glob IF});auto;progress.
     by while{1}(true)(n{1}-i{1});auto;smt().
   + by proc;sim.
   proc;sp;if;auto;sp;call(: ={glob IF,glob S});auto.
@@ -836,7 +836,7 @@ section Ideal.
   
 
   local equiv equiv_L4_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, F2.RO, BIRO.IRO, BIRO2.IRO}) :
-      L4(D,F.LRO,F2.LRO).distinguish
+      L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish
       ~
       IdealIndif(BIRO.IRO,SimLast(S),DRestr(D)).main
       :
@@ -912,7 +912,7 @@ section Ideal.
     D(FC(FValid(DSqueeze2(F, F2.RO))), PC(S(Last(DSqueeze2(F, F2.RO))))).
 
   local module D6 (D : DISTINGUISHER) (F2 : F2.RO) = 
-    D(FC(FValid(DSqueeze2(F.LRO, F2))), PC(S(Last(DSqueeze2(F.LRO, F2))))).
+    D(FC(FValid(DSqueeze2(F.FullEager.LRO, F2))), PC(S(Last(DSqueeze2(F.FullEager.LRO, F2))))).
 
   lemma equiv_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, 
       F.FRO, F2.RO, F2.FRO, BIRO.IRO, BIRO2.IRO}) &m:
@@ -926,20 +926,20 @@ section Ideal.
         Pr[SLCommon.IdealIndif(IF,S,A(D)).main() @ &m : res].
   + by byequiv(ideal_equiv2 D). 
   cut->:Pr[L2(D, F.RO).distinguish() @ &m : res] = 
-        Pr[L2(D,F.LRO).distinguish() @ &m : res].
+        Pr[L2(D,F.FullEager.LRO).distinguish() @ &m : res].
   + byequiv=>//=;proc;sp;inline*;sp;wp.
-    by call(F.RO_LRO_D (D2(D)));auto.
+    by call(F.FullEager.RO_LRO_D (D2(D)) dunifin_ll);auto.
   cut->:Pr[IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res] =
-        Pr[L4(D,F.LRO,F2.LRO).distinguish() @ &m : res].
+        Pr[L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish() @ &m : res].
   + by rewrite eq_sym;byequiv(equiv_L4_ideal D)=>//=.
   cut<-:Pr[L4(D, F.RO, F2.RO).distinguish() @ &m : res] = 
-        Pr[L4(D,F.LRO,F2.LRO).distinguish() @ &m : res].
+        Pr[L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish() @ &m : res].
   + cut->:Pr[L4(D, F.RO, F2.RO).distinguish() @ &m : res] = 
-          Pr[L4(D,F.LRO, F2.RO).distinguish() @ &m : res].
+          Pr[L4(D,F.FullEager.LRO, F2.RO).distinguish() @ &m : res].
     - byequiv=>//=;proc;sp;inline*;sp;wp.
-      by call(F.RO_LRO_D (D5(D)));auto.
+      by call(F.FullEager.RO_LRO_D (D5(D)) dunifin_ll);auto.
     byequiv=>//=;proc;sp;inline*;sp;wp.
-    by call(F2.RO_LRO_D (D6(D)));auto.
+    by call(F2.FullEager.RO_LRO_D (D6(D)) dunifin_ll);auto.
   cut<-:Pr[L3(D, F.RO).distinguish() @ &m : res] =
         Pr[L4(D, F.RO, F2.RO).distinguish() @ &m : res].
   + by byequiv(equiv_L3_L4 D)=>//=.
@@ -947,9 +947,9 @@ section Ideal.
         Pr[L3(D, F.RO).distinguish() @ &m : res].
   + by byequiv(Ideal_equiv3 D).
   cut->:Pr[L(D, F.RO).distinguish() @ &m : res] = 
-        Pr[L(D,F.LRO).distinguish() @ &m : res].
+        Pr[L(D,F.FullEager.LRO).distinguish() @ &m : res].
   + byequiv=>//=;proc;sp;inline*;sp;wp.
-    by call(F.RO_LRO_D (D3(D)));auto.
+    by call(F.FullEager.RO_LRO_D (D3(D)) dunifin_ll);auto.
   rewrite eq_sym.
   by byequiv(Ideal_equiv_valid D).
   qed.
@@ -1731,7 +1731,7 @@ end section Real.
 
 section Real_Ideal.
   (* REAL & IDEAL *)
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
 
   axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
@@ -1777,7 +1777,7 @@ require import AdvAbsVal.
 
 section Real_Ideal_Abs.
 
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
 
   axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
@@ -1984,13 +1984,13 @@ axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
   islossless P0.f => islossless P0.fi => islossless F0.f => 
   islossless D(F0, P0).distinguish.
 
-local clone import PROM.GenEager as IRO2 with
-  type from   <- block list * int,
-  type to     <- block,
-  op sampleto <- fun _, bdistr,
-  type input  <- unit,
-  type output <- bool
-proof * by exact/DBlock.dunifin_ll.
+local clone import PROM.FullRO as IRO2 with
+  type in_t    <- block list * int,
+  type out_t   <- block,
+  op   dout _  <- bdistr,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+import FullEager.
 
 local module Simu (FRO : IRO2.RO) (F : DFUNCTIONALITY) = {
   proc init() = {
@@ -2128,7 +2128,7 @@ qed.
 
 local lemma equal2 &m :
   Pr [ IdealIndif(BIRO.IRO, Simulator, DRestr(D)).main() @ &m : res ] =
-  Pr [ L(IRO2.LRO).distinguish() @ &m : res ].
+  Pr [ L(IRO2.FullEager.LRO).distinguish() @ &m : res ].
 proof.
 byequiv=>//=; proc; inline*; auto. 
 call (: ={BIRO.IRO.mp,C.c,Simulator.m,Simulator.mi,Simulator.paths} /\
@@ -2160,7 +2160,7 @@ lemma Simplify_simulator &m :
   Pr [ IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res ].
 proof.
 rewrite (equal1 &m) (equal2 &m) eq_sym.
-by byequiv(RO_LRO_D L)=>//=.
+by byequiv(RO_LRO_D L dunifin_ll)=>//=.
 qed.
 
 
@@ -2171,7 +2171,7 @@ end section Simplify_Simulator.
 
 
 section Real_Ideal.
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.RRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
+  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
 
   axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 

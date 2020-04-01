@@ -3,8 +3,8 @@ require import Core Int IntDiv Real List FSet SmtMap.
 (*---*) import IntExtra.
 require import Distr DBool DList.
 require import StdBigop StdOrder. import IntOrder.
-require import Common.
-require (*--*) IRO BlockSponge PROM.
+require import Common PROM.
+require (*--*) IRO BlockSponge.
 
 (*------------------------- Indifferentiability ------------------------*)
 
@@ -369,13 +369,13 @@ section.
 
 declare module D : HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}.
 
-local clone PROM.GenEager as ERO with
-  type from   <- block list * int,
-  type to     <- bool,
-  op sampleto <- fun _ => dbool,
-  type input  <- unit,
-  type output <- bool
-  proof sampleto_ll by apply dbool_ll.
+local clone PROM.FullRO as ERO with
+  type in_t    <- block list * int,
+  type out_t   <- bool,
+  op   dout _  <- dbool,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+import ERO.FullEager.
 
 local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
   proc main() : bool = {
@@ -387,12 +387,12 @@ local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
 }.
 
 local lemma LRO_RO (D <: ERO.RO_Distinguisher{ERO.RO, ERO.FRO}) &m :
-  Pr[EROExper(ERO.LRO, D).main() @ &m : res] =
+  Pr[EROExper(LRO, D).main() @ &m : res] =
   Pr[EROExper(ERO.RO, D).main() @ &m : res].
 proof.
 byequiv=> //; proc.
 seq 1 1 : (={glob D, ERO.RO.m}); first sim.
-symmetry; call (ERO.RO_LRO_D D); auto.
+symmetry; call (RO_LRO_D D dbool_ll); auto.
 qed.
 
 (* make a Hybrid IRO out of a random oracle *)
@@ -424,12 +424,12 @@ local module HIRO(RO : ERO.RO) : HYBRID_IRO = {
 }.
 
 local lemma HybridIROLazy_HIRO_LRO_init :
-  equiv[HybridIROLazy.init ~ HIRO(ERO.LRO).init :
+  equiv[HybridIROLazy.init ~ HIRO(LRO).init :
         true ==> HybridIROLazy.mp{1} = ERO.RO.m{2}].
 proof. proc; inline*; auto. qed.
 
 local lemma HybridIROLazy_fill_in_LRO_get :
-  equiv[HybridIROLazy.fill_in ~ ERO.LRO.get :
+  equiv[HybridIROLazy.fill_in ~ LRO.get :
         (xs, i){1} = x{2} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
         ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
 proof.
@@ -442,11 +442,11 @@ wp; rnd; auto.
 qed.
 
 local lemma HybridIROLazy_HIRO_LRO_f :
-  equiv[HybridIROLazy.f ~ HIRO(ERO.LRO).f :
+  equiv[HybridIROLazy.f ~ HIRO(LRO).f :
         ={xs, n} /\ HybridIROLazy.mp{1} = ERO.RO.m{2} ==>
         ={res} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}].
 proof.
-proc; inline ERO.LRO.sample; sp=> /=.
+proc; inline LRO.sample; sp=> /=.
 if=> //.
 while{2} (true) (m{2} - i{2}).
 progress; auto; progress; smt().
@@ -512,7 +512,7 @@ local module RODist(RO : ERO.RO) = {
 
 local lemma Exper_HybridIROLazy_LRO &m :
   Pr[HybridIROExper(HybridIROLazy, D).main() @ &m : res] =
-  Pr[EROExper(ERO.LRO, RODist).main() @ &m : res].
+  Pr[EROExper(LRO, RODist).main() @ &m : res].
 proof.
 byequiv=> //; proc; inline*; wp.
 seq 1 1 : (={glob D} /\ HybridIROLazy.mp{1} = ERO.RO.m{2}); first auto.

@@ -1,21 +1,21 @@
 pragma -oldip. pragma +implicits.
 require import Core Int Real StdOrder Ring IntExtra.
 require import List FSet SmtMap Common SLCommon.
-require import DProd Dexcepted PROM.
+require import DProd Dexcepted.
+require import PROM.
 (*...*) import Capacity IntOrder DCapacity.
 
-require (*--*) ConcreteF PROM.
+require (*--*) ConcreteF.
 
-clone export PROM.GenEager as ROhandle with
-  type from   <- handle,
-  type to     <- capacity,
-  op sampleto <- fun (_:int) => cdistr,
-  type input  <- unit,
-  type output <- bool
-  proof sampleto_ll by apply DCapacity.dunifin_ll.
+clone export PROM.FullRO as ROhandle with
+  type in_t    <- handle,
+  type out_t   <- capacity,
+  op   dout  _ <- cdistr,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+export ROhandle.FullEager.
 
 clone export ConcreteF as ConcreteF1.
-
 
 module G1(D:DISTINGUISHER) = {
   var m, mi               : smap

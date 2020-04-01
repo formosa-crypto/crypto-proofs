@@ -1,7 +1,7 @@
 pragma -oldip.
 require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
-require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
-require import DProd Dexcepted.
+require import List FSet SmtMap Common SLCommon FelTactic Mu_mem.
+require import DProd Dexcepted PROM.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA DCapacity.
 
 require (*..*) Gcol.
@@ -61,14 +61,14 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
         }
         y     <- (y1, y2);
  
-        handles_ <@ HS.restrK();
+        handles_ <@ HS.allKnown();
         if (!rng handles_ x.`2) {
           HS.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <- HS.restrK();
+        handles_ <- HS.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
-        t        <@ HS.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
+        t        <@ HS.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if ((x.`1, hx2) \in G1.mh /\ t) {
           hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
           y2                   <@ HS.get(hy2);
@@ -99,17 +99,17 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
       var y, y1, y2, hx2, hy2, handles_, t;
  
       if (x \notin G1.mi) {
-        handles_ <@ HS.restrK();
+        handles_ <@ HS.allKnown();
         if (!rng handles_ x.`2) {
           HS.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <@ HS.restrK();
+        handles_ <@ HS.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
         y1       <$ bdistr;
         y2       <$ cdistr;
         y        <- (y1,y2);
-        t        <@ HS.in_dom((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
+        t        <@ HS.queried((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
         if ((x.`1, hx2) \in G1.mhi /\ t) {
           (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
           y2                   <@ HS.get(hy2);
@@ -153,8 +153,10 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
   }    
 }.
 
+clone include EagerCore
+proof * by (move=> _; exact/Capacity.DCapacity.dunifin_ll).
+
 section.
-  
   declare module D: DISTINGUISHER{G1, G2, FRO, C}.
 
   op inv_ext (m mi:smap) (FROm:handles) = 
@@ -193,14 +195,18 @@ section.
                          inv_ext G1.m{2} G1.mi{2} FRO.m{2})) /\
         (forall h, h \in FRO.m => h < G1.chandle){1} /\
         x0{1} \notin G1.m{1}).
-      + inline *;auto=> &ml&mr[#]10!-> -> ->->Hi-> Hhand -> /=.
-        rewrite -dom_restr rng_restr /=;progress;3:by smt ml=0. 
-        + rewrite !rngE /=; move: H0=> [/Hi[->|[x h][]H1 H2]|H0]//. 
-          + by right; right; exists x h; rewrite get_setE; smt(). 
-          right; left; move: H0; rewrite rngE /= => [][] h Hh.
-          exists h; rewrite get_set_neqE //=.
-          by have:= Hhand h; rewrite domE Hh /#.
-        by move: H0; rewrite mem_set /#.
+      + inline *; auto=> |> &ml &mr Hi Hhand.
+        rewrite -dom_restr rng_restr !rngE /= negb_exists=> /= |> x_notin_G1.
+        case: (x0{mr})=> b0 c0 /=; split=> [x0K_notinrng_m|h mh].
+        + split=> [|/#].
+          split=> [[/Hi [-> //|[] x h /= [] H1 H2]|[] h Hh]|h].
+          + by right; right; exists x h; rewrite get_setE /#.
+          + right; left; exists h; rewrite get_set_neqE //=.
+            by have:= Hhand h; rewrite domE Hh /#.
+          by rewrite mem_set /#.
+        split=> [/#|[/Hi [->//|[] x h' /= [] H1 H2]|[] h' Hh']].
+        + by right; right; exists x h'.
+        by right; left; exists h'.
       seq 1 1: (={x0,y0,x,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.paths,G1.chandle,FRO.m,C.queries,C.c} /\
                   inv_ext1 G1.bext{1} G1.bext{2} G1.m{2} G1.mi{2} FRO.m{2} /\ x{1} = x0{1} /\
                   forall (h : handle), h \in FRO.m{1} => h < G1.chandle{1});2:by auto.
@@ -239,17 +245,18 @@ section.
                           inv_ext G1.m{2} G1.mi{2} FRO.m{2})) /\
         (forall h, h \in FRO.m => h < G1.chandle){1} /\
         x{1} \notin G1.mi{1}).
-      + inline *;auto=> &ml&mr[#]-><-_ _9!-> Hi Hhand _ -> /=.
-        rewrite -dom_restr rng_restr /=;progress; 3:by smt ml=0.
-        + rewrite rngE/=; case: H2 =>//= H4. 
-          + move:Hi; rewrite/inv_ext1 H4 /= => [][->|] //= [] x h.
-            move=> [#] H5 Hh; right; right.
-            exists x h; rewrite H5 get_set_neqE//=.
-            by move:(Hhand h);rewrite domE Hh /#.
-          move: H4; rewrite rngE /= => [][] h Hh; right; left.
-          exists h; rewrite get_set_neqE //=.
-          by move:(Hhand h);rewrite domE Hh /#.
-        by move:H2;rewrite mem_set /#.
+      + inline *; auto=> |> &ml &mr Hi Hhand.
+        rewrite -dom_restr rng_restr !rngE /= negb_exists=> /= |> c_le_msize x_notin_G1.
+        case: (x{mr})=> b c /=; split=> [xK_notinrng_m|h mh].
+        + split=> [b0 _ c0 _|/#].
+          split=> [[/Hi [-> //|[] x h /= [] H1 H2]|[] h Hh]|h].
+          + by right; right; exists x h; rewrite get_setE /#.
+          + right; left; exists h; rewrite get_set_neqE //=.
+            by have:= Hhand h; rewrite domE Hh /#.
+          by rewrite mem_set /#.
+        split=> [/#|b0 _ c0 _ [/Hi [->//|[] x h' /= [] H1 H2]|[] h' Hh']].
+        + by right; right; exists x h'.
+        by right; left; exists h'.
       if=>//.
       + inline *;rcondt{2} 4.
         + by move=> &m;auto;rewrite /in_dom_with.
@@ -385,14 +392,14 @@ section EXT.
           y     <- (y1, y2);
           (* exists x h, mem (dom G1.m) x /\ handles.[h] = Some (x.2, I) *)
    
-          handles_ <@ RRO.restrK();
+          handles_ <@ RRO.allKnown();
           if (!rng handles_ x.`2) {
             RRO.set(G1.chandle, x.`2);
             G1.chandle <- G1.chandle + 1;
           }
-          handles_ <- RRO.restrK();
+          handles_ <- RRO.allKnown();
           hx2      <- oget (hinvc handles_ x.`2);
-          t        <@ RRO.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
+          t        <@ RRO.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
           if ((x.`1, hx2) \in G1.mh /\ t) {
             hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
             ReSample.f1(x.`2, hy2);
@@ -423,17 +430,17 @@ section EXT.
         var y, y1, y2, hx2, hy2, handles_, t;
    
         if (x \notin G1.mi) {
-          handles_ <@ RRO.restrK();
+          handles_ <@ RRO.allKnown();
           if (!rng handles_ x.`2) {
             RRO.set(G1.chandle, x.`2);
             G1.chandle <- G1.chandle + 1;
           }
-          handles_ <@ RRO.restrK();
+          handles_ <@ RRO.allKnown();
           hx2      <- oget (hinvc handles_ x.`2);
           y1       <$ bdistr;
           y2       <$ cdistr;
           y        <- (y1,y2);
-          t        <@ RRO.in_dom((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
+          t        <@ RRO.queried((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
           if ((x.`1, hx2) \in G1.mhi /\ t) {
             (y1,hy2)             <- oget G1.mhi.[(x.`1, hx2)];
             ReSample.f1(x.`2,hy2);
@@ -616,8 +623,8 @@ section EXT.
         (={t,y,x,hx2,F.RO.m,FRO.m,G1.paths,G1.mh,G1.mhi,G1.m,G1.mi,G1.chandle,G1.bext, C.c,C.queries} /\
         inv_lt  G1.m{2} G1.mi{2} C.c{1} FRO.m{2}  ReSample.count{2} /\
         (t => in_dom_with FRO.m (oget G1.mh.[(x.`1, hx2)]).`2 Unknown){1}).
-      + inline RRO.in_dom; wp;call (_: ={FRO.m});1:by sim.
-        inline RRO.restrK;sp 1 1;if=>//.
+      + inline RRO.queried; wp;call (_: ={FRO.m});1:by sim.
+        inline RRO.allKnown;sp 1 1;if=>//.
         by wp;call RROset_inv_lt;auto.
       if=>//;wp. 
       + inline *;rcondt{1} 4;1:by auto=>/#. 
@@ -638,8 +645,8 @@ section EXT.
         (={t,y,x,hx2,F.RO.m,FRO.m,G1.paths,G1.mh,G1.mhi,G1.m,G1.mi,G1.chandle,G1.bext, C.c} /\
         inv_lt  G1.m{2} G1.mi{2} C.c{1} FRO.m{2}  ReSample.count{2} /\
         (t => in_dom_with FRO.m (oget G1.mhi.[(x.`1, hx2)]).`2 Unknown){1}).
-      + inline RRO.in_dom; auto;call (_: ={FRO.m});1:by sim.
-        inline RRO.restrK;sp 1 1;if=>//.
+      + inline RRO.queried; auto;call (_: ={FRO.m});1:by sim.
+        inline RRO.allKnown;sp 1 1;if=>//.
         by wp;call RROset_inv_lt;auto.
       if=>//;wp. 
       + inline *;rcondt{1} 4;1:by auto=>/#.

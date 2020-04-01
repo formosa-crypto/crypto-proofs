@@ -1,7 +1,7 @@
 pragma -oldip.
 require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
-require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
-require import DProd Dexcepted.
+require import List FSet SmtMap Common SLCommon FelTactic Mu_mem.
+require import DProd Dexcepted PROM.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Gext.
@@ -116,14 +116,14 @@ local module G3(RO:F.RO) = {
         }
         y2 <$ cdistr;
         y <- (y1, y2);
-        handles_ <@ RRO.restrK();
+        handles_ <@ RRO.allKnown();
         if (!rng handles_ x.`2) {
           RRO.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <- RRO.restrK();
+        handles_ <- RRO.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
-        t        <@ RRO.in_dom((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
+        t        <@ RRO.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if ((x.`1, hx2) \in G1.mh /\ t) {
           hy2                  <- (oget G1.mh.[(x.`1, hx2)]).`2;
           FRO.m.[hy2]          <- (y2,Known);
@@ -152,14 +152,14 @@ local module G3(RO:F.RO) = {
       var y, y1, y2, hx2, hy2, handles_, t;
  
       if (x \notin G1.mi) {
-        handles_ <@ RRO.restrK();
+        handles_ <@ RRO.allKnown();
         if (!rng handles_ x.`2) {
           RRO.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <@ RRO.restrK();
+        handles_ <@ RRO.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
-        t        <@ RRO.in_dom((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
+        t        <@ RRO.queried((oget G1.mhi.[(x.`1,hx2)]).`2, Unknown);
         y1       <$ bdistr;
         y2       <$ cdistr;
         y        <- (y1,y2);
@@ -204,7 +204,7 @@ local module G3(RO:F.RO) = {
   }    
 }.
 
-local equiv G2_G3: Eager(G2(DRestr(D))).main2 ~ G3(F.LRO).distinguish : ={glob D} ==> ={res}.
+local equiv G2_G3: Eager(G2(DRestr(D))).main2 ~ G3(F.FullEager.LRO).distinguish : ={glob D} ==> ={res}.
 proof.
   proc;wp;call{1} RRO_resample_ll;inline *;wp.
   call (_: ={FRO.m,F.RO.m,G1.m,G1.mi,G1.mh,G1.mhi,G1.chandle,G1.paths,C.c,C.queries}); last by auto.
@@ -348,7 +348,7 @@ proof.
   by sim;inline *;auto;progress;smt(DCapacity.dunifin_ll).
 qed.
   
-local equiv G4_Ideal : G4(F.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :
+local equiv G4_Ideal : G4(F.FullEager.LRO).distinguish ~ IdealIndif(IF,S,DRestr(D)).main :
    ={glob D} ==> ={res}.
 proof.
   proc;inline *;wp.
@@ -356,7 +356,7 @@ proof.
   + by sim. + by sim.     
   + proc;sp;if=>//;auto;if=>//;auto.
     call (_: ={F.RO.m});2:by auto.
-    inline F.LRO.get F.FRO.sample;wp 7 2;sim.
+    inline F.FullEager.LRO.get F.FRO.sample;wp 7 2;sim.
     by while{1} (true) (size p - i){1};auto;1:inline*;auto=>/#.
   by auto.
 qed.
@@ -376,11 +376,11 @@ lemma Real_Ideal &m:
 proof.
   apply (ler_trans _ _ _ (Real_G2 D D_ll &m)).
   rewrite !(ler_add2l, ler_add2r);apply lerr_eq.
-  apply (eq_trans _ Pr[G3(F.LRO).distinguish() @ &m : res]);1:by byequiv G2_G3.
+  apply (eq_trans _ Pr[G3(F.FullEager.LRO).distinguish() @ &m : res]);1:by byequiv G2_G3.
   apply (eq_trans _ Pr[G3(F.RO ).distinguish() @ &m : res]).
-  + by byequiv (_: ={glob G3, F.RO.m} ==> _)=>//;symmetry;conseq (F.RO_LRO_D G3).
+  + by byequiv (_: ={glob G3, F.RO.m} ==> _)=>//;symmetry;conseq (F.FullEager.RO_LRO_D G3 Block.DBlock.dunifin_ll).
   apply (eq_trans _ Pr[G4(F.RO ).distinguish() @ &m : res]);1:by byequiv G3_G4.
-  apply (eq_trans _ Pr[G4(F.LRO).distinguish() @ &m : res]);1:by byequiv (F.RO_LRO_D G4).
+  apply (eq_trans _ Pr[G4(F.FullEager.LRO).distinguish() @ &m : res]);1:by byequiv (F.FullEager.RO_LRO_D G4 Block.DBlock.dunifin_ll).
   by byequiv G4_Ideal.
 qed.
   

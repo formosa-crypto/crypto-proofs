@@ -148,8 +148,8 @@ section.
 declare module Dist :
   DISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
                 Simulator, BlockSponge.C, Gconcl.S,
-                SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
+                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
                 Gconcl_list.Simulator}.
 
 axiom Dist_lossless (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }) :
@@ -314,8 +314,8 @@ lemma SHA3Indiff
       (Dist <: DISTINGUISHER{
                  Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
                  Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
-                 SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                 SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
+                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
                  Gconcl_list.Simulator})
         &m :
       (forall (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }),

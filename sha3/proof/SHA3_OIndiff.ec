@@ -171,8 +171,8 @@ section.
 declare module Dist :
   ODISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
                 Simulator, BlockSponge.C, Gconcl.S,
-                SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
+                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
                 Gconcl_list.Simulator}.
 
 
@@ -210,8 +210,8 @@ lemma SHA3OIndiff
       (Dist <: ODISTINGUISHER{
                  Counter, Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
                  Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
-                 SLCommon.F.RO, SLCommon.F.RRO, SLCommon.Redo, SLCommon.C,
-                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.RRO,
+                 SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
+                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
                  Gconcl_list.Simulator, OSimulator})
         &m :
       (forall (F <: ODFUNCTIONALITY) (P <: ODPRIMITIVE),

@@ -1,7 +1,7 @@
 pragma -oldip.
 require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
-require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
-require import DProd Dexcepted.
+require import List FSet SmtMap Common SLCommon FelTactic Mu_mem.
+require import DProd Dexcepted PROM.
 (*...*) import Capacity IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Handle.

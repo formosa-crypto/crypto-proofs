@@ -13,13 +13,13 @@ axiom sampleto_ll:   is_lossless sampleto.
 axiom sampleto_full: is_full     sampleto.
 axiom sampleto_fu:   is_funiform sampleto.
 
-clone import PROM.GenEager as RO with
-  type from <- from,
-  type to   <- to,
-  op sampleto <- fun _ => sampleto,
-  type input <- unit,
-  type output <- bool
-proof * by exact/sampleto_ll.
+clone import PROM.FullRO as RO with
+  type in_t    <- from,
+  type out_t   <- to,
+  op   dout _  <- sampleto,
+  type d_in_t  <- unit,
+  type d_out_t <- bool.
+import FullEager.
 
 op increase_counter (c : int) (m : from) : int.
 axiom increase_counter_spec c m : c <= increase_counter c m.
@@ -261,7 +261,7 @@ section SecondPreimage.
             Pr [ SecondPreimage3(A,RO).main(mess1) @ &m : res ].
     - rewrite eq_sym.
       byequiv=>//=; proc.
-      by call(RO_LRO_D (D1(A))); inline*; auto.
+      by call(RO_LRO_D (D1(A)) sampleto_ll); inline*; auto.
     by byequiv=> //=; proc; inline*; wp -2 18; sim.
   byphoare(: arg = mess1 ==> _)=>//=; proc.
   seq 1 : (rng (rem RO.m mess1) (oget RO.m.[mess1]))

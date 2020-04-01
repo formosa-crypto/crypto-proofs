@@ -79,8 +79,8 @@ module IRO' : IRO = {
 
     work <- fdom mp `\` visible;
     while (work <> fset0) {
-      x <- pick work;
-      r <$ dto;
+      x      <- pick work;
+      r      <$ dto;
       mp.[x] <- r;
       work <- work `\` fset1 x;
     }
