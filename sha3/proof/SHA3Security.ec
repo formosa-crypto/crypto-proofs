@@ -148,7 +148,7 @@ section Preimage.
   proof. by split;exact invmC'. qed.
 
   local lemma useful m mi a :
-      invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
+      Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
   cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
@@ -505,7 +505,7 @@ section SecondPreimage.
   proof. by split;exact invmC'. qed.
 
   local lemma useful m mi a :
-      invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
+      Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
   cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
@@ -898,7 +898,7 @@ section Collision.
   proof. by split;exact invmC'. qed.
 
   local lemma useful m mi a :
-      invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
+      Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
   cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
