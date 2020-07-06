@@ -1,4 +1,4 @@
-require import AllCore List Int IntDiv IntExtra StdOrder Distr SmtMap FSet.
+require import AllCore List Int IntDiv StdOrder Distr SmtMap FSet.
 
 require import Common Sponge. import BIRO.
 require (*--*) SLCommon Gconcl_list BlockSponge.

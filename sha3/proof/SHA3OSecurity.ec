@@ -1,6 +1,6 @@
 (* Top-level Proof of SHA-3 Security *)
 
-require import AllCore Distr DList DBool List IntExtra IntDiv Dexcepted DProd SmtMap FSet.
+require import AllCore Distr DList DBool List IntDiv Dexcepted DProd SmtMap FSet.
 require import Common SLCommon Sponge SHA3_OIndiff.
 require (****) SecureORO SecureHash.
 (*****) import OIndif.
@@ -56,9 +56,9 @@ cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x).
   rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}. 
   have:=size_out_gt0; move/ltzW.
   move:size_out;apply intind=> //=. 
-  - by rewrite powr0 iter0 //= fromint1.
+  - by rewrite RField.expr0 iter0 //= fromint1.
   move=> i hi0 rec.
-  by rewrite powrS//iterS// -rec; smt().
+  by rewrite RField.exprS//iterS// -rec; smt().
 rewrite -dout_equal_dlist dmap1E.
 apply mu_eq.
 by move=> l; rewrite /pred1/(\o); smt(to_listK).

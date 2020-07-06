@@ -1,8 +1,7 @@
 (*------------------------- Sponge Construction ------------------------*)
 require import Core Int IntDiv Real List FSet SmtMap.
-(*---*) import IntExtra.
 require import Distr DBool DList.
-require import StdBigop StdOrder. import IntOrder.
+require import Ring StdBigop StdOrder. import IntID IntOrder.
 require import Common PROM.
 require (*--*) IRO BlockSponge.
 
@@ -1243,9 +1242,8 @@ have -> /# // :
   0 <= n => 0 < n => iter n (( * ) (1%r / 2%r)) 1%r = inv (2 ^ n)%r.
 elim=> [// | i ge0_i IH _].
 case: (i = 0)=> [-> /= | ne_i0].
-rewrite iter1 pow1 /#.
-by rewrite iterS // IH 1:/# powS // RealExtra.fromintM
-           StdRing.RField.invfM.
+rewrite iter1 expr1 /#.
+by rewrite iterS // IH 1:/# exprS // fromintM RField.invfM.
 qed.
 
 (* module for adapting PrLoopSnoc_sample to block generation *)

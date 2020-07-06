@@ -277,7 +277,7 @@ lemma security &m :
   (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
 rewrite -(replace_simulator &m).
-rewrite powS 1:addz_ge0 1:ge0_r 1:ge0_c -pow_add 1:ge0_r 1:ge0_c.
+rewrite exprS 1:addz_ge0 1:ge0_r 1:ge0_c exprDn 1:ge0_r 1:ge0_c.
 have -> :
   (limit ^ 2 - limit)%r / (2 * (2 ^ r * 2 ^ c))%r =
   ((limit ^ 2 - limit)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
@@ -288,7 +288,7 @@ have -> :
   limit%r * ((2 * limit)%r / (2 ^ c)%r) + limit%r * ((2 * limit)%r / (2 ^ c)%r).
   have -> : 4 = 2 * 2 by trivial.
   have {3}-> : 2 = 1 + 1 by trivial.
-  rewrite powS // pow1 /#.
+  rewrite exprS // expr1 /#.
 rewrite -/SLCommon.dstate /limit.
 cut->:=conclusion (Gconcl_list.SimLast(Gconcl.S)) (DRestr(Dist)) &m.
 cut//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).

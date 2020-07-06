@@ -1,5 +1,5 @@
 (*------------------- Common Definitions and Lemmas --------------------*)
-require import Core Int IntExtra IntDiv Real List Distr.
+require import Core Int IntDiv Real List Distr.
 require import Ring StdRing StdOrder StdBigop BitEncoding DProd.
 require (*--*) FinType BitWord PRP Monoid.
 (*---*) import IntID IntOrder Bigint Bigint.BIA IntDiv.
@@ -250,7 +250,7 @@ proof. by rewrite last_cat last_mkpad. qed.
 
 lemma size_mkpad n : size (mkpad n) = num0 n + 2.
 proof.
-rewrite /mkpad /= size_rcons size_nseq max_ler.
+rewrite /mkpad /= size_rcons size_nseq ler_maxr.
 by rewrite /num0 modz_ge0 gtr_eqF ?gt0_r. by ring.
 qed.
 
@@ -285,7 +285,7 @@ lemma index_true_behead_mkpad n :
   index true (behead (mkpad n)) = num0 n.
 proof.
 rewrite /mkpad -cats1 //= index_cat mem_nseq size_nseq.
-by rewrite max_ler // /num0 modz_ge0 gtr_eqF ?gt0_r.
+by rewrite ler_maxr // /num0 modz_ge0 gtr_eqF ?gt0_r.
 qed.
 
 lemma padE (s : bool list, n : int) :
@@ -334,8 +334,8 @@ have [ge0_j lt_js]: 0 <= j < size s by move=> /#.
 rewrite -cats1 drop_cat lt_js /= /mkpad -cats1 -cat_cons; congr=> //=.
 rewrite size_take // size_cat /= ltr_spsaddr //= /num0 -iE.
 have sz_js: size (drop j s) = i+1; last apply/(eq_from_nth false).
-+ by rewrite size_drop //= max_ler ?subr_ge0 ?ltrW // /j #ring.
-+ by rewrite sz_js /= addrC size_nseq max_ler.
++ by rewrite size_drop //= ler_maxr ?subr_ge0 ?ltrW // /j #ring.
++ by rewrite sz_js /= addrC size_nseq ler_maxr.
 rewrite sz_js => k [ge0_k lt_kSi]; rewrite nth_drop //.
 move/ler_eqVlt: ge0_k => [<-|] /=.
   by rewrite jE -nth_rev ?nth_index // -index_mem size_rev.
@@ -509,7 +509,7 @@ lemma extendK (xs : block list) (n : int) :
   last b0 xs <> b0 => 0 <= n => strip(extend xs n) = (xs, n).
 proof.
 move=> xs_ends_not_b0 ge0_n; rewrite /strip /extend /=.
-rewrite rev_cat rev_nseq size_cat size_nseq max_ler // -addzA.
+rewrite rev_cat rev_nseq size_cat size_nseq ler_maxr // -addzA.
 have head_rev_xs_neq_b0 : head b0 (rev xs) <> b0 by rewrite - last_rev revK //.
 have -> : rev xs = head b0 (rev xs) :: behead (rev xs).
   by rewrite head_behead //; case: (rev xs) head_rev_xs_neq_b0.
@@ -518,7 +518,7 @@ have has_p_full : has p (nseq n b0 ++ head b0 (rev xs) :: behead (rev xs))
   by apply has_cat; right; simplify; left.
 have not_has_p_nseq : ! has p (nseq n b0) by rewrite has_nseq.
 have -> : find p (nseq n b0 ++ head b0 (rev xs) :: behead (rev xs)) = n.
-  rewrite find_cat not_has_p_nseq /= size_nseq max_ler //.
+  rewrite find_cat not_has_p_nseq /= size_nseq ler_maxr //.
   have -> // : p (head b0 (rev xs)) by trivial.
 by rewrite (@addzC n) addNz /= take_size_cat.
 qed.
@@ -532,8 +532,8 @@ have [ge0_i le_ixs]: 0 <= i <= size xs.
   by rewrite find_ge0 -size_rev find_size.
 have sz_drop: size (drop (size xs - i) xs) = i.
   rewrite size_drop ?subr_ge0 // opprD opprK.
-  by rewrite addrA /= max_ler.
-apply/(eq_from_nth b0) => [|j]; rewrite ?size_nseq ?max_ler //.
+  by rewrite addrA /= ler_maxr.
+apply/(eq_from_nth b0) => [|j]; rewrite ?size_nseq ?ler_maxr //.
 rewrite sz_drop=> -[ge0_j lt_ji]; rewrite nth_nseq //.
 rewrite nth_drop ?subr_ge0 // -{1}revK nth_rev ?size_rev.
   rewrite addr_ge0 ?subr_ge0 //= -ltr_subr_addr.
@@ -571,9 +571,9 @@ split=> [vb | [s n] [rng_n b2b] b2b_xs_eq].
 have [up _] := (unpadP (blocks2bits xs)).
 rewrite vb /= in up; case: up=> [s n rng_n _ b2b].
 by apply (@ValidBlock xs s n).
-rewrite unpadP (@Unpad (blocks2bits xs) s n) //.
+rewrite /valid_block unpadP (@Unpad (blocks2bits xs) s n) //.
 have <- : size (blocks2bits xs) = size s + n + 2
-  by rewrite b2b_xs_eq 3!size_cat /= size_nseq max_ler /#ring.
+  by rewrite b2b_xs_eq 3!size_cat /= size_nseq ler_maxr /#ring.
 by apply size_blocks2bits_dvd_r.
 qed.
 
@@ -602,7 +602,7 @@ have last_b2b_xs_true : last true (blocks2bits xs) = true
    by rewrite b2b_xs_eq cats1 last_rcons.
 have last_b2b_xs_false : last true (blocks2bits xs) = false
     by rewrite xs_take_drop blocks2bits_cat blocks2bits_sing ofblockK
-               1:size_nseq 1:max_ler 1:ge0_r // last_cat
+               1:size_nseq 1:ler_maxr 1:ge0_r // last_cat
                last_nseq 1:gt0_r.
 by rewrite last_b2b_xs_true in last_b2b_xs_false.
 qed.
@@ -637,14 +637,14 @@ have sz_drp : size drp = size s %% r.
   rewrite size_drop 1:mulr_ge0 1:divz_ge0 1:gt0_r 1:size_ge0
           1:ge0_r.
   case (size s %/ r * r < size s)=> // not_lt_sz_s.
-  rewrite max_ler /#.
+  rewrite ler_maxr /#.
   have eq : size s %/ r * r = size s.
     rewrite -lezNgt in not_lt_sz_s; apply ler_asym; split=> //.
     by rewrite lez_floor gtr_eqF 1:gt0_r //.
-  rewrite max_lel /#.
+  rewrite ler_maxl /#.
 have sz_s_pad_dvd_r : r %| (size s + n + 2).
   have <- : size (s ++ [true] ++ nseq n false ++ [true]) = size s + n + 2
-    by rewrite !size_cat /= size_nseq max_ler 1:ge0_n #ring.
+    by rewrite !size_cat /= size_nseq ler_maxr 1:ge0_n #ring.
   rewrite -b2b_xs_eq size_blocks2bits_dvd_r.
 have sz_tke_dvd_r : r %| size tke by rewrite sz_tke dvdz_mull dvdzz.
 have sz_drp_plus_n_plus_2_dvd_r : r %| (size drp + n + 2).
@@ -657,7 +657,7 @@ have xs_eq : xs = bits2blocks(s ++ [true] ++ nseq n false ++ [true])
   by rewrite -blocks2bitsK b2b_xs_eq.
 rewrite -(@cat_take_drop (size s %/ r * r) s) -!catA -/tke -/drp
         bits2blocks_cat in xs_eq.
-+ rewrite sz_tke_dvd_r. rewrite !size_cat /= size_nseq max_ler 1:ge0_n.
++ rewrite sz_tke_dvd_r. rewrite !size_cat /= size_nseq ler_maxr 1:ge0_n.
 + have -> : size drp + (1 + (n + 1)) = size drp + n + 2 by ring.
 + rewrite sz_drp_plus_n_plus_2_dvd_r.
 case: (n = r - 1)=> [n_eq_r_min1 | n_neq_r_min1].
@@ -675,12 +675,12 @@ have sz_drp_plus1_eq_r : size drp + 1 = r.
 apply (@ValidBlockStruct2 xs (bits2blocks tke)
       (mkblock (drp ++ [true])) (mkblock (nseq n false ++ [true]))).
 rewrite xs_eq (@catA drp [true]) bits2blocks_cat 1:size_cat //
-        1:size_cat 1:size_nseq 1:max_ler 1:ge0_n /= 1:/#
+        1:size_cat 1:size_nseq 1:ler_maxr 1:ge0_n /= 1:/#
         (@bits2blocks_sing (drp ++ [true])) 1:size_cat //
         (@bits2blocks_sing (nseq n false ++ [true]))
-        1:size_cat 1:size_nseq /= 1:max_ler 1:ge0_n /#.
+        1:size_cat 1:size_nseq /= 1:ler_maxr 1:ge0_n /#.
 rewrite ofblockK 1:size_cat //= cats1 last_rcons.
-rewrite n_eq_r_min1 ofblockK 1:size_cat //= size_nseq max_ler /#.
+rewrite n_eq_r_min1 ofblockK 1:size_cat //= size_nseq ler_maxr /#.
 have lt_n_r_min1 : n < r - 1 by smt().
 move: xs_eq.
 have sz_drp_plus_n_plus_2_eq_r : size drp + n + 2 = r.
@@ -696,16 +696,16 @@ move=> xs_eq.
 rewrite (@bits2blocks_sing
          (drp ++ ([true] ++ (nseq n false ++ [true]))))
         in xs_eq.
-+ rewrite !size_cat /= size_nseq max_ler 1:ge0_n 1:sz_drp.
++ rewrite !size_cat /= size_nseq ler_maxr 1:ge0_n 1:sz_drp.
 +   have -> : size s %% r + (1 + (n + 1)) = size s %%r + n + 2 by ring.
 +   by rewrite -sz_drp.
 apply (@ValidBlockStruct1 xs (bits2blocks tke)
        (mkblock (drp ++ ([true] ++ (nseq n false ++ [true]))))
        drp n)=> //.
-by rewrite ofblockK 1:!size_cat /= 1:size_nseq 1:max_ler 1:ge0_n
+by rewrite ofblockK 1:!size_cat /= 1:size_nseq 1:ler_maxr 1:ge0_n
            1:-sz_drp_plus_n_plus_2_eq_r 1:#ring -!catA cat1s.
 have sz_w2b_x_eq_r : size (ofblock x) = r by apply size_block.
-rewrite w2b_x_eq !size_cat /= size_nseq max_ler // in sz_w2b_x_eq_r.
+rewrite w2b_x_eq !size_cat /= size_nseq ler_maxr // in sz_w2b_x_eq_r.
 have lt_nr : n < r by smt(size_ge0).
 apply (@ValidBlock xs (blocks2bits ys ++ s) n)=> //.
 by rewrite xs_eq blocks2bits_cat blocks2bits_sing w2b_x_eq -!catA.
@@ -740,6 +740,6 @@ lemma nosmt valid_absorbP (xs : block list) :
 proof.
 rewrite /valid_absorb; split=> [strp_xs_valid | [ys n] ge0_n vb_ys ->].
 by rewrite (@ValidAbsorb xs (strip xs).`1 (strip xs).`2)
-           2:(@strip_ge0 xs) 2:(@stripK xs).
+           2:(@strip_ge0 xs) // -/(extend (strip xs).`1 (strip xs).`2) (@stripK xs).
 by rewrite -/(extend ys n) extendK 1:valid_block_ends_not_b0.
 qed.

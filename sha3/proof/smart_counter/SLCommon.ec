@@ -2,7 +2,7 @@
     functionality is a fixed-output-length random oracle whose output
     length is the input block size. We prove its security even when
     padding is not prefix-free. **)
-require import Core Int Real StdOrder Ring IntExtra.
+require import Core Int Real StdOrder Ring.
 require import List FSet SmtMap Common Distr DProd Dexcepted.
 require import PROM.
 
@@ -170,7 +170,7 @@ lemma build_hpath_map0 p:
    build_hpath empty p = if   p = [] then Some (b0,0) else None.
 proof.
 elim/last_ind: p=> //= p b _.
-by rewrite -{1}cats1 foldl_cat {1}/step_hpath /= emptyE /= [smt(size_rcons size_ge0)].
+by rewrite -{1}cats1 /build_hpath foldl_cat {1}/step_hpath /= emptyE /= [smt(size_rcons size_ge0)].
 qed.
 
 (* -------------------------------------------------------------------------- *)
@@ -243,14 +243,14 @@ case: (i <= j)=> Hij.
   move=> [Hk0 Hki].
   by rewrite !nth_take /#.
 case: (0 < j)=> //= Hj0; last smt(take_le0).
-rewrite min_ler 1:/#.
+rewrite (: min i j = j) 1:minrE 1:/#.
 by rewrite take_oversize //= size_take /#.
 qed.
 
 lemma prefix_take_leq (l1 l2 : 'a list) (i : int) :
   i <= prefix l1 l2 => take i l1 = take i l2.
 proof.
-move=> Hi; have ->: i = min i (prefix l1 l2) by smt(min_lel).
+move=> Hi; have ->: i = min i (prefix l1 l2) by smt(minrE).
 by rewrite -(take_take l1 i _) -(take_take l2 i _) prefix_take.
 qed.
 
@@ -512,7 +512,8 @@ cut:prefix (take i l1) l2 <= prefix l1 l2.
 + rewrite-{2}(cat_take_drop i l1) prefix_leq_prefix_cat.
 cut/#:prefix l1 l2 <= prefix (take i l1) l2.
 rewrite -prefix_take_prefix.
-rewrite-(cat_take_drop (prefix l1 l2) (take i l1))take_take min_lel// prefix_leq_prefix_cat. 
+rewrite-(cat_take_drop (prefix l1 l2) (take i l1))take_take minrE hi //=.
+by rewrite prefix_leq_prefix_cat. 
 qed.
 
 lemma get_max_prefix_take (l : 'a list) (ll : 'a list list) i :
@@ -1018,7 +1019,7 @@ op has (P : 'a -> 'b -> bool) (m : ('a,'b) fmap) =
 lemma hasP (P : 'a -> 'b -> bool) (m : ('a,'b) fmap):
   has P m <=> exists x, x \in m /\ P x (oget m.[x]).
 proof.
-rewrite hasP; split=> [] [x] [#].
+rewrite /has hasP; split=> [] [x] [#].
 + by move=> _ x_in_m Pxmx; exists x.
 by move=> x_in_m Pxmx; exists x; rewrite -memE mem_fdom.
 qed.
@@ -1029,7 +1030,7 @@ op find (P : 'a -> 'b -> bool) (m : ('a,'b) fmap) =
 lemma find_none (P : 'a -> 'b -> bool) (m : ('a,'b) fmap):
   has P m <=> find P m <> None.
 proof.
-rewrite has_find; split=> [h|].
+rewrite /find /has has_find; split=> [h|].
 + by rewrite (onth_nth witness) 1:find_ge0 /=.
 by apply/contraLR=> h; rewrite onth_nth_map nth_default 1:size_map 1:lezNgt.
 qed.
@@ -1066,23 +1067,24 @@ lemma hinvP handles c:
   if hinv handles c = None then forall h f, handles.[h] <> Some(c,f)
   else exists f, handles.[oget (hinv handles c)] = Some(c,f).
 proof.
-  cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
-    findP (fun (_ : handle) => pred1 c \o fst) handles.
-  + exists (oget handles.[h]).`2.
-    by move: Hmem; rewrite domE; case: (handles.[h])=> //= - [].
-  by cut := H h;rewrite domE /#.
+move=> @/hinv.
+cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
+  findP (fun (_ : handle) => pred1 c \o fst) handles.
++ exists (oget handles.[h]).`2.
+  by move: Hmem; rewrite domE; case: (handles.[h])=> //= - [].
+by cut := H h;rewrite domE /#.
 qed.
 
 lemma huniq_hinv (handles:handles) (h:handle): 
   huniq handles => dom handles h => hinv handles (oget handles.[h]).`1 = Some h.
 proof.
-  move=> Huniq;pose c := (oget handles.[h]).`1.
-  cut:=Huniq h;cut:=hinvP handles c.
-  case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')].
-  + rewrite domE /=; move: (Hdiff h (oget handles.[h]).`2).
-    by rewrite /c; case: handles.[h]=> //= - [].
-  move=> [f ->] /(_ (oget handles.[h]) (c,f)) H1 H2;rewrite H1 //.
-  by move: H2; rewrite domE; case: (handles.[h]).
+move=> Huniq;pose c := (oget handles.[h]).`1.
+cut:=Huniq h;cut:=hinvP handles c.
+case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')].
++ rewrite domE /=; move: (Hdiff h (oget handles.[h]).`2).
+  by rewrite /c; case: handles.[h]=> //= - [].
+move=> [f ->] /(_ (oget handles.[h]) (c,f)) H1 H2;rewrite H1 //.
+by move: H2; rewrite domE; case: (handles.[h]).
 qed.
 
 lemma hinvKP handles c:

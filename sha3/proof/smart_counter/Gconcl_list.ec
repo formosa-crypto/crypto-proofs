@@ -1,8 +1,8 @@
 pragma -oldip.
-require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
+require import Core Int Real StdOrder Ring StdBigop.
 require import List FSet SmtMap Common SLCommon PROM FelTactic Mu_mem.
 require import Distr DProd Dexcepted BlockSponge Gconcl.
-(*...*) import Capacity IntOrder Bigreal RealOrder BRA.
+(*...*) import Capacity IntID IntOrder Bigreal RealOrder BRA.
 
 require (*--*) Handle.
 
@@ -1033,13 +1033,13 @@ section Real.
   + move=>l;rewrite mem_set;case;1:smt(all_prefixes_of_INV_real get_setE).
     move=>->>j[]hj0 hjsize;rewrite get_setE/=.
     cut:=hmp1 (format bl (i - 1));rewrite domE H_p_val/==>help.
-    cut:=hjsize;rewrite !size_cat !size_nseq/=!max_ler 1:/#=>hjsizei.
+    cut:=hjsize;rewrite !size_cat !size_nseq/=!ler_maxr 1:/#=>hjsizei.
     cut->/=:!take j (format bl i) = format bl i by smt(size_take).
     cut h:forall k, 0 <= k <= size bl + i - 2 => 
       take k (format bl (i - 1)) = take k (format bl i).
     * move=>k[]hk0 hkjS;rewrite !take_cat;case(k<size bl)=>//=hksize;congr. 
-      apply (eq_from_nth witness);1:rewrite!size_take//=1,2:/#!size_nseq!max_ler/#.
-      rewrite!size_take//=1:/#!size_nseq!max_ler 1:/#.
+      apply (eq_from_nth witness);1:rewrite!size_take//=1,2:/#!size_nseq!ler_maxr/#.
+      rewrite!size_take//=1:/#!size_nseq!ler_maxr 1:/#.
       pose o:=if _ then _ else _;cut->/={o}:o = k - size bl by smt().
       by progress;rewrite!nth_take//= 1,2:/# !nth_nseq//=/#.
     case(j < size bl + i - 2)=>hj. 
@@ -1153,7 +1153,7 @@ section Real.
           move=>[]j[][]hj0 hjsize ->>.
           cut:=Hisize;rewrite size_take 1:/#.
           pose k:=if _ then _ else _;cut->>Hij{k}:k=j by rewrite/#.
-          by rewrite!take_take!min_lel 1,2:/# nth_take 1,2:/#;smt(domE).
+          by rewrite!take_take!minrE 1:nth_take 1,2:/#;smt(domE).
         - smt(get_setE oget_some domE take_oversize).
       while( ={i0,p0,i,p,n,nb,bl,sa,sc,lres,C.c,glob Redo,glob Perm}
         /\ n{1} = nb{1} /\ p{1} = bl{1} /\ p0{1} = p{1} /\ 0 <= i0{1} <= size p{1}
@@ -1212,7 +1212,7 @@ section Real.
         move=>j; case(0 <= j)=>hj0; rewrite mem_set.
         * case: (j <= i0{2}) => hjmax; 2:smt(take_oversize size_take).
           left; have-> : take j (take (i0{2}+1) bl{2}) = take j (take i0{2} bl{2}).
-          * by rewrite 2!take_take min_lel 1:/# min_lel.
+          * by rewrite 2!take_take !minrE /#.
           by apply H8; rewrite domE H1.
         rewrite take_le0 1:/#; left.
         by rewrite-(take0 (take i0{2} bl{2})) H8 domE H1.
@@ -1227,7 +1227,8 @@ section Real.
       - move:H15;apply absurd=>//=_;rewrite mem_set.
         pose x:=_ = _;cut->/={x}:x=false by smt(size_take).
         move:H12;apply absurd=>//=.
-        cut:=take_take bl{2}(i0{2} + 1)(i0{2} + 1 + 1);rewrite min_lel 1:/# =><-h. 
+        cut:=take_take bl{2}(i0{2} + 1)(i0{2} + 1 + 1).
+        rewrite minrE (: i0{2} + 1 <= i0{2} + 1 + 1) 1:/#=><-h. 
         by rewrite (H8 _ h).
       - move=>l;rewrite!mem_set;case=>[H_dom|->>]/=;1:smt(mem_set).
         move=>j;rewrite mem_set.
@@ -1236,7 +1237,8 @@ section Real.
           by rewrite-(take0 (take i0{2} bl{2})) H8 domE H1.
         case(j < i0{2} + 1)=>hjiS;2:smt(domE take_take).
         rewrite take_take/min hjiS//=;left.
-        cut:=(take_take bl{2} j i0{2});rewrite min_lel 1:/#=><-.
+        cut:=(take_take bl{2} j i0{2}).
+        rewrite minrE (: j <= i0{2}) 1:/#=><-.
         smt(all_prefixes_of_INV_real domE).
       - smt(get_setE domE mem_set).
   sp;case(0 < n{1});last first.
@@ -1331,7 +1333,7 @@ section Real.
         /\ Redo.prefixes{1}.[format p{1} (i1{1} - size p{1} + 1)] = 
              Some (sa0{1}, sc0{1}));progress. 
   + smt().
-  + by move: H8; rewrite size_cat size_nseq /= max_ler /#.
+  + by move: H8; rewrite size_cat size_nseq /= ler_maxr /#.
   + move:H8;rewrite size_cat size_nseq/=/max H0/=;smt().
   splitwhile{1}1:i1 < size p;splitwhile{2}1:i1 < size p.
   while(={nb,bl,n,p,p1,i,i1,lres,sa0,sc0,C.c,glob Redo,glob Perm}
@@ -1510,27 +1512,27 @@ section Real.
       + sp;rcondf{2}1;auto;progress.
         + rewrite head_nth nth_drop//=.
           cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{m} _;1:smt(size_take).
-          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !minrE //= (: i0{m} <= i0{m} + 1) 1:/#.
           rewrite H1=>//=[][][]->>->>.
           by rewrite nth_onth (onth_nth b0)//=;smt(domE).
         + rewrite head_nth nth_drop//=.
           cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
-          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !minrE//= (: i0{1} <= i0{1} + 1) 1:/#.
           rewrite H1=>//=[][][]->>->>.
           by rewrite nth_onth (onth_nth b0)//=;smt(domE).
         + rewrite head_nth nth_drop//=.
           cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
-          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !minrE //= (: i0{1} <= i0{1} + 1) 1:/#.
           rewrite H1=>//=[][][]->>->>.
           by rewrite nth_onth (onth_nth b0)//=;smt(domE).
         + rewrite head_nth nth_drop//=.
           cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
-          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !minrE //= (: i0{1} <= i0{1} + 1) 1:/#.
           rewrite H1=>//=[][][]->>->>.
           by rewrite nth_onth (onth_nth b0)//=;smt(domE).
         + rewrite head_nth nth_drop//=.
           cut[]_[]_ hmp1 _ :=H2;cut:=hmp1 _ H5 i0{1} _;1:smt(size_take).
-          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !min_lel//= 1:/#.
+          move=>[]b3 c3;rewrite!take_take!nth_take 1,2:/# !minrE //= (: i0{1} <= i0{1} + 1) 1:/#.
           rewrite H1=>//=[][][]->>->>.
           by rewrite nth_onth (onth_nth b0)//=;smt(domE).
         + smt().
@@ -1619,13 +1621,13 @@ section Real.
           /\ valid p{1});last first.
   + if{1};auto.
     + rcondf{2}1;auto;progress.
-      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#.
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq ler_maxr/#.
         move=>H_dom;rewrite domE. 
         by cut<-:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;rewrite-domE.
-      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#;move=>H_dom.
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq ler_maxr/#;move=>H_dom.
         by cut:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;smt(domE).
       + smt().
-      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq max_ler/#;move=>H_dom.
+      + move:H5;rewrite take_oversize;1:rewrite size_cat size_nseq ler_maxr/#;move=>H_dom.
         by cut:=lemma4 _ _ _ _ _ _ _ _ _ H3 H H2 H_dom;smt(domE).
     sp;if;auto;progress.
     + move:H6;rewrite nth_cat nth_nseq;1:smt(size_ge0).
@@ -1676,14 +1678,14 @@ section Real.
   + smt().
   + move:H9;rewrite take_format/=1:/#;1:smt(size_ge0 size_cat size_nseq).
     pose x := if _ then _ else _ ;cut->/={x}: x = format p{1} (i_R+1).
-    + rewrite/x size_cat size_nseq/=!max_ler 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
+    + rewrite/x size_cat size_nseq/=!ler_maxr 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
       case(size p{1} + i_R <= size p{1})=>//=h;2:smt(size_ge0 size_cat size_nseq).
       cut->>/=:i_R = 0 by smt().
       by rewrite take_size/format nseq0 cats0.
     by rewrite H3/==>[][]->>->>.
   + move:H9;rewrite take_format/=1:/#;1:smt(size_ge0 size_cat size_nseq).
     pose x := if _ then _ else _ ;cut->/={x}: x = format p{1} (i_R+1).
-    + rewrite/x size_cat size_nseq/=!max_ler 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
+    + rewrite/x size_cat size_nseq/=!ler_maxr 1:/#-(addzA _ _ (-1))-(addzA _ _ (-1))/=.
       case(size p{1} + i_R <= size p{1})=>//=h;2:smt(size_ge0 size_cat size_nseq).
       cut->>/=:i_R = 0 by smt().
       by rewrite take_size/format nseq0 cats0.
@@ -1809,7 +1811,7 @@ section Real_Ideal_Abs.
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
   cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
-  rewrite Distr.mu_disjoint 1:predCI//=StdRing.RField.addrC. 
+  rewrite Distr.mu_disjoint 1:predCI//= RField.addrC. 
   cut/=->:=ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
@@ -1903,7 +1905,7 @@ section Real_Ideal_Abs.
   cut := neg_D_concl &m.
   pose p1 := Pr[IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res].
   pose p2 := Pr[RealIndif(Sponge, Perm, DRestr(D)).main() @ &m : res]. 
-  rewrite-5!(StdRing.RField.addrA).
+  rewrite-5!(RField.addrA).
   pose p3 := (max_size ^ 2)%r / 2%r / (2 ^ r)%r / (2 ^ c)%r +
              (max_size%r * ((2 * max_size)%r / (2 ^ c)%r) +
              max_size%r * ((2 * max_size)%r / (2 ^ c)%r)).

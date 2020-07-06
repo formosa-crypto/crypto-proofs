@@ -1,8 +1,8 @@
 pragma -oldip.
-require import Core Int Real RealExtra StdOrder Ring StdBigop IntExtra.
+require import Core Int Real StdOrder Ring StdBigop.
 require import List FSet SmtMap Common SLCommon FelTactic Mu_mem.
 require import DProd Dexcepted PROM.
-(*...*) import Capacity IntOrder Bigreal RealOrder BRA.
+(*...*) import Capacity IntID IntOrder Bigreal RealOrder BRA.
 
 require (*..*) Handle.
 
@@ -12,7 +12,7 @@ import ROhandle.
 
  (* TODO: move this *)
   lemma c_gt0r : 0%r < (2^c)%r.
-  proof. by rewrite lt_fromint;apply /powPos. qed.
+  proof. by rewrite lt_fromint; apply/IntOrder.expr_gt0. qed.
 
   lemma c_ge0r : 0%r <= (2^c)%r.
   proof. by apply /ltrW/c_gt0r. qed. 

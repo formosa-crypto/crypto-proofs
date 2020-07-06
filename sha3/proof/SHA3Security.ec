@@ -1,7 +1,8 @@
 (* Top-level Proof of SHA-3 Security *)
 
-require import AllCore Distr DList DBool List IntExtra IntDiv Dexcepted DProd SmtMap FSet.
+require import AllCore Distr DList DBool List IntDiv Dexcepted DProd SmtMap FSet.
 require import Common SLCommon Sponge SHA3Indiff.
+(*---*) import StdOrder.IntOrder.
 require (****) IndifRO_is_secure.
 
 module SHA3 (P : DPRIMITIVE) = {
@@ -50,9 +51,9 @@ cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x).
   rewrite StdBigop.Bigreal.BRM.big_const count_predT spec_dout=> {p}.
   have:=size_out_gt0; move/ltzW.
   move:size_out;apply intind=> //=. 
-  - by rewrite powr0 iter0 //= fromint1.
+  - by rewrite RField.expr0 iter0 //= fromint1.
   move=> i hi0 rec.
-  by rewrite powrS//iterS// -rec; smt().
+  by rewrite RField.exprS //iterS// -rec; smt().
 rewrite -dout_equal_dlist dmap1E.
 apply mu_eq.
 by move=> l; rewrite /pred1/(\o); smt(to_listK).
@@ -155,7 +156,7 @@ section Preimage.
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
   cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
-  rewrite Distr.mu_disjoint 1:predCI//=StdRing.RField.addrC. 
+  rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
   cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
@@ -380,7 +381,7 @@ section Preimage.
     - rewrite get_set_sameE oget_some H7 rangeSr.
       rewrite !size_map 1:size_ge0. 
       rewrite (size_map _ (range 0 (size bs0{2}))) size_range /=.
-      rewrite max_ler 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
+      rewrite ler_maxr 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
       apply eq_in_map=> j.
       rewrite mem_range /==> [] [] hj1 hj2.
       by rewrite get_set_neqE //=; smt().
@@ -512,7 +513,7 @@ section SecondPreimage.
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
   cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
-  rewrite Distr.mu_disjoint 1:predCI//=StdRing.RField.addrC. 
+  rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
   cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
@@ -727,7 +728,7 @@ section SecondPreimage.
     - rewrite get_set_sameE oget_some H7 rangeSr.
       rewrite !size_map 1:size_ge0. 
       rewrite (size_map _ (range 0 (size bs0{2}))) size_range /=.
-      rewrite max_ler 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
+      rewrite ler_maxr 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
       apply eq_in_map=> j.
       rewrite mem_range /==> [] [] hj1 hj2.
       by rewrite get_set_neqE //=; smt().
@@ -905,7 +906,7 @@ section Collision.
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
   cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
-  rewrite Distr.mu_disjoint 1:predCI//=StdRing.RField.addrC. 
+  rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
   cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
@@ -1119,7 +1120,7 @@ section Collision.
     - rewrite get_set_sameE oget_some H7 rangeSr.
       rewrite !size_map 1:size_ge0. 
       rewrite (size_map _ (range 0 (size bs0{2}))) size_range /=.
-      rewrite max_ler 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
+      rewrite ler_maxr 1:size_ge0 map_rcons /=get_set_sameE oget_some; congr.
       apply eq_in_map=> j.
       rewrite mem_range /==> [] [] hj1 hj2.
       by rewrite get_set_neqE //=; smt().

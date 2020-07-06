@@ -1,7 +1,7 @@
-require import Core Int Real StdOrder Ring Distr IntExtra.
+require import Core Int Real StdOrder Ring Distr.
 require import List FSet SmtMap Common SLCommon DProd Dexcepted.
 
-(*...*) import Capacity IntOrder RealOrder.
+(*...*) import Capacity IntID IntOrder RealOrder.
 
 require (*..*) Strong_RP_RF.
 

@@ -1,9 +1,9 @@
 pragma -oldip. pragma +implicits.
-require import Core Int Real StdOrder Ring IntExtra.
+require import Core Int Real StdOrder Ring.
 require import List FSet SmtMap Common SLCommon.
 require import DProd Dexcepted.
 require import PROM.
-(*...*) import Capacity IntOrder DCapacity.
+(*...*) import Capacity IntID IntOrder DCapacity.
 
 require (*--*) ConcreteF.
 
@@ -1336,7 +1336,7 @@ proof.
 move=>inv0 hi take_i1_p_in_prefixes prefixes_sa_sc build_hpath_i_p ro_prefix hs_h_sc_f.
 cut[]_ _ m_prefix _:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0.
 cut[]b1 c1[]:=m_prefix _ take_i1_p_in_prefixes i _;1:smt(size_take).
-rewrite!take_take!min_lel 1,2:/# nth_take 1,2:/# prefixes_sa_sc/==>[][<-<-]{b1 c1}Pm_prefix.
+rewrite!take_take!minrE //= (: i <= i + 1) 1:/# nth_take 1,2:/# prefixes_sa_sc/==>[][<-<-]{b1 c1}Pm_prefix.
 cut[]hh1 hh2 hh3:=mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ inv0.
 move:ro_prefix;cut{1}->:=(take_nth witness i p);1:smt(size_take);move=>h1.
 cut:=hh2 (take i p) (nth witness p i) (oget prefixes.[take (i + 1) p]).`1.
@@ -1846,7 +1846,7 @@ proof.
 move=>Hinv H_size H_take_iS H_take_i H_hs_h.
 cut[]_ _ H _ _:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ Hinv.
 cut[]sa sc:=H _ H_take_iS i _;1:smt(size_take).
-rewrite!take_take !min_lel//= 1:/# nth_take 1,2:/#H_take_i=>[][]/=[->>->>] H_pm.
+rewrite!take_take !minrE (: i <= i + 1) 1: /# nth_take 1,2:/#H_take_i=>[][]/=[->>->>] H_pm.
 cut[]b' c' H_Pm:exists b' c', Pm.[(sa +^ nth witness p i, sc)] = Some (b',c').
 + rewrite H_pm. exists (oget prefixes.[take (i + 1) p]).`1 (oget prefixes.[take (i + 1) p]).`2.
   by move: H_take_iS; rewrite domE; case: (prefixes.[take (i + 1) p])=> //= - [].
@@ -2040,7 +2040,7 @@ proof.
       move=>[]b2 c2 h2[]H_PFm H_Gmh. 
       rewrite H_Gmh/=.
       cut[]b6 c6[]:=H_pref1 _ H12 i{2} _;1:smt(size_take).
-      by rewrite!take_take !min_lel 1,2:/# nth_take 1,2:/# H2/==>[][]->>->><-;rewrite H_PFm oget_some.
+      by rewrite!take_take !minrE (: i{2} <= i{2} + 1) //= 1:/# nth_take 1,2:/# H2/==>[][]->>->><-;rewrite H_PFm oget_some.
     - rewrite/#.
     - cut[]HINV[]->>/=[]->>/=[]H_h[]H_path H_F_RO:=H6 H11.
       cut[]H01 H02 H_pref1 H_pref2:=m_p_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
@@ -2051,7 +2051,7 @@ proof.
       * rewrite/#.
       move=>[]b2 c2 h2[]H_PFm H_Gmh. 
       cut[]b6 c6[]:=H_pref1 _ H12 i{2} _;1:smt(size_take).
-      rewrite!take_take !min_lel 1,2:/# nth_take 1,2:/# H2/=H_Gmh oget_some=>[][]<<-<<-<-. 
+      rewrite!take_take !minrE (: i{2} <= i{2} + 1) // 1:/# nth_take 1,2:/# H2/=H_Gmh oget_some=>[][]<<-<<-<-. 
       rewrite H_PFm oget_some/=.
       cut [] help1 help2:= m_mh_of_INV _ _ _ _ _ _ _ _ _ _ _ _ HINV.
       + by have [] xc fx yc fy [#] /# := help2 _ _ _ _ H_Gmh.
@@ -2075,7 +2075,7 @@ proof.
       * rewrite/#.
       move=>[]b2 c2 h2[]H_PFm H_Gmh. 
       cut[]b6 c6[]:=H_pref1 _ H12 i{2} _;1:smt(size_take).
-      rewrite!take_take !min_lel 1,2:/# nth_take 1,2:/# H2/==>[][]<<-<<-<-. 
+      rewrite!take_take !minrE (: i{2} <= i{2} + 1) 1:/# nth_take 1,2:/# H2/==>[][]<<-<<-<-. 
       rewrite H_PFm/=(@take_nth witness)1:/#.
       by cut[]help1 help2/# :=mh_of_INV _ _ _ _  _ _ _ _ _ _ _ _ HINV.
 
@@ -2176,7 +2176,8 @@ proof.
           cut->/=:(if i{2} + 1 < size bs{1} then i{2} + 1 else size bs{1}) = i{2} + 1 by rewrite/#.
           move=>[]H0j HjiS;rewrite!get_setE.
           cut->/=:! take j (take (i{2} + 1) bs{1}) = take (i{2} + 1) bs{1} by smt(size_take).
-          rewrite!take_take!min_lel 1,2:/# nth_take 2:/#;1:smt(prefix_ge0).
+          rewrite!take_take!minrE (: j <= i{2} + 1) 1:/# (: j + 1 <= i{2} + 1) 1:/#.
+          rewrite nth_take 2:/#;1:smt(prefix_ge0).
           case(j < i{2})=>Hij.
           - cut->/=:!take (j + 1) bs{1} = take (i{2} + 1) bs{1} by smt(size_take).
             by cut:=Hmp1(take i{2} bs{1}) _ j _;
@@ -2397,7 +2398,7 @@ proof.
             rewrite negb_exists/=;progress;rewrite !negb_and.
             by cut[]/#:=H_hs_spec.
           cut[]eq_xor ->>:=h_eq.
-          move:h;rewrite h_eq/==>->>.
+          move:h;rewrite eq_xor/==>->>.
           cut/#:!(p0 = (take i{2} bs{1}) /\ bn = (nth witness bs{1} i{2})) =>
                 F.RO.m{2}.[rcons p0 bn] = Some b0.
           move:H_h;case:f=>h_flag;last first.
@@ -2497,7 +2498,8 @@ proof.
       cut->/=:(if i{2} + 1 < size bs{1} then i{2} + 1 else size bs{1}) = i{2} + 1 by rewrite/#.
       move=>HjiS;rewrite!get_setE.
       cut->/=:! take j (take (i{2} + 1) bs{1}) = take (i{2} + 1) bs{1} by smt(size_take).
-      rewrite!take_take!min_lel 1,2:/# nth_take 2:/#;1:smt(prefix_ge0).
+      rewrite!take_take!minrE (: j <= i{2} + 1) 1:/# (: j + 1 <= i{2} + 1) 1:/#.
+      rewrite nth_take 2:/#;1:smt(prefix_ge0).
       case(j < i{2})=>Hij.
       - cut->/=:!take (j + 1) bs{1} = take (i{2} + 1) bs{1} by smt(size_take).
         by cut:=Hmp1(take i{2} bs{1}) _ j _;smt(domE take_take nth_take prefix_ge0 size_take get_setE).

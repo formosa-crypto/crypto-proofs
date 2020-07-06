@@ -1,4 +1,6 @@
 require import Int Distr Real SmtMap FSet Mu_mem.
+require (*--*) StdOrder.
+(*---*) import StdOrder.IntOrder.
 require (****) PROM FelTactic.
 
 
@@ -130,9 +132,9 @@ section Preimage.
       (card (fdom RO.m) <= Bounder.bounder <= bound)
       =>//.
     - rewrite StdBigop.Bigreal.BRA.big_const List.count_predT List.Range.size_range.
-      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_ge0).
-      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_ge0).
-      by rewrite StdRing.RField.intmulr; smt(). 
+      rewrite ler_maxr //=; 1:smt(bound_ge0).
+      rewrite-RField.AddMonoid.iteropE-RField.intmulpE; 1: smt(bound_ge0).
+      by rewrite RField.intmulr; smt(). 
     - inline*; auto=> /> &h.
       rewrite mem_rng_empty /= fdom0 fcards0 /=; smt(bound_ge0). 
     - proc.
@@ -284,9 +286,9 @@ section SecondPreimage.
         (card (fdom RO.m) - 1 <= Bounder.bounder <= bound /\ mess1 \in RO.m)=> {h}
       =>//.
     + rewrite StdBigop.Bigreal.BRA.big_const List.count_predT List.Range.size_range.
-      rewrite IntExtra.Extrema.max_ler //=; 1:smt(bound_ge0).
-      rewrite-StdRing.RField.AddMonoid.iteropE-StdRing.RField.intmulpE; 1: smt(bound_ge0).
-      by rewrite StdRing.RField.intmulr; smt(mu_bounded bound_ge0). 
+      rewrite ler_maxr //=; 1:smt(bound_ge0).
+      rewrite-RField.AddMonoid.iteropE-RField.intmulpE; 1: smt(bound_ge0).
+      by rewrite RField.intmulr; smt(mu_bounded bound_ge0). 
     + inline*; auto=> />.
       move=> &h r; rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
       rewrite get_set_sameE//= fdom_set fdom0 fset0U fcard1 /= rngE /=; split; 2: smt(bound_ge0). 
@@ -445,7 +447,7 @@ section Collision.
         (collision RO.m)
         [Bounder(RF(RO)).get: (card (fdom RO.m) <= Bounder.bounder < bound)]
         (card (fdom RO.m) <= Bounder.bounder <= bound)=> //. 
-  + rewrite -StdBigop.Bigreal.BRA.mulr_suml StdRing.RField.mulrAC.
+  + rewrite -StdBigop.Bigreal.BRA.mulr_suml RField.mulrAC.
     rewrite StdOrder.RealOrder.ler_wpmul2r; 1: smt(mu_bounded).
     by rewrite StdBigop.Bigreal.sumidE //; smt(bound_ge0).
   + inline*; auto=> />.
@@ -475,7 +477,7 @@ section Collision.
     rnd; skip=> /> &h bounder _ h _. 
     rewrite (mu_mem (frng RO.m{h}) sampleto (mu1 sampleto witness)); 1: smt(sampleto_fu).
     rewrite StdOrder.RealOrder.ler_wpmul2r //. 
-    by rewrite RealExtra.le_fromint; smt(le_card_frng_fdom). 
+    by rewrite le_fromint; smt(le_card_frng_fdom). 
   + move=> c; proc; inline*; auto; sp; if; last by auto; smt().
     auto=> /> &h h1 h2 _ sample _.
     by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
