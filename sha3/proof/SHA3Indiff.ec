@@ -277,7 +277,7 @@ lemma security &m :
   (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof.
 rewrite -(replace_simulator &m).
-rewrite exprS 1:addz_ge0 1:ge0_r 1:ge0_c exprDn 1:ge0_r 1:ge0_c.
+rewrite exprSr 1:addz_ge0 1:ge0_r 1:ge0_c mulrC exprD_nneg 1:ge0_r 1:ge0_c.
 have -> :
   (limit ^ 2 - limit)%r / (2 * (2 ^ r * 2 ^ c))%r =
   ((limit ^ 2 - limit)%r / 2%r) * (1%r / (2 ^ r)%r) * (1%r / (2 ^ c)%r).
