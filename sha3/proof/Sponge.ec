@@ -391,7 +391,7 @@ local lemma LRO_RO (D <: ERO.RO_Distinguisher{ERO.RO, ERO.FRO}) &m :
 proof.
 byequiv=> //; proc.
 seq 1 1 : (={glob D, ERO.RO.m}); first sim.
-symmetry; call (RO_LRO_D D dbool_ll); auto.
+by symmetry; call (RO_LRO_D D _); auto; rewrite dbool_ll.
 qed.
 
 (* make a Hybrid IRO out of a random oracle *)
@@ -1639,8 +1639,7 @@ rcondf{2} 1; first auto; progress;
   by rewrite -lezNgt needed_blocks_non_pos ltzW.
 rcondf{1} 1; first auto; progress;
   by rewrite -lezNgt pmulr_lle0 1:gt0_r needed_blocks_non_pos ltzW.
-auto; progress;
-  [by rewrite blocks2bits_nil | by smt(needed_blocks0)].
+by auto; progress; smt(needed_blocks0).
 (* 0 <= n1 *)
 conseq
   (_ :

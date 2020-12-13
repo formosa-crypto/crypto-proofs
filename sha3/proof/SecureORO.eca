@@ -263,7 +263,8 @@ section SecondPreimage.
             Pr [ SecondPreimage3(A,RO).main(mess1) @ &m : res ].
     - rewrite eq_sym.
       byequiv=>//=; proc.
-      by call(RO_LRO_D (D1(A)) sampleto_ll); inline*; auto.
+      call(RO_LRO_D (D1(A)) _); first by rewrite sampleto_ll.
+      by inline*; auto.
     by byequiv=> //=; proc; inline*; wp -2 18; sim.
   byphoare(: arg = mess1 ==> _)=>//=; proc.
   seq 1 : (rng (rem RO.m mess1) (oget RO.m.[mess1]))

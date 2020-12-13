@@ -643,7 +643,8 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
+call(RO_LRO_D Dist _); first by rewrite dbool_ll.
+by inline*; auto=> />.
 qed.
 
 local lemma rw_ideal_2 &m:
@@ -1403,7 +1404,8 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-by call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
+call(RO_LRO_D Dist _); first by rewrite dbool_ll.
+by inline*; auto=> />.
 qed.
 
 
@@ -2281,7 +2283,8 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   by call eq_eager_ideal2; auto.
 rewrite eq_sym; byequiv=> //=; proc. 
-by call(RO_LRO_D Dist dbool_ll); inline*; auto=> />.
+call(RO_LRO_D Dist _); first by rewrite dbool_ll.
+by inline*; auto=> />.
 qed.
 
 local equiv toto :

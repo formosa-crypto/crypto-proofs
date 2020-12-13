@@ -184,7 +184,6 @@ wp; sp.
 call (_ : ={Perm.m, Perm.mi}); first sim.
 auto.
 auto; progress; by rewrite blocks2bits_nil.
-auto.
 qed.
 
 lemma drestr_commute2 &m :
@@ -222,8 +221,7 @@ inline RaiseFun(BlockSponge.BIRO.IRO).f.
 wp; sp.
 call (_ : ={BlockSponge.BIRO.IRO.mp}); first sim.
 auto.
-auto; progress. by rewrite blocks2bits_nil.
-auto.
+by auto.
 qed.
 
 op wit_pair : block * capacity = witness.
