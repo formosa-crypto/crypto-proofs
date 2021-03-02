@@ -44,12 +44,12 @@ axiom dout_equal_dlist : dmap dout to_list = dlist dbool size_out.
 
 lemma doutE1 x : mu1 dout x = inv (2%r ^ size_out).
 proof.
-cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x). 
+have->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x). 
 + rewrite dlist1E.
   - smt(size_out_gt0).
   rewrite spec_dout/=.
   pose p:= StdBigop.Bigreal.BRM.big _ _ _.
-  cut->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
+  have->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
   - rewrite /p =>{p}. 
     apply StdBigop.Bigreal.BRM.eq_bigr.
     by move=> i; rewrite//= dbool1E.
@@ -351,10 +351,10 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 12?.
-    rewrite take_oversize 1:spec_dout 1:H4 //.
+  - move=> &l &r H0 H1 H2 H3 H4 bs_L mp_L H5 H6 H7 H8 H9.
+    rewrite take_oversize 1:spec_dout 1:H5 //.
     rewrite eq_sym to_listK => ->.
-    by have:=H3; rewrite domE; smt().
+    by have:=H4; rewrite domE; smt().
   - smt(take_oversize spec_dout).
   while{1}(BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ 
         0 <= i{1} <= size_out /\ n{1} = size_out /\
@@ -362,11 +362,11 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 9?.
+    move=> &h H0 H1 H2 H3 H4 H5 H6 H7 H8.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
-    rewrite - H6; congr; rewrite H4=> //=.
-    by apply H3=> //=.
+    rewrite - H7; congr; rewrite H5=> //=.
+    by apply H4=> //=.
   smt(size_out_gt0 size_ge0 take0).
 auto=> //=.
 conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\ n{1} = size_out /\
@@ -380,14 +380,14 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r H0 H1 H2 H3 H4 mp_L bs_L H5 H6 H7 H8 H9; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
-  - rewrite oget_some H8; 1:smt(); congr; congr.
+  - rewrite oget_some H9; 1:smt(); congr; congr.
     by rewrite eq_sym to_listK; smt(spec2_dout).
   move=> Hneq.
-  by rewrite -(H6 _ _ Hneq) H2; smt(domE).
+  by rewrite -(H7 _ _ Hneq) H3; smt(domE).
 while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   n{1} = size_out /\ inv m{1} RFList.m{2} /\
   (forall j, (x{1}, j) \in BIRO.IRO.mp{1} => 0 <= j < i{1}) /\
@@ -396,7 +396,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
 + sp; rcondt{1} 1; auto=> />.
   - smt().
-  move=> &l &r *.
+  move=> &l &r H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 rL _.
   rewrite get_setE /= size_rcons /=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
@@ -404,7 +404,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   - move=>j Hj0 Hjsize; rewrite get_setE/=nth_rcons.
     case: (j = size bs{l})=>[->>//=|h].
     have/=Hjs:j < size bs{l} by smt().
-    by rewrite Hjs/=H8//=.
+    by rewrite Hjs/=H9//=.
 by auto; smt(size_out_gt0).
 qed.
 
@@ -583,7 +583,7 @@ local lemma eager_ideal &m :
       OSimulator(ExtendSample(FSome(BIRO.IRO))),
       ODRestr(Dist_of_P1Adv(A))).main() @ &m : res].
 proof.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO),
     OSimulator(FSome(BIRO.IRO)),
     ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] =
@@ -614,7 +614,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   inline{1} 1; inline{2} 1; sp; sim.
   by call eq_eager_ideal; auto.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     OSimulator(ExtendSample(FSome(BIRO.IRO))),
     ODRestr(Dist_of_P1Adv(A))).main() @ &m : res] =
@@ -774,9 +774,9 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> /> &l &r H0 H1 H2 H3 H5 H6 result_L mp_L m_R H7 H8 H9 H10 H11; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
-have h:=spec2_dout result_L H5.
+have h:=spec2_dout result_L H7.
 have-> := some_oget _ h.
 by rewrite /= eq_sym -to_listK.
 qed.
@@ -877,8 +877,10 @@ qed.
   swap{1} 4; sp. 
   seq 2 2 : (={glob A, glob Perm, hash, m} /\ Bounder.bounder{1} = Counter.c{2}).
   + call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-    - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+(** - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt(). **)
+(** FIXME: two different instances of x{1} with InvalidGoalShape **)
+    - by proc; inline *; sp; if; auto; 2:sim=> />; smt().
+    - by proc; inline*; sp; if; auto; 2:sim=> />; smt().
     - proc; inline*; sp; if; auto; sp=> />.
       by conseq(:_==> ={z0, glob Perm})=> />; sim.
     by auto. 
@@ -1069,10 +1071,10 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 12?.
-    rewrite take_oversize 1:spec_dout 1:H4 //.
+  - move=> &l &r H0 H1 H2 H3 H4 bs_L mp_L H5 H6 H7 H8 H9.
+    rewrite take_oversize 1:spec_dout 1:H5 //.
     rewrite eq_sym to_listK => ->.
-    by have:=H3; rewrite domE; smt().
+    by have:=H4; rewrite domE; smt().
   - smt(take_oversize spec_dout).
   while{1}(BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ 
         0 <= i{1} <= size_out /\ n{1} = size_out /\
@@ -1080,11 +1082,11 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 9?.
+    move=> &h H0 H1 H2 H3 H4 H5 H6 H7 H8.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
-    rewrite - H6; congr; rewrite H4=> //=.
-    by apply H3=> //=.
+    rewrite - H7; congr; rewrite H5=> //=.
+    by apply H4=> //=.
   smt(size_out_gt0 size_ge0 take0).
 auto=> //=.
 conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\ n{1} = size_out /\
@@ -1098,14 +1100,14 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r H0 H1 H2 H3 H4 mp_L bs_L H5 H6 H7 H8 H9; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
-  - rewrite oget_some H8; 1:smt(); congr; congr.
+  - rewrite oget_some H9; 1:smt(); congr; congr.
     by rewrite eq_sym to_listK; smt(spec2_dout).
   move=> Hneq.
-  by rewrite -(H6 _ _ Hneq) H2; smt(domE).
+  by rewrite -(H7 _ _ Hneq) H3; smt(domE).
 while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   n{1} = size_out /\ inv m{1} RFList.m{2} /\
   (forall j, (x{1}, j) \in BIRO.IRO.mp{1} => 0 <= j < i{1}) /\
@@ -1114,7 +1116,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
 + sp; rcondt{1} 1; auto=> />.
   - smt().
-  move=> &l &r 13?.
+  move=> &l &r H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 result_l _.
   rewrite get_setE/=size_rcons/=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
@@ -1122,7 +1124,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   - move=>j Hj0 Hjsize; rewrite get_setE/=nth_rcons.
     case: (j = size bs{l})=>[->>//=|h].
     have/=Hjs:j < size bs{l} by smt().
-    by rewrite Hjs/=H8//=.
+    by rewrite Hjs/=H9//=.
 by auto; smt(size_out_gt0).
 qed.
 
@@ -1294,7 +1296,7 @@ local lemma eager_ideal &m :
       OSimulator(ExtendSample(FSome(BIRO.IRO))),
       ODRestr(Dist_of_P2Adv(A))).main() @ &m : res].
 proof.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO),
     OSimulator(FSome(BIRO.IRO)),
     ODRestr(Dist_of_P2Adv(A))).main() @ &m : res] =
@@ -1351,7 +1353,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   inline{1} 1; inline{2} 1; sp; sim.
   by call eq_eager_ideal; auto.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     OSimulator(ExtendSample(FSome(BIRO.IRO))),
     ODRestr(Dist_of_P2Adv(A))).main() @ &m : res] =
@@ -1448,9 +1450,9 @@ if{1}.
   inline{1} 1; sp; auto.
   sp; rcondt{1} 1; auto.
   inline{1} 1; sp; auto.
-  call(eq_IRO_RFWhile); auto=> /> 15?. 
+  call(eq_IRO_RFWhile); auto=> /> &1 &2 bounder_R H0 H1 H2 H3 H4 H5 result_R mp_L m_R H6 H7 H8 H9.
   rewrite take_oversize 1:/# /=. 
-  have:=spec2_dout _ H5.
+  have:=spec2_dout _ H6.
   move=>/(some_oget)-> /=; smt(divz_ge0 gt0_r size_ge0 spec2_dout).
 move=>/=.
 conseq(:_==> true); auto.
@@ -1556,7 +1558,7 @@ seq 1 1 : (={glob A, glob OFC, glob OSimulator, Log.m} /\
          SORO.Bounder.bounder{2} <= Counter.c{1}); last first.
 + sp; case: (increase_counter Counter.c{1} Dist_of_P2Adv.m{1} size_out <= SHA3Indiff.limit).
   - exists * mi{2}, Dist_of_P2Adv.m{1}, Counter.c{1}; elim* => mess2 mess1 c.
-    call(titi mess2 (increase_counter c mess1 size_out))=> /= />.
+    call(titi mess2 (increase_counter c mess1 size_out))=> /=.
     by call(titi mess1 c)=> />; auto; smt().
   inline*; sp.
   rcondf{1} 1; 1: auto; sp.
@@ -1610,9 +1612,9 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> &l &r H0 H1 H2 H3 H4 H5 result_L mp_L m_R H6 H7 H8 H9 H10; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
-have h:=spec2_dout result_L H5.
+have h:=spec2_dout result_L H6.
 have-> := some_oget _ h.
 by rewrite eq_sym -to_listK; congr.
 qed.
@@ -1734,8 +1736,8 @@ inline{1} 1; sp; wp=> />.
 seq 1 1 : (={glob A, glob Perm} /\ m1{1} = Dist_of_P2Adv.m{2} /\
   m2{1} = m'{2} /\ Bounder.bounder{1} = Counter.c{2}).
 + auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
-  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; smt().
   - proc; inline*; sp; if; auto; sp=> />.
     by conseq(:_==> ={z0, glob Perm})=> />; sim.
   by auto; smt().
@@ -1948,10 +1950,10 @@ if{2}; sp; last first.
   conseq(:_==> BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ i{1} = size_out /\
         inv mp{1} RFList.m{2} /\
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))=> />.
-  - move=> &l &r 12?.
-    rewrite take_oversize 1:spec_dout 1:H4 //.
+  - move=> &l &r H0 H1 H2 H3 H4 bs_L mp_L H5 H7 H8 H9 H10.
+    rewrite take_oversize 1:spec_dout 1:H5 //.
     rewrite eq_sym to_listK => ->.
-    by have:=H3; rewrite domE; smt().
+    by have:=H4; rewrite domE; smt().
   - smt(take_oversize spec_dout).
   while{1}(BIRO.IRO.mp{1} = mp{1} /\ size bs{1} = i{1} /\ 
         0 <= i{1} <= size_out /\ n{1} = size_out /\
@@ -1959,11 +1961,11 @@ if{2}; sp; last first.
         bs{1} = take i{1} (to_list (oget RFList.m{2}.[x{1}])))(size_out - i{1});
       auto=> />.
   + sp; rcondf 1; auto=> />; 1: smt().
-    move=> &h 9?.
+    move=> &h H0 H1 H2 H3 H4 H5 H6 H7 H8.
     rewrite size_rcons //=; do!split; 1, 2, 4: smt(size_ge0).
     rewrite (take_nth witness) 1:spec_dout 1:size_ge0//=. 
-    rewrite - H6; congr; rewrite H4=> //=.
-    by apply H3=> //=.
+    rewrite - H7; congr; rewrite H5=> //=.
+    by apply H4=> //=.
   smt(size_out_gt0 size_ge0 take0).
 auto=> //=.
 conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\ n{1} = size_out /\
@@ -1977,14 +1979,14 @@ conseq(:_==> l{2} = bs{1} /\ size bs{1} = i{1} /\ i{1} = n{1} /\
   (forall l j, l <> x{1} => m{1}.[(l,j)] = BIRO.IRO.mp{1}.[(l,j)]) /\
   (forall j, 0 <= j < i{1} => (x{1}, j) \in BIRO.IRO.mp{1}) /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
-+ move=> /> &l &r 12?; do!split; ..-2 : smt(domE mem_set).
++ move=> /> &l &r H0 H1 H2 H3 H4 mp_L bs_L H5 H6 H7 H8 H9; do!split; ..-2 : smt(domE mem_set).
   move=> l j Hin.
   rewrite get_setE/=.
   case: (l = x{r}) => [<<-|].
-  - rewrite oget_some H8; 1:smt(); congr; congr.
+  - rewrite oget_some H9; 1:smt(); congr; congr.
     by rewrite eq_sym to_listK; smt(spec2_dout).
   move=> Hneq.
-  by rewrite -(H6 _ _ Hneq) H2; smt(domE).
+  by rewrite -(H7 _ _ Hneq) H3; smt(domE).
 while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   n{1} = size_out /\ inv m{1} RFList.m{2} /\
   (forall j, (x{1}, j) \in BIRO.IRO.mp{1} => 0 <= j < i{1}) /\
@@ -1993,7 +1995,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   (forall j, 0 <= j < i{1} => BIRO.IRO.mp{1}.[(x{1},j)] = Some (nth witness bs{1} j))).
 + sp; rcondt{1} 1; auto=> />.
   - smt().
-  move=> &l &r 13?.
+  move=> &l &r H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 rL _.
   rewrite get_setE/=size_rcons/=; do!split; 1,2: smt(size_ge0).
   - smt(mem_set).
   - smt(get_setE).
@@ -2001,7 +2003,7 @@ while(l{2} = bs{1} /\ size bs{1} = i{1} /\ 0 <= i{1} <= n{1} /\ ={i} /\
   - move=>j Hj0 Hjsize; rewrite get_setE/=nth_rcons.
     case: (j = size bs{l})=>[->>//=|h].
     have/=Hjs:j < size bs{l} by smt().
-    by rewrite Hjs/=H8//=.
+    by rewrite Hjs/=H9//=.
 by auto; smt(size_out_gt0).
 qed.
 
@@ -2173,7 +2175,7 @@ local lemma eager_ideal &m :
       OSimulator(ExtendSample(FSome(BIRO.IRO))),
       ODRestr(Dist_of_CollAdv(A))).main() @ &m : res].
 proof.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(FSome(BIRO.IRO),
     OSimulator(FSome(BIRO.IRO)),
     ODRestr(Dist_of_CollAdv(A))).main() @ &m : res] =
@@ -2230,7 +2232,7 @@ cut->:
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
   inline{1} 1; inline{2} 1; sp; sim.
   by call eq_eager_ideal; auto.
-cut->: 
+have->: 
   Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     OSimulator(ExtendSample(FSome(BIRO.IRO))),
     ODRestr(Dist_of_CollAdv(A))).main() @ &m : res] =
@@ -2326,9 +2328,9 @@ if{1}.
   inline{1} 1; sp; auto.
   sp; rcondt{1} 1; auto.
   inline{1} 1; sp; auto.
-  call(eq_IRO_RFWhile); auto=> /> 15?. 
+  call(eq_IRO_RFWhile); auto=> /> &1 &2 bounder_R H0 H1 H2 H3 H4 H5 result_L mp_L m_R H6 H7 H8 H9.
   rewrite take_oversize 1:/# /=. 
-  have:=spec2_dout _ H5.
+  have:=spec2_dout _ H6.
   move=>/(some_oget)-> /=; smt(divz_ge0 gt0_r size_ge0 spec2_dout).
 move=>/=.
 conseq(:_==> true); auto.
@@ -2430,7 +2432,7 @@ seq 1 2 : (={glob A, glob OFC, glob OSimulator, Log.m, m1, m2} /\
          SORO.Bounder.bounder{2} <= Counter.c{1}); last first.
 + sp; case: (increase_counter Counter.c{1} m1{1} size_out <= SHA3Indiff.limit).
   - exists * m2{2}, m1{1}, Counter.c{1}; elim* => mess2 mess1 c.
-    call(titi mess2 (increase_counter c mess1 size_out))=> /= />.
+    call(titi mess2 (increase_counter c mess1 size_out))=> /=.
     by call(titi mess1 c)=> />; auto; smt().
   inline*; sp.
   rcondf{1} 1; 1: auto; sp.
@@ -2482,9 +2484,9 @@ rcondf{2} 4; 1: auto.
 inline{2} 1; sp.
 rcondt{2} 1; 1: by auto; smt(divz_ge0 gt0_r size_ge0).
 auto; call eq_IRO_RFWhile; auto=> />.
-move=> &l &r 14?; split; 2: smt(divz_ge0 gt0_r size_ge0).
+move=> &l &r H0 H1 H2 H3 H4 H5 result_L mp_L m_R H6 H7 H8 H9 H10; split; 2: smt(divz_ge0 gt0_r size_ge0).
 rewrite cats0 take_oversize 1:/# take_oversize 1:spec_dout //=.
-have h:=spec2_dout result_L H5.
+have h:=spec2_dout result_L H6.
 have-> := some_oget _ h.
 by rewrite eq_sym -to_listK; congr.
 qed.
@@ -2599,8 +2601,8 @@ inline{1} 1; inline{2} 1; sp.
 inline{1} 1; sp; wp=> />.
 seq 1 1 : (={glob A, glob Perm, m1, m2} /\ Bounder.bounder{1} = Counter.c{2}).
 + auto; call(: ={glob Perm} /\ Bounder.bounder{1} = Counter.c{2})=> //=.
-  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
-  - by proc; inline*; sp; if; auto; 2:sim=> />; 1: smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; smt().
+  - by proc; inline*; sp; if; auto; 2:sim=> />; smt().
   - proc; inline*; sp; if; auto; sp=> />.
   by conseq(:_==> ={z0, glob Perm})=> />; sim.
 conseq(:_==> ={hash1, hash2, m1, m2})=> //=; 1: smt(); sim.

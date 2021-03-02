@@ -224,7 +224,7 @@ lemma SHA3OIndiff
   (limit ^ 2 - limit)%r / (2 ^ (r + c + 1))%r + (4 * limit ^ 2)%r / (2 ^ c)%r.
 proof. 
 move=>h.
-cut->: Pr[OGReal(CSome(Sponge), PSome(Perm), ODRestr(Dist)).main() @ &m : res] =
+have->: Pr[OGReal(CSome(Sponge), PSome(Perm), ODRestr(Dist)).main() @ &m : res] =
        Pr[RealIndif(Sponge, Perm, DRestr(OD(Dist))).main() @ &m : res].
 + byequiv=>//=; proc; inline*; sim; sp.
   call(: ={glob Perm, glob Counter} /\ ={c}(Counter,Cntr))=>/>; auto.
@@ -239,7 +239,7 @@ cut->: Pr[OGReal(CSome(Sponge), PSome(Perm), ODRestr(Dist)).main() @ &m : res] =
   - by sp; if; auto; sp; if; auto.
   conseq(:_==> ={glob Perm, sa, sc})=> />; sim.
   by while(={glob Perm, sa, sc, xs}); auto; sp; if; auto=> />.
-cut->: Pr[OGIdeal(FSome(IRO), OSimulator, ODRestr(Dist)).main() @ &m : res] =
+have->: Pr[OGIdeal(FSome(IRO), OSimulator, ODRestr(Dist)).main() @ &m : res] =
         Pr[IdealIndif(IRO, Simulator, DRestr(OD(Dist))).main() @ &m : res].
 + byequiv=>//=; proc; inline*; sim; sp.
   call(: ={glob IRO, glob Simulator, glob Counter} /\ ={c}(Counter,Cntr)); auto.

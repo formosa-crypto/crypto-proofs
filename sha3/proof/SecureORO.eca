@@ -106,7 +106,7 @@ section Preimage.
   lemma RO_is_preimage_resistant &m :
     Pr [ Preimage(A,RF(RO)).main() @ &m : res ] <= (bound + 1)%r * mu1 sampleto witness.
   proof.
-  cut->: Pr [ Preimage (A,RF(RO)).main() @ &m : res ] = 
+  have->: Pr [ Preimage (A,RF(RO)).main() @ &m : res ] = 
          Pr [ Preimage2(A,RF(RO)).main() @ &m : res ].
   + by byequiv=> //=; proc; inline*; sim.
   byphoare(: _ ==> _) => //=; proc.
@@ -121,7 +121,8 @@ section Preimage.
     by auto=> />; rewrite fdom0 fcards0; smt(bound_ge0).
   + seq 1 : true 1%r (bound%r * mu1 sampleto witness) 0%r _; auto.
     exists * Preimage2.hash; elim* => h.
-    call(: Preimage2.hash = h /\ h = arg ==> rng RO.m h)=> //; bypr=> /> {&m} &m {h} <-.
+    call(: Preimage2.hash = h /\ h = arg ==> rng RO.m h)=> //.
+    bypr=> /> {&m} &m <<- <-.
     pose h := Preimage2.hash{m}.
     have H: forall &m h, 
          Pr[FEL(A, RF(RO)).main(h) @ &m : rng RO.m h] <= bound%r * mu1 sampleto witness; last first.
@@ -135,17 +136,17 @@ section Preimage.
       rewrite ler_maxr //=; 1:smt(bound_ge0).
       rewrite-RField.AddMonoid.iteropE-RField.intmulpE; 1: smt(bound_ge0).
       by rewrite RField.intmulr; smt(). 
-    - inline*; auto=> /> &h.
+    - inline*; auto=> />.
       rewrite mem_rng_empty /= fdom0 fcards0 /=; smt(bound_ge0). 
     - proc.
       sp; if; auto; sp; inline*; sp; wp=> /=.
       case: (x \in RO.m); wp => //=.
       + by hoare; auto; smt(mu_bounded). 
-      rnd (pred1 h); auto=> /> &h c ??????.
+      rnd (pred1 h); auto=> /> &h c H0 H1 H2 H3 H4 H5.
       rewrite (sampleto_fu h witness) /= => ? ?.
       rewrite rngE/= => [][] a; rewrite get_setE. 
       case: (a=x{h}) => [->>|] //=.
-      by move:H1; rewrite rngE /= negb_exists/= => /(_ a) //=.
+      by move:H2; rewrite rngE /= negb_exists/= => /(_ a) //=.
     - move=> c; proc; inline*; sp; if; sp.
       + auto; progress. 
         + smt().
@@ -277,7 +278,7 @@ section SecondPreimage.
     - proc; inline*; auto; sp; if; last by auto; smt().
       auto=> /> &h c Hc Hdom Hc2 sample.
       by rewrite sampleto_full/=!fdom_set !fcardU !fcard1;smt(mem_set fcard_ge0).
-    auto=> /> &h sample.
+    auto=> /> sample.
     by rewrite mem_set mem_empty/= fdom_set fdom0 fset0U fcard1; smt(bound_ge0).
   + call(: arg = mess1 ==> rng (rem RO.m mess1) (oget RO.m.[mess1])); auto.
     bypr=> {&m} &m h; rewrite h.
@@ -291,7 +292,7 @@ section SecondPreimage.
       rewrite-RField.AddMonoid.iteropE-RField.intmulpE; 1: smt(bound_ge0).
       by rewrite RField.intmulr; smt(mu_bounded bound_ge0). 
     + inline*; auto=> />.
-      move=> &h r; rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
+      move=> r; rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
       rewrite get_set_sameE//= fdom_set fdom0 fset0U fcard1 /= rngE /=; split; 2: smt(bound_ge0). 
       by rewrite negb_exists/= => a; rewrite remE get_setE //= emptyE; smt().
     + proc; inline*; sp; if; last by hoare; auto.
@@ -329,8 +330,8 @@ section SecondPreimage.
     swap [7..11] -6; sp.
     swap[5..6] 2; wp 6=> /=.
     case: (SecondPreimage2.m2 \in RO.m).
-    - rcondf 5; 1: auto; hoare; auto=> /> &h d _ _ in_dom1 not_rng _ in_dom2.
-      move=> sample2 _ sample1 _; rewrite negb_and/=.
+    - rcondf 5; 1: auto; hoare; auto=> /> &h d _ _ in_dom1 not_rng d_bound _ in_dom2.
+      move=> sample2 _ m1_in_RO sample1 _; rewrite negb_and/=.
       move: not_rng; rewrite rngE /= negb_exists /= => /(_ SecondPreimage2.m2{h}).
       rewrite remE; case: (SecondPreimage2.m2{h} = m1{h})=> //=.
       by move: in_dom1 in_dom2; smt().
@@ -483,7 +484,7 @@ section Collision.
     auto=> /> &h h1 h2 _ sample _.
     by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
   move=> b c; proc; inline*; sp; if; auto.
-  move=> /> &h  h1 h2 _ _ sample _.
+  move=> /> &h  h1 h2 _ h3 sample _.
   by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
   qed.
 
