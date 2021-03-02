@@ -107,7 +107,7 @@ case: (n{1} <= 0).
   + by auto; smt(size_ge0).
   rcondf{1} 3; 1:by auto.
   rcondf{2} 1.
-  + by auto=> /> &hr _ /needed_blocks_non_pos /#.
+  + by auto=> /> &hr /needed_blocks_non_pos /#.
   by auto=> /> &1 &2 _ n_le0; rewrite !take_le0.
 while (   ={glob P, z, n, sa, sc}
        /\ (finished{1} <=> n{1} <= size z{1})
@@ -1778,7 +1778,7 @@ rcondf{1} 1; first auto; progress; smt().
 rcondf{1} 1; first auto; progress; smt().
 auto=> |> &1 &2 ? ? sz_eq ? ? need_blks_eq.
 split.
-have -> : n{1} = size (blocks2bits bs{2})
+have -> : n1 = size (blocks2bits bs{2})
   by rewrite size_blocks2bits sz_eq -mulzC divzK 1:needed_blocks_eq_div_r.
 by rewrite take_size.
 by rewrite sz_eq need_blks_eq.
@@ -2084,9 +2084,9 @@ call (HIRO.HybridIROEager_f_BlockIRO_f n' xs2).
 skip=> |> &1 &2 ? res1 res2 mp1 mp2 ? vb_imp not_vb_imp.
 case: (valid_block (pad2blocks bs{2}))=> [vb | not_vb].
 have [le0_n2_imp gt0_n2_imp] := vb_imp vb.
-case: (n{2} <= 0)=> [le0_n2 /# | not_le0_n2].
-have gt0_n2 : 0 < n{2} by smt().
-by have [-> _] := gt0_n2_imp gt0_n2.
+case: (n' <= 0)=> [le0_n' /# | not_le0_n'].
+have gt0_n' : 0 < n' by smt().
+by have [-> _] := gt0_n2_imp gt0_n'.
 have [-> ->] := not_vb_imp not_vb; by rewrite blocks2bits_nil.
 qed.
 

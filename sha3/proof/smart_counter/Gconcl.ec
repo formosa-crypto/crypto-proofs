@@ -378,9 +378,12 @@ proof.
   rewrite !(ler_add2l, ler_add2r);apply lerr_eq.
   apply (eq_trans _ Pr[G3(F.FullEager.LRO).distinguish() @ &m : res]);1:by byequiv G2_G3.
   apply (eq_trans _ Pr[G3(F.RO ).distinguish() @ &m : res]).
-  + by byequiv (_: ={glob G3, F.RO.m} ==> _)=>//;symmetry;conseq (F.FullEager.RO_LRO_D G3 Block.DBlock.dunifin_ll).
+  + byequiv (_: ={glob G3, F.RO.m} ==> _)=>//;symmetry;conseq (F.FullEager.RO_LRO_D G3 _)=> //.
+    by move=> _; exact/Block.DBlock.dunifin_ll.
   apply (eq_trans _ Pr[G4(F.RO ).distinguish() @ &m : res]);1:by byequiv G3_G4.
-  apply (eq_trans _ Pr[G4(F.FullEager.LRO).distinguish() @ &m : res]);1:by byequiv (F.FullEager.RO_LRO_D G4 Block.DBlock.dunifin_ll).
+  apply (eq_trans _ Pr[G4(F.FullEager.LRO).distinguish() @ &m : res]).
+  + byequiv (F.FullEager.RO_LRO_D G4 _)=> //.
+    by move=> _; exact/Block.DBlock.dunifin_ll.
   by byequiv G4_Ideal.
 qed.
   

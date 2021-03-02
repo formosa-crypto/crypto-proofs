@@ -39,12 +39,12 @@ axiom dout_equal_dlist : dmap dout to_list = dlist dbool size_out.
 
 lemma doutE1 x : mu1 dout x = inv (2%r ^ size_out).
 proof.
-cut->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x). 
+have->:inv (2%r ^ size_out) = mu1 (dlist dbool size_out) (to_list x). 
 + rewrite dlist1E.
   - smt(size_out_gt0).
   rewrite spec_dout/=.
   pose p:= StdBigop.Bigreal.BRM.big _ _ _.
-  cut->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
+  have->: p = StdBigop.Bigreal.BRM.big predT (fun _ => inv 2%r) (to_list x).
   - rewrite /p =>{p}. 
     apply StdBigop.Bigreal.BRM.eq_bigr.
     by move=> i; rewrite//= dbool1E.
@@ -152,18 +152,18 @@ section Preimage.
       Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
-  cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
+  have prod_ll:Distr.is_lossless (bdistr `*` cdistr).
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
-  cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
+  have->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
   rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
-  cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
+  have/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
-  cut{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
+  have{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
   move:a. 
-  cut:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
-  cut->//=:fdom m \subset frng m. 
+  have:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
+  have->//=:fdom m \subset frng m. 
   + by move=> x; rewrite mem_fdom mem_frng hyp.
   smt(mem_fdom mem_frng).
   qed.
@@ -244,8 +244,8 @@ section Preimage.
     - smt().
     - exact(dout_ll).
     - have[] h[#] h1 h2 := H.
-      cut->:i_R = size_out by smt().
-      cut<-:=h2 _ H3.
+      have->:i_R = size_out by smt().
+      have<-:=h2 _ H3.
       smt(to_listK).
   rcondt{1} 2; 1: auto; wp =>/=.
   exists* BIRO.IRO.mp{2}; elim* => mp.
@@ -366,7 +366,7 @@ section Preimage.
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
     - rewrite get_setE (H4 _ _ H11).
-      cut/#: !(l1, j) = (x0{2}, size bs0{2}).
+      have/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
@@ -405,7 +405,7 @@ section Preimage.
   rewrite(preimage_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m ha init_ha).
   exists (SimSetSize(Simulator))=>//=; split.
   + by move=> F _; proc; inline*; auto.
-  cut->//:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, DPre(A)).main() @ &m : res] =
+  have->//:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, DPre(A)).main() @ &m : res] =
         Pr[RealIndif(Sponge, Perm, DRestr(DSetSize(DPre(A)))).main() @ &m : res].
   + byequiv=>//=; proc. 
     inline DPre(A, CSetSize(Sponge, Perm), Perm).distinguish.
@@ -434,7 +434,7 @@ section Preimage.
       by call(equiv_sponge_perm c1 m); auto; smt().
     auto; progress.
     by rewrite /invm=> x y; rewrite 2!emptyE.
-  cut->//:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), DPre(A)).main() @ &m : res] =
+  have->//:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), DPre(A)).main() @ &m : res] =
         Pr[IdealIndif(BIRO.IRO, Simulator, DRestr(DSetSize(DPre(A)))).main() @ &m : res].
   + byequiv=>//=; proc.
     inline Simulator(FGetSize(RO)).init RO.init Simulator(BIRO.IRO).init 
@@ -509,18 +509,18 @@ section SecondPreimage.
       Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
-  cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
+  have prod_ll:Distr.is_lossless (bdistr `*` cdistr).
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
-  cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
+  have->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
   rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
-  cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
+  have/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
-  cut{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
+  have{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
   move:a. 
-  cut:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
-  cut->//=:fdom m \subset frng m. 
+  have:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
+  have->//=:fdom m \subset frng m. 
   + by move=> x; rewrite mem_fdom mem_frng hyp.
   smt(mem_fdom mem_frng).
   qed.
@@ -591,8 +591,8 @@ section SecondPreimage.
     - smt().
     - exact(dout_ll).
     - have[] h[#] h1 h2 := H.
-      cut->:i_R = size_out by smt().
-      cut<-:=h2 _ H3.
+      have->:i_R = size_out by smt().
+      have<-:=h2 _ H3.
       smt(to_listK).
   rcondt{1} 2; 1: auto; wp =>/=.
   exists* BIRO.IRO.mp{2}; elim* => mp.
@@ -713,7 +713,7 @@ section SecondPreimage.
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
     - rewrite get_setE (H4 _ _ H11).
-      cut/#: !(l1, j) = (x0{2}, size bs0{2}).
+      have/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
@@ -752,7 +752,7 @@ section SecondPreimage.
   rewrite(second_preimage_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m mess init_mess).
   exists (SimSetSize(Simulator)); split.
   + by move=> F _; proc; inline*; auto.
-  cut->:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, D2Pre(A)).main() @ &m : res] =
+  have->:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, D2Pre(A)).main() @ &m : res] =
         Pr[RealIndif(Sponge, Perm, DRestr(DSetSize(D2Pre(A)))).main() @ &m : res].
   + byequiv=>//=; proc. 
     inline Perm.init CSetSize(Sponge, Perm).init Sponge(Perm).init 
@@ -810,7 +810,7 @@ section SecondPreimage.
       by call(equiv_sponge_perm c1 m); auto; smt().
     inline*; auto; progress.
     by rewrite /invm=> x y; rewrite 2!emptyE.
-  cut->:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), D2Pre(A)).main() @ &m : res] =
+  have->:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), D2Pre(A)).main() @ &m : res] =
         Pr[IdealIndif(BIRO.IRO, Simulator, DRestr(DSetSize(D2Pre(A)))).main() @ &m : res].
   + byequiv=>//=; proc.
     inline Simulator(FGetSize(RO)).init RO.init Simulator(BIRO.IRO).init 
@@ -902,18 +902,18 @@ section Collision.
       Prefix.invm m mi => ! a \in m => Distr.is_lossless ((bdistr `*` cdistr) \ rng m).
   proof.
   move=>hinvm nin_dom.
-  cut prod_ll:Distr.is_lossless (bdistr `*` cdistr).
+  have prod_ll:Distr.is_lossless (bdistr `*` cdistr).
   + by rewrite dprod_ll DBlock.dunifin_ll DCapacity.dunifin_ll. 
   apply dexcepted_ll=>//=;rewrite-prod_ll.
-  cut->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
+  have->:predT = predU (predC (rng m)) (rng m);1:rewrite predCU//=.
   rewrite Distr.mu_disjoint 1:predCI//=RField.addrC. 
-  cut/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
+  have/=->:=StdOrder.RealOrder.ltr_add2l (mu (bdistr `*` cdistr) (rng m)) 0%r.
   rewrite Distr.witness_support/predC.
   move:nin_dom;apply absurd=>//=;rewrite negb_exists/==>hyp. 
-  cut{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
+  have{hyp}hyp:forall x, rng m x by smt(supp_dprod DBlock.supp_dunifin DCapacity.supp_dunifin). 
   move:a. 
-  cut:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
-  cut->//=:fdom m \subset frng m. 
+  have:=eqEcard (fdom m) (frng m);rewrite leq_card_rng_dom/=. 
+  have->//=:fdom m \subset frng m. 
   + by move=> x; rewrite mem_fdom mem_frng hyp.
   smt(mem_fdom mem_frng).
   qed.
@@ -983,8 +983,8 @@ section Collision.
     - smt().
     - exact(dout_ll).
     - have[] h[#] h1 h2 := H.
-      cut->:i_R = size_out by smt().
-      cut<-:=h2 _ H3.
+      have->:i_R = size_out by smt().
+      have<-:=h2 _ H3.
       smt(to_listK).
   rcondt{1} 2; 1: auto; wp =>/=.
   exists* BIRO.IRO.mp{2}; elim* => mp.
@@ -1105,7 +1105,7 @@ section Collision.
     - by rewrite size_cat/=.
     - by rewrite mem_set; left; rewrite H3. 
     - rewrite get_setE (H4 _ _ H11).
-      cut/#: !(l1, j) = (x0{2}, size bs0{2}).
+      have/#: !(l1, j) = (x0{2}, size bs0{2}).
       move:H2; apply absurd=> //=[#] <<- ->>.
       have[] h1 [] h2 h3 := H1.
       by apply h2; smt().
@@ -1142,7 +1142,7 @@ section Collision.
   rewrite (coll_resistant_if_indifferentiable A A_ll (CSetSize(Sponge)) Perm &m).
   exists (SimSetSize(Simulator)); split.
   + by move=> F _; proc; inline*; auto.
-  cut->:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, DColl(A)).main() @ &m : res] =
+  have->:Pr[Indiff0.Indif(CSetSize(Sponge, Perm), Perm, DColl(A)).main() @ &m : res] =
         Pr[RealIndif(Sponge, Perm, DRestr(DSetSize(DColl(A)))).main() @ &m : res].
   + byequiv=>//=; proc. 
     inline Perm.init CSetSize(Sponge, Perm).init Sponge(Perm).init 
@@ -1193,7 +1193,7 @@ section Collision.
       by call(equiv_sponge_perm c1 m); auto; smt().
     inline*; auto; progress.
     by rewrite /invm=> x y; rewrite 2!emptyE.
-  cut->:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), DColl(A)).main() @ &m : res] =
+  have->:Pr[Indiff0.Indif(RO, SimSetSize(Simulator, RO), DColl(A)).main() @ &m : res] =
         Pr[IdealIndif(BIRO.IRO, Simulator, DRestr(DSetSize(DColl(A)))).main() @ &m : res].
   + byequiv=>//=; proc.
     inline Simulator(FGetSize(RO)).init RO.init Simulator(BIRO.IRO).init 

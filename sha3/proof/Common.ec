@@ -154,7 +154,7 @@ have -> : (n + r - 1) %/r * r = (n + r - 1) - (n + r - 1)%% r
 have -> : n + r - 1 - (n + r - 1) %% r - n = r - 1 - (n + r - 1) %% r
   by ring.
 rewrite ltzE -(@ler_add2r (-r)) /=.
-cut -> : r - 1 - (n + r - 1) %% r + 1 - r = -(n + r - 1) %% r by ring.
+have -> : r - 1 - (n + r - 1) %% r + 1 - r = -(n + r - 1) %% r by ring.
 by rewrite oppz_le0 modz_ge0 gtr_eqF 1:gt0_r.
 qed.
 

@@ -112,7 +112,7 @@ section Preimage.
   lemma RO_is_preimage_resistant &m (h : to) :
     Pr [ Preimage(A,RO).main(h) @ &m : res ] <= (bound + 1)%r * mu1 sampleto h.
   proof.
-  cut->: Pr [ Preimage (A,RO).main(h) @ &m : res ] = 
+  have->: Pr [ Preimage (A,RO).main(h) @ &m : res ] = 
          Pr [ Preimage2(A,RO).main(h) @ &m : res ].
   + by byequiv=> //=; proc; inline*; sim.
   byphoare(: arg = h ==> _) => //=; proc.
@@ -141,10 +141,10 @@ section Preimage.
       if; last by hoare; auto; progress; smt(mu_bounded).
       case: (x \in RO.m); wp => //=.
       + by hoare; auto; smt(mu_bounded). 
-      rnd (pred1 h); auto=> /> &h c ????????.
-      rewrite rngE/= => hh [] a; rewrite get_setE. 
+      rnd (pred1 h); auto=> /> &h c ge0_c lt_c_bound h_notin_rngRO le_sRO_c le_c_bound Hcount x_notin_RO v _.
+      rewrite rngE=> /= - [] a; rewrite get_setE.
       case: (a=x{h}) => [->>|] //=.
-      by move:H1; rewrite rngE /= negb_exists/= => /(_ a) //=.
+      by move:h_notin_rngRO; rewrite rngE /= negb_exists/= => /(_ a) //=.
     - move=> c; proc; inline*; sp; if; sp.
       + if; auto; progress. 
         + smt().
@@ -178,8 +178,8 @@ section Preimage.
     - hoare; auto; progress. 
       rewrite H3/=; move: H1; rewrite rngE /= negb_exists /=.
       by have:=H3; rewrite domE; smt().
-    rnd (pred1 h); auto=> //= &hr [#]->>??<<-????.
-    by rewrite H3 /= get_setE /=; smt().
+    rnd (pred1 h); auto=> //= &hr [#]->>H0 H1<<-H2 H3 H4 H5 H6.
+    by rewrite H4 /= get_setE /=; smt().
   smt().
   qed.
 
@@ -297,7 +297,7 @@ section SecondPreimage.
     - proc; inline*; auto; sp; if; sp; auto; if; last by auto; smt().
       auto=> /> &h c Hc _ Hdom Hc2 _ sample.
       by rewrite sampleto_full/=!fdom_set !fcardU !fcard1;smt(mem_set fcard_ge0).
-    auto=> /> &h sample.
+    auto=> /> sample.
     by rewrite mem_set mem_empty/= fdom_set fdom0 fset0U fcard1; smt(bound_gt0).
   + call(: arg = mess1 ==> rng (rem RO.m mess1) (oget RO.m.[mess1])); auto.
     bypr=> {&m} &m h; rewrite h.
@@ -310,8 +310,8 @@ section SecondPreimage.
       rewrite ler_maxr //=; 1:smt(bound_gt0).
       rewrite-RField.AddMonoid.iteropE-RField.intmulpE; 1: smt(bound_gt0).
       by rewrite RField.intmulr; smt(mu_bounded bound_gt0). 
-    + inline*; auto=> />.
-      move=> &h r; rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
+    + inline*; auto=> /> r.
+      rewrite mem_empty /= !mem_set mem_empty/= sampleto_full /=.
       rewrite get_set_sameE//= fdom_set fdom0 fset0U fcard1 /= rngE /=; split; 2: smt(bound_gt0). 
       by rewrite negb_exists/= => a; rewrite remE get_setE //= emptyE; smt().
     + proc; inline*; sp; if; last by hoare; auto.
@@ -351,7 +351,7 @@ section SecondPreimage.
     rcondt 3; 1: auto.
     swap 3 -2; sp.
     case: (SecondPreimage2.m2 \in RO.m).
-    - rcondf 5; 1: auto; hoare; auto=> /> &h d _ _ in_dom1 not_rng _ in_dom2.
+    - rcondf 5; 1: auto; hoare; auto=> /> &h d _ _ in_dom1 not_rng _ _ in_dom2.
       move=> sample2 _ sample1 _; rewrite negb_and/=.
       move: not_rng; rewrite rngE /= negb_exists /= => /(_ SecondPreimage2.m2{h}).
       rewrite remE; case: (SecondPreimage2.m2{h} = m1{h})=> //=.
@@ -472,7 +472,7 @@ section Collision.
   + by move=> />; smt(mu_bounded).
   + inline*; wp; call(: card (fdom RO.m) <= Bounder.bounder <= bound); auto.
     - proc; inline*; sp; if; auto; sp; if; last by auto; smt().
-      auto=> /> &h d Hbc _ _ Hcb sample _; split.
+      auto=> /> &h d Hbc _ Hcb _ sample _; split.
       * by move=> nin_dom1; rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
       by move=> in_dom1; smt().
     by move=> />; rewrite fdom0 fcards0; smt(bound_gt0).
@@ -509,15 +509,15 @@ section Collision.
       have:= Hcoll2; rewrite negb_exists /= => /(_ m1).
       rewrite negb_exists /= => /(_ m2).
       by rewrite neq in_dom1 in_dom2 /= => ->.
-    rnd; skip=> /> &h bounder _ h _. 
+    rnd; skip=> /> &h c0 bounder _ h _. 
     rewrite (mu_mem (frng RO.m{h}) sampleto (mu1 sampleto witness)); 1: smt(sampleto_fu).
     rewrite StdOrder.RealOrder.ler_wpmul2r //. 
     by rewrite le_fromint; smt(le_card_frng_fdom). 
   + move=> c; proc; sp; if; auto; inline*; auto; sp; if; last by auto; smt().
-    auto=> /> &h d h1 _ h2 _ sample _.
+    auto=> /> &h d h1 _ h2 sample _.
     by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
   move=> b c; proc; inline*; sp; if; auto; sp; if; auto; 2: smt().
-  move=> /> &h  h1 h2 _ _ _ sample _.
+  move=> /> &h  h1 h2 _ h3 _ sample _.
   by rewrite fdom_set fcardU fcard1; smt(fcard_ge0).
   qed.
 

@@ -297,11 +297,11 @@ section.
       if;1,3:auto;progress.
       rcondt{2} 3;1:by auto=>/#.
       auto;progress. 
-      + move=>bad1;cut[/=->//|]:=H bad1;rewrite/inv_ext=>[][]x h[]H_dom Hh;right.
+      + move=>bad1;have[/=->//|]:=H bad1;rewrite/inv_ext=>[][]x h[]H_dom Hh;right.
         exists x h;rewrite H_dom/= get_set_neqE //=. 
         by move:(H0 h);rewrite domE Hh /#.
       + smt(mem_set).
-      + move=>bad1;cut[/=->//|]:=H bad1;rewrite/inv_ext=>[][]x h[]H_dom Hh;right.
+      + move=>bad1;have[/=->//|]:=H bad1;rewrite/inv_ext=>[][]x h[]H_dom Hh;right.
         exists x h;rewrite H_dom/= get_set_neqE //=. 
         by move:(H0 h);rewrite domE Hh /#.
       + smt(mem_set).
@@ -706,7 +706,7 @@ section EXT.
   proof.
     apply (ler_trans _ _ _ (Real_G1 D D_ll &m)).
     do !apply ler_add => //.
-    + cut ->: Pr[G1(DRestr(D)).main() @ &m : res] = Pr[Eager(G2(DRestr(D))).main1() @ &m : res].
+    + have ->: Pr[G1(DRestr(D)).main() @ &m : res] = Pr[Eager(G2(DRestr(D))).main1() @ &m : res].
       + by byequiv (G1_G2 D).
       by apply lerr_eq;byequiv (Eager_1_2 (G2(DRestr(D)))). 
     + by apply (Pr_G1col D D_ll &m).

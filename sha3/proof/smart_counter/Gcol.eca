@@ -209,7 +209,7 @@ section PROOF.
     + proc;sp;if;2:by hoare=>//??;apply eps_ge0.
       wp.
       rnd (mem (image fst (frng FRO.m)));skip;progress;2:smt ml=0. 
-      cut->:=(Mu_mem.mu_mem (image fst (frng FRO.m{hr})) cdistr (1%r/(2^c)%r) _).
+      have->:=(Mu_mem.mu_mem (image fst (frng FRO.m{hr})) cdistr (1%r/(2^c)%r) _).
       + move=>x _; rewrite DCapacity.dunifin1E;do !congr;smt(@Capacity). 
       apply ler_wpmul2r;2:by rewrite le_fromint.
       by apply divr_ge0=>//;apply /c_ge0r. 
@@ -240,7 +240,7 @@ section PROOF.
       if;1:auto.
       - inline Gcol.sample_c;rcondt{2}4.
         * auto;inline*;auto;progress. 
-          + by cut/#:=fcard_image_leq (fun (p : capacity * flag) => p.`1) (frng FRO.m{hr}). 
+          + by have/#:=fcard_image_leq (fun (p : capacity * flag) => p.`1) (frng FRO.m{hr}). 
           rewrite/#.
         seq 3 4 : (={x0, p, v, y1, hx2, F.RO.m, G1.mi, G1.paths, G1.m, G1.mhi, 
                G1.chandle, G1.mh, FRO.m, C.c, C.queries}
@@ -250,15 +250,15 @@ section PROOF.
             /\ (x0{1}.`2 \in G1.paths{1})
             /\ y2{1} = c{2});1: by inline*;auto.
         sp 1 4;if;auto;progress.
-        + by cut->:=(H H6).
+        + by have->:=(H H6).
         + smt(card_rng_set).
-        + case:H5=>/=[h|H_hinv];1: by cut->:=H h.
-          cut:=hinvP FRO.m{2} c{2};rewrite H_hinv/=imageP/==>[][]f H_f. 
+        + case:H5=>/=[h|H_hinv];1: by have->:=H h.
+          have:=hinvP FRO.m{2} c{2};rewrite H_hinv/=imageP/==>[][]f H_f. 
           by right; exists (c{2}, f)=> //=; rewrite mem_frng rngE/= /#.
         smt(card_rng_set).
      inline Gcol.sample_c;rcondt{2}3.
       * auto;progress. 
-        + by cut/#:=fcard_image_leq (fun (p : capacity * flag) => p.`1) (frng FRO.m{hr}). 
+        + by have/#:=fcard_image_leq (fun (p : capacity * flag) => p.`1) (frng FRO.m{hr}). 
         rewrite/#.
       seq 2 3 : (={x0, y1, hx2, F.RO.m, G1.mi, G1.paths, G1.m, G1.mhi, 
              G1.chandle, G1.mh, FRO.m, C.c, C.queries}
@@ -268,10 +268,10 @@ section PROOF.
           /\ ! (x0{1}.`2 \in G1.paths{1})
           /\ y2{1} = c{2});1: by auto.
       sp 1 4;if;auto;progress.
-      + by cut->:=(H H6).
+      + by have->:=(H H6).
       + smt(card_rng_set).
-      + case:H5=>/=[h|H_hinv];1: by cut->:=H h.
-        cut:= hinvP FRO.m{2} c{2}.
+      + case:H5=>/=[h|H_hinv];1: by have->:=H h.
+        have:= hinvP FRO.m{2} c{2}.
         rewrite H_hinv /= imageP /= => [] [] f H_f.
         by right; exists (c{2},f); rewrite mem_frng rngE /=; exists (oget (hinv FRO.m{2} c{2})).
       smt(card_rng_set).
@@ -298,7 +298,7 @@ section PROOF.
          Gcol.count <= C.c <= max_size){2});2:by auto;smt w=card_rng_set.
       inline Gcol.sample_c.
       rcondt{2}3.
-      + by auto;progress;cut /#:= fcard_image_leq fst (frng FRO.m{hr}).
+      + by auto;progress;have /#:= fcard_image_leq fst (frng FRO.m{hr}).
 (* BUG: auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | H].  marche pas ???? *)
       auto=> /> ?? Himp _ _ _ ?_?_ [/Himp->// | X];right;apply hinv_image=> //.  
 

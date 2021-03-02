@@ -40,7 +40,7 @@ qed.
 
 lemma parse_valid p: valid_block p => parse p = (p,1).
 proof.
-move=>h;cut{1}->:p=format p 1;2:smt(parseK).
+move=>h;have{1}->:p=format p 1;2:smt(parseK).
 by rewrite/format/=nseq0 cats0.
 qed.
 

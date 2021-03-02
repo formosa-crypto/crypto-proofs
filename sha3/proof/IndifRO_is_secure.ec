@@ -107,13 +107,13 @@ section Collision.
         bound + ((limit * (limit - 1) + 2)%r / 2%r * mu1 sampleto witness).
   proof.
   move=>[] S [] S_ll Hbound.
-  cut->: Pr[Collision(A, FM(C,P)).main() @ &m : res] = 
+  have->: Pr[Collision(A, FM(C,P)).main() @ &m : res] = 
          Pr[GReal(C, P, DColl(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sim.
     by swap{1} [1..2] 2; sim.
-  cut/#:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] <= 
+  have/#:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] <= 
          (limit * (limit - 1) + 2)%r / 2%r * mu1 sampleto witness.
-  cut->:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] =
+  have->:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] =
         Pr[Collision(A, SRO.RO.RO).main() @ &m : res].
   + byequiv=>//=; proc; inline DColl(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp. 
@@ -153,13 +153,13 @@ section Preimage.
         bound + (limit + 1)%r * mu1 sampleto hash.
   proof.
   move=>init_hash [] S [] S_ll Hbound.
-  cut->: Pr[Preimage(A, FM(C,P)).main(hash) @ &m : res] = 
+  have->: Pr[Preimage(A, FM(C,P)).main(hash) @ &m : res] = 
          Pr[GReal(C, P, DPre(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
     by swap{2} [1..2] 4; sim; auto; smt(). 
-  cut/#:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] <= 
+  have/#:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] <= 
          (limit + 1)%r * mu1 sampleto hash.
-  cut->:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] =
+  have->:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] =
         Pr[Preimage(A, SRO.RO.RO).main(hash) @ &m : res].
   + byequiv=>//=; proc; inline DPre(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp; sim; auto.
@@ -199,13 +199,13 @@ section SecondPreimage.
         bound + (limit + 1)%r * mu1 sampleto witness.
   proof.
   move=>init_mess [] S [] S_ll Hbound.
-  cut->: Pr[SecondPreimage(A, FM(C,P)).main(mess) @ &m : res] = 
+  have->: Pr[SecondPreimage(A, FM(C,P)).main(mess) @ &m : res] = 
          Pr[GReal(C, P, D2Pre(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
     by swap{2} [1..2] 3; sim; auto; smt(). 
-  cut/#:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] <= 
+  have/#:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] <= 
          (limit + 1)%r * mu1 sampleto witness.
-  cut->:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] =
+  have->:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] =
         Pr[SecondPreimage(A, SRO.RO.RO).main(mess) @ &m : res].
   + byequiv=>//=; proc; inline D2Pre(A, RO, S(RO)).distinguish; wp; sim.
     inline*; swap{2} 1 1; wp; sim; auto.

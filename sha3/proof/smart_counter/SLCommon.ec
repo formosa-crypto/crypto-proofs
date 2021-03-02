@@ -406,7 +406,7 @@ lemma all_take_in (l : block list) i prefixes :
   i <= prefix l (get_max_prefix l (elems (fdom prefixes))).
 proof.
 move=>[hi0 hisize] all_prefix take_in_dom.
-cut->:i = prefix l (take i l);2:smt(get_max_prefix_max memE mem_fdom).
+have ->:i = prefix l (take i l);2:smt(get_max_prefix_max memE mem_fdom).
 apply get_prefix. 
 + smt(size_take). 
 + by right;left;apply size_eq0;rewrite size_drop//size_take//=/#.
@@ -424,7 +424,7 @@ proof.
 move=>h_i h_nil h_all_prefixes take_in_dom [?[h_prefix_inv h_exist]].
 case(take i l = [])=>//=h_take_neq_nil.
 + smt(prefix_ge0 size_take).
-cut[l2 h_l2_mem]:=h_exist l i h_take_neq_nil take_in_dom.
+have [l2 h_l2_mem]:=h_exist l i h_take_neq_nil take_in_dom.
 rewrite -mem_fdom memE in h_l2_mem.
 rewrite(StdOrder.IntOrder.ler_trans _ _ _ _ (get_max_prefix_max _ _ _ h_l2_mem)).
 rewrite-{1}(cat_take_drop i l)prefix_cat size_take 1:/#;smt(prefix_ge0).
@@ -446,8 +446,8 @@ move=>l3 ll Hind l1 l2[->|[->|h1]].
 + by rewrite prefix_eq max_prefix_eq ltzNge prefix_sizel /= prefix_eq. 
 + rewrite prefix_eq max_prefix_eq. 
   case(prefix l3 l2 < size l3)=>//=h;1:by rewrite prefix_eq.
-  cut h1:prefix l3 l2 = size l3 by smt(prefix_sizel).
-  cut: size l3 <= prefix l3 (max_prefix l3 l2 ll);2:smt(prefix_sizel).
+  have h1: prefix l3 l2 = size l3 by smt(prefix_sizel).
+  have: size l3 <= prefix l3 (max_prefix l3 l2 ll);2:smt(prefix_sizel).
   rewrite-h1.
   by clear Hind l1 h h1;move:l2 l3;elim:ll=>//=l3 ll Hind l1 l2/#.
 by case(prefix l1 l2 < prefix l1 l3)=>//=/#.
@@ -475,7 +475,7 @@ lemma prefix_geq (l1 l2 : 'a list) :
 proof.
 move:l2;elim:l1=>//=[[] //=|] e1 l1 Hind l2;elim:l2=>//=e2 l2 Hind2.
 case(e1=e2)=>//=h12.
-cut->/=:! 1 + prefix l1 l2 <= 0 by smt(prefix_ge0).
+have ->/=:! 1 + prefix l1 l2 <= 0 by smt(prefix_ge0).
 rewrite h12/=/#.
 qed.
 
@@ -484,7 +484,7 @@ lemma prefix_take_prefix (l1 l2 : 'a list) :
 proof.
 move:l2;elim:l1=>//=e1 l1 Hind l2;elim:l2=>//=e2 l2 Hind2.
 case(e1=e2)=>//=h12.
-cut->/=:! 1 + prefix l1 l2 <= 0 by smt(prefix_ge0).
+have ->/=:! 1 + prefix l1 l2 <= 0 by smt(prefix_ge0).
 rewrite h12/=/#.
 qed.
 
@@ -508,11 +508,11 @@ lemma prefix_take_geq_prefix (l1 l2 : 'a list) i :
     prefix l1 l2 = prefix (take i l1) l2.
 proof.
 move=>hi.
-cut:prefix (take i l1) l2 <= prefix l1 l2.
+have: prefix (take i l1) l2 <= prefix l1 l2.
 + rewrite-{2}(cat_take_drop i l1) prefix_leq_prefix_cat.
-cut/#:prefix l1 l2 <= prefix (take i l1) l2.
+have /#: prefix l1 l2 <= prefix (take i l1) l2.
 rewrite -prefix_take_prefix.
-rewrite-(cat_take_drop (prefix l1 l2) (take i l1))take_take minrE hi //=.
+rewrite -(cat_take_drop (prefix l1 l2) (take i l1))take_take minrE hi //=.
 by rewrite prefix_leq_prefix_cat. 
 qed.
 
@@ -555,19 +555,19 @@ move:l;elim:ll=>//=l2 ll Hind l1;clear Hind;move:l1 l2;elim:ll=>//=.
   rewrite-(cat_take_drop (prefix l1 l2) (take i l1))
     -{3}(cat_take_drop (prefix l1 l2) l2)take_take/min H0/=.
   rewrite prefix_take. 
-  cut:drop (prefix l1 l2) (take i l1) <> drop (prefix l1 l2) l2;2:smt(catsI). 
+  have: drop (prefix l1 l2) (take i l1) <> drop (prefix l1 l2) l2;2:smt(catsI). 
   rewrite (prefix_take_geq_prefix l1 l2 i) 1:/#.  
-  cut:=drop_prefix_neq (take i l1) l2.
-  cut/#:drop (prefix (take i l1) l2) (take i l1) <> [].
-  cut:0 < size (drop (prefix (take i l1) l2) (take i l1));2:smt(size_eq0).
+  have:= drop_prefix_neq (take i l1) l2.
+  have /#: drop (prefix (take i l1) l2) (take i l1) <> [].
+  have: 0 < size (drop (prefix (take i l1) l2) (take i l1));2:smt(size_eq0).
   rewrite size_drop 1:prefix_ge0 size_take;1:smt(prefix_ge0).
   by rewrite-prefix_take_geq_prefix /#.
 
 move=>l3 ll hind l1 l2.
 case(prefix l1 l2 < prefix l1 l3)=>//=h;progress.
 + rewrite!negb_or/=. 
-  cut:=hind l1 l3 H i H0;rewrite negb_or=>[][->->]/=.
-  cut:=hind l1 l2 _ i _;smt(prefix_prefix_prefix).
+  have:= hind l1 l3 H i H0;rewrite negb_or=>[][->->]/=.
+  have:= hind l1 l2 _ i _;smt(prefix_prefix_prefix).
 smt(prefix_prefix_prefix).
 qed.
 
@@ -579,10 +579,10 @@ lemma asfadst queries prefixes (bs : block list) :
     take (prefix bs (get_max_prefix bs (elems (fdom queries))) + 1) bs = bs.
 proof.
 progress. 
-cut h:=prefix_inv_leq bs (size bs) prefixes queries _ _ _ _ _;rewrite//=.
+have h:=prefix_inv_leq bs (size bs) prefixes queries _ _ _ _ _;rewrite//=.
 + exact size_ge0.
 + rewrite H2//=;exact size_ge0.
-cut->/=:prefix bs (get_max_prefix bs (elems (fdom queries))) = size bs by smt(prefix_sizel).
+have ->/=: prefix bs (get_max_prefix bs (elems (fdom queries))) = size bs by smt(prefix_sizel).
 rewrite take_oversize/#.
 qed.
 
@@ -598,9 +598,9 @@ case(ll1 = [])=>//=[-> _ _|].
 move=> ll1_nil incl all_prefix incl2; have ll2_nil: ll2 <> [] by smt(mem_eq0).
 have:= get_max_prefix_max l ll2 (get_max_prefix l ll1) _.
 + by rewrite incl mem_get_max_prefix ll1_nil.
-cut mem_ll2:=mem_get_max_prefix l ll2 ll2_nil.
-cut[]l3 mem_ll1:=incl2 _ mem_ll2.
-cut:=get_max_prefix_max l ll1 _ mem_ll1.
+have mem_ll2:=mem_get_max_prefix l ll2 ll2_nil.
+have[]l3 mem_ll1:=incl2 _ mem_ll2.
+have:=get_max_prefix_max l ll1 _ mem_ll1.
 smt(prefixC prefix_leq_prefix_cat).
 qed.
 
@@ -609,7 +609,7 @@ lemma prefix_inv_nil queries prefixes :
     elems (fdom queries) = [] => fdom prefixes \subset fset1 [].
 proof.
 move=>[h1 [h2 h3]] h4 x h5;rewrite in_fset1.
-cut:=h3 x (size x).
+have:=h3 x (size x).
 rewrite take_size -mem_fdom h5/=;apply absurd=>//=h6.
 rewrite h6/=negb_exists/=;smt(memE mem_fdom).
 qed.
@@ -639,12 +639,12 @@ lemma prefix_exchange queries prefixes (l : block list) :
 proof.
 move=> [h1[h2 h3]] h5.
 case: (elems (fdom queries) = [])=> h4.
-+ cut h6:=prefix_inv_nil queries prefixes _ h4;1:rewrite/#.
++ have h6:=prefix_inv_nil queries prefixes _ h4;1:rewrite/#.
   rewrite h4/=. 
   have fdom_prefixP: fdom prefixes = fset0 \/ fdom prefixes = fset1 [].
   + by move: h6; rewrite !fsetP /(\subset); smt(in_fset0 in_fset1).
   case(elems (fdom prefixes) = [])=>//=[->//=|]h7.
-  cut h8:elems (fdom prefixes) = [[]].
+  have h8:elems (fdom prefixes) = [[]].
   + have []:= fdom_prefixP.
     + by move=> h8; move: h7; rewrite h8 elems_fset0.
     by move=> ->; rewrite elems_fset1.
@@ -679,7 +679,7 @@ proof.
 move=>[]H_incl H_all_prefixes Hi.
 rewrite (prefix_take_leq _ (get_max_prefix l (elems (fdom queries))))1:/#.
 rewrite H_all_prefixes.
-cut:get_max_prefix l (elems (fdom queries)) \in queries;2:smt(domE).
+have:get_max_prefix l (elems (fdom queries)) \in queries;2:smt(domE).
 by rewrite -mem_fdom memE;apply prefix_gt0_mem=>/#.
 smt(prefix_sizer).
 qed.
@@ -722,14 +722,14 @@ case(prefix (l1 ++ l2) l3 < prefix (l1 ++ l2) l4)=>//=.
   case(prefix l1 l3 = size l1)=>//=H_l1l3;case(prefix l1 l4 = size l1)=>//=H_l1l4.
   - rewrite H_l1l4 H_l1l3/=ltz_add2l=>h;rewrite h/=.
     rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _)).
-    cut->/=:prefix l1 (max_prefix l1 l4 ll) = size l1
+    have->/=:prefix l1 (max_prefix l1 l4 ll) = size l1
       by move:{hind};elim:ll=>//=;smt(prefix_sizel).
-    by cut->/=:prefix l1 (max_prefix l1 l3 ll) = size l1
+    by have->/=:prefix l1 (max_prefix l1 l3 ll) = size l1
       by move:{hind};elim:ll=>//=;smt(prefix_sizel). 
   - smt(prefix_sizel prefix_ge0).
-  - cut->/=h:prefix l1 l3 < prefix l1 l4 by smt(prefix_sizel).
+  - have->/=h:prefix l1 l3 < prefix l1 l4 by smt(prefix_sizel).
     rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _)).
-    cut->/=:prefix l1 (max_prefix l1 l4 ll) = size l1
+    have->/=:prefix l1 (max_prefix l1 l4 ll) = size l1
       by move:{hind};elim:ll=>//=;smt(prefix_sizel). 
     smt(prefix_prefix_prefix).
   move=>H_l3l4;rewrite H_l3l4/=.
@@ -740,9 +740,9 @@ rewrite 2!prefix_cat1.
 case(prefix l1 l3 = size l1)=>//=H_l1l3;case(prefix l1 l4 = size l1)=>//=H_l1l4.
 + by rewrite H_l1l4 H_l1l3/=ltz_add2l=>h;rewrite h/=hind.
 + rewrite H_l1l3.
-  cut->/=:!size l1 < prefix l1 l4 by smt(prefix_sizel).
+  have->/=:!size l1 < prefix l1 l4 by smt(prefix_sizel).
   rewrite(StdOrder.IntOrder.ler_trans _ _ _ (hind _ _ _))//=.
-  cut->//=:prefix l1 (max_prefix l1 l3 ll) = size l1
+  have->//=:prefix l1 (max_prefix l1 l3 ll) = size l1
     by move:{hind};elim:ll=>//=;smt(prefix_sizel).
   smt(prefix_prefix_prefix).
 + smt(prefix_sizel prefix_ge0).
@@ -793,8 +793,8 @@ lemma invm_set (m mi : ('a * 'b, 'a * 'b) fmap) x y :
     ! x \in m => ! rng m y => invm m mi => invm m.[x <- y] mi.[y <- x].
 proof.
 move=>Hxdom Hyrng Hinv a b; rewrite !get_setE; split.
-+ case(a=x)=>//=hax hab;cut->/#:b<>y.
-  by cut/#: rng m b;rewrite rngE /#.
++ case(a=x)=>//=hax hab;have->/#:b<>y.
+  by have/#: rng m b;rewrite rngE /#.
 case(a=x)=>//=hax.
 + case(b=y)=>//=hby.
   by rewrite (eq_sym y b)hby/=-Hinv hax;rewrite domE /=/# in Hxdom.
@@ -1068,18 +1068,18 @@ lemma hinvP handles c:
   else exists f, handles.[oget (hinv handles c)] = Some(c,f).
 proof.
 move=> @/hinv.
-cut @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
+have @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
   findP (fun (_ : handle) => pred1 c \o fst) handles.
 + exists (oget handles.[h]).`2.
   by move: Hmem; rewrite domE; case: (handles.[h])=> //= - [].
-by cut := H h;rewrite domE /#.
+by have := H h;rewrite domE /#.
 qed.
 
 lemma huniq_hinv (handles:handles) (h:handle): 
   huniq handles => dom handles h => hinv handles (oget handles.[h]).`1 = Some h.
 proof.
 move=> Huniq;pose c := (oget handles.[h]).`1.
-cut:=Huniq h;cut:=hinvP handles c.
+have:=Huniq h;have:=hinvP handles c.
 case (hinv _ _)=> /=[Hdiff _| h' +/(_ h')].
 + rewrite domE /=; move: (Hdiff h (oget handles.[h]).`2).
   by rewrite /c; case: handles.[h]=> //= - [].
@@ -1092,7 +1092,7 @@ lemma hinvKP handles c:
   else handles.[oget (hinvK handles c)] = Some(c,Known).
 proof.
   rewrite /hinvK.
-  cut @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
+  have @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
   + by rewrite domE restrP;case (handles.[h])=>//= /#.
   by move=>+h-/(_ h);rewrite domE restrP => H1/#. 
 qed.

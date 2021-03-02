@@ -288,16 +288,16 @@ have -> :
   have {3}-> : 2 = 1 + 1 by trivial.
   rewrite exprS // expr1 /#.
 rewrite -/SLCommon.dstate /limit.
-cut->:=conclusion (Gconcl_list.SimLast(Gconcl.S)) (DRestr(Dist)) &m.
-cut//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).
+have->:=conclusion (Gconcl_list.SimLast(Gconcl.S)) (DRestr(Dist)) &m.
+have//=:=(Gconcl_list.Real_Ideal (LowerDist(Dist))  _ &m).
 + move=>F P hp hpi hf'//=.
-  cut hf:islossless RaiseFun(F).f.
+  have hf:islossless RaiseFun(F).f.
   - proc;call hf';auto.
   exact(Dist_lossless (RaiseFun(F)) P hp hpi hf).
 rewrite(drestr_commute1 &m) (drestr_commute2 &m).
-cut->:=Gconcl_list.Simplify_simulator (LowerDist(Dist)) _ &m.
+have->:=Gconcl_list.Simplify_simulator (LowerDist(Dist)) _ &m.
 + move=>F P hp hpi hf'//=.
-  cut hf:islossless RaiseFun(F).f.
+  have hf:islossless RaiseFun(F).f.
   - proc;call hf';auto.
   exact(Dist_lossless (RaiseFun(F)) P hp hpi hf).
 smt().

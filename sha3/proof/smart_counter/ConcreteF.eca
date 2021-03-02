@@ -138,11 +138,11 @@ section.
       * move=>x;rewrite mem_set=>[][|-> j]; 1:smt(mem_set).
         case(0 <= j)=>hj0;last first.
         + by rewrite (@take_le0 j)1:/# domE get_setE H0 /#.
-        by rewrite take_take /min; case: (j < i{2} + 1)=> _; rewrite mem_set //= /#.
+        by rewrite take_take /min; case: (j < i{2} + 1); rewrite mem_set //= /#.
       * smt(mem_set take_take domE get_setE oget_some).
       * smt(mem_set take_take domE get_setE oget_some).
       * rewrite mem_set negb_or H9 negb_or/=negb_exists/=.
-        cut htake:take (i{2} + 1) bs{1} = take (i{2} + 1) (take (i{2} + 1 + 1) bs{1});
+        have htake:take (i{2} + 1) bs{1} = take (i{2} + 1) (take (i{2} + 1 + 1) bs{1});
           smt(take_take size_take).
       * rewrite/#.
       * rewrite/#.
@@ -220,7 +220,7 @@ section.
     Pr[GReal(D).main()@ &m: res /\ C.c <= max_size] <=
     Pr[CF(DRestr(D)).main()@ &m: res] + (max_size ^ 2 - max_size)%r / 2%r * mu dstate (pred1 witness).
   proof.
-    cut->:
+    have ->:
       Pr[RealIndif(SqueezelessSponge,PC(Perm),D).main()@ &m:
          res /\ C.c <= max_size] = Pr[GReal'.main()@ &m: res/\ C.c <= max_size].
     + byequiv=>//;proc;inline *;
@@ -287,12 +287,12 @@ section.
           /\ (forall l, l \in Redo.prefixes{2} => 
                l \in pref{2} \/ (exists j, 0 <= j <= i{2} /\ l = take j p{2}))).
       + rcondf{1}1;2:rcondf{2}1;..2:auto;progress.
-         * cut:=H7 (take (i{m0}+1) p{m0}).
+         * have:=H7 (take (i{m0}+1) p{m0}).
            case((take (i{m0} + 1) p{m0} \in Redo.prefixes{m0}))=>//=_.
            rewrite negb_or negb_exists/=;progress.
            + by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ p{m0} H1 H0)//=/#.
            case(0<=a<=i{m0})=>//=ha;smt(size_take).
-         * cut:=H7 (take (i{hr}+1) p{hr}).
+         * have:=H7 (take (i{hr}+1) p{hr}).
            case((take (i{hr} + 1) p{hr} \in Redo.prefixes{hr}))=>//=_.
            rewrite negb_or negb_exists/=;progress. 
            + by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ p{hr} H1 H0)//=/#.
@@ -312,7 +312,7 @@ section.
         * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
         * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE).
         * rewrite!get_setE/=.
-          cut/#: !take (i{2} + 1) p{2} \in pref{2}.
+          have/#: !take (i{2} + 1) p{2} \in pref{2}.
           by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
         * rewrite get_set_sameE !oget_some.
           have: take (i{2} + 1) p{2} \notin Redo.prefixes{2}.
@@ -343,7 +343,7 @@ section.
         * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
         * by rewrite!get_setE.
         * rewrite !get_setE//=.
-          cut/#: !take (i{2} + 1) p{2} \in pref{2}.
+          have /#: !take (i{2} + 1) p{2} \in pref{2}.
           by rewrite -mem_fdom memE prefix_lt_size//=-(@prefix_exchange _ _ _ H1 H0)//=/#.
         * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
         * smt(prefix_lt_size  mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop memE mem_fdom).
@@ -366,8 +366,8 @@ section.
       + rcondt{1}1;2:rcondt{2}1;auto;progress.
         * rewrite/#. search get_max_prefix (<=) take mem.
         * rewrite(@prefix_inv_leq _ _ _ _ _ _ H H7 H0)//= 1:/#.
-          cut:=H0=>[][h1 [h2 h3]].
-          cut:=h3 _ _ _ H7;last smt(memE mem_fdom).
+          have :=H0=>[][h1 [h2 h3]].
+          have :=h3 _ _ _ H7;last smt(memE mem_fdom).
           smt(size_eq0 size_take).
         * smt(domE).
       auto;progress.
@@ -391,8 +391,12 @@ section.
              = Pr[PRPSec.IND(PRPi.PRPi,DBounder(D')).main() @ &m: res].
     + rewrite -(DoubleBounding PRPi.PRPi &m).
       byequiv=> //=; proc; inline *; sim (_: ={m,mi}(Perm,PRPi.PRPi) /\ ={glob C}).
-      * by proc; if=> //=; auto.
-      by proc; if=> //=; auto.
+      (** * by proc; if=> //=; auto. **)
+      * proc. if.
+        + move=> &1 &2 [#] <<- _ _ -> _. (** FIXME: the two instances of PRPi.PRPi.mi{2} appear to not be the same value; one of them in an ill-formed term **) smt().
+        + auto=> /#.
+        + auto=> /#.
+      by proc; if=> //=; auto=> /#.
     have ->: Pr[CF(DRestr(D)).main() @ &m: res]
              = Pr[PRPSec.IND(ARP,DBounder(D')).main() @ &m: res].
     + rewrite -(DoubleBounding ARP &m).
