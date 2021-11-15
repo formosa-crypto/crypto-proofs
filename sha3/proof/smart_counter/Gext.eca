@@ -157,7 +157,7 @@ clone include EagerCore
 proof * by (move=> _; exact/Capacity.DCapacity.dunifin_ll).
 
 section.
-  declare module D: DISTINGUISHER{G1, G2, FRO, C}.
+  declare module D <: DISTINGUISHER{G1, G2, FRO, C}.
 
   op inv_ext (m mi:smap) (FROm:handles) = 
      exists x h, mem (fdom m `|` fdom mi) x /\ FROm.[h] = Some (x.`2, Unknown).
@@ -315,7 +315,7 @@ end section.
 
 section EXT.
 
-  declare module D: DISTINGUISHER{C, PF, G1, G2, Perm, RO, Redo}.
+  declare module D <: DISTINGUISHER{C, PF, G1, G2, Perm, RO, Redo}.
 
   local module ReSample = {
     var count:int  
@@ -693,7 +693,7 @@ section EXT.
     by apply H10.
   qed.
 
-  axiom D_ll:
+  declare axiom D_ll:
    forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
      islossless P.f => islossless P.fi => islossless F.f => islossless D(F, P).distinguish.
 

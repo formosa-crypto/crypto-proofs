@@ -170,7 +170,7 @@ lemma build_hpath_map0 p:
    build_hpath empty p = if   p = [] then Some (b0,0) else None.
 proof.
 elim/last_ind: p=> //= p b _.
-by rewrite -{1}cats1 /build_hpath foldl_cat {1}/step_hpath /= emptyE /= [smt(size_rcons size_ge0)].
+by rewrite -{1}cats1 /build_hpath foldl_cat {1}/step_hpath /= emptyE /= #smt:(size_rcons size_ge0).
 qed.
 
 (* -------------------------------------------------------------------------- *)
@@ -580,7 +580,6 @@ lemma asfadst queries prefixes (bs : block list) :
 proof.
 progress. 
 have h:=prefix_inv_leq bs (size bs) prefixes queries _ _ _ _ _;rewrite//=.
-+ exact size_ge0.
 + rewrite H2//=;exact size_ge0.
 have ->/=: prefix bs (get_max_prefix bs (elems (fdom queries))) = size bs by smt(prefix_sizel).
 rewrite take_oversize/#.
@@ -689,8 +688,7 @@ lemma prefix_cat_leq_prefix_size (l1 l2 l3 : 'a list):
 proof.
 move:l2 l3;elim:l1=>//=.
 + by move=> l2 []; smt(prefix_sizel).
-move=>e1 l1 hind1 l2 l3;move:e1 l1 l2 hind1;elim:l3=>//=;1:smt(size_ge0).
-by move=>e3 l3 hind3 e1 l1 l2 hind1;case(e1=e3)=>//=[->>/#|h];exact size_ge0.
+by move=>e1 l1 hind1 l2 l3;move:e1 l1 l2 hind1;elim:l3=>//=;1:smt(size_ge0).
 qed.
 
 lemma prefix_cat1 (l1 l2 l3 : 'a list) :
@@ -956,9 +954,9 @@ qed.
 
 section RESTR. 
 
-  declare module F:FUNCTIONALITY{C}.
-  declare module P:PRIMITIVE{C,F}.
-  declare module D:DISTINGUISHER{F,P,C}.
+  declare module F <: FUNCTIONALITY{C}.
+  declare module P <: PRIMITIVE{C,F}.
+  declare module D <: DISTINGUISHER{F,P,C}.
 
   lemma swap_restr &m: 
     Pr[Indif(FRestr(F), PRestr(P), D).main()@ &m: res] =
@@ -973,16 +971,16 @@ end section RESTR.
 
 section COUNT.
 
-  declare module P:PRIMITIVE{C}.
-  declare module CO:CONSTRUCTION{C,P}.
-  declare module D:DISTINGUISHER{C,P,CO}.
+  declare module P  <: PRIMITIVE{C}.
+  declare module CO <: CONSTRUCTION{C,P}.
+  declare module D  <: DISTINGUISHER{C,P,CO}.
 
-  axiom f_ll  : islossless P.f.
-  axiom fi_ll : islossless P.fi.
+  declare axiom f_ll  : islossless P.f.
+  declare axiom fi_ll : islossless P.fi.
 
-  axiom CO_ll : islossless CO(P).f.
+  declare axiom CO_ll : islossless CO(P).f.
 
-  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 

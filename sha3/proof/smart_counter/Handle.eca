@@ -2561,9 +2561,9 @@ qed.
 
 section AUX.
 
-  declare module D : DISTINGUISHER {PF, RO, G1, Redo, C}.
+  declare module D <: DISTINGUISHER {PF, RO, G1, Redo, C}.
 
-  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
@@ -2669,9 +2669,9 @@ end section AUX.
 
 section.
 
-  declare module D: DISTINGUISHER{Perm, C, PF, G1, RO, Redo}.
+  declare module D <: DISTINGUISHER{Perm, C, PF, G1, RO, Redo}.
   
-  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi =>
     islossless F.f => islossless D(F, P).distinguish.
 
@@ -2682,15 +2682,16 @@ section.
       + Pr[G1(DRestr(D)).main() @&m: G1.bcol]
       + Pr[G1(DRestr(D)).main() @&m: G1.bext].
   proof. 
-    apply (@RealOrder.ler_trans _ _ _ (Real_Concrete D D_ll &m))=>//=.
+    apply (@RealOrder.ler_trans _ _ _ (Real_Concrete D _ &m))=>//=.
+    + exact: D_ll.
     have : Pr[CF(DRestr(D)).main() @ &m : res] <= 
           Pr[G1(DRestr(D)).main() @ &m : res] + 
           Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext].
-    + byequiv (CF_G1 D D_ll)=>//=/#.
+    + by byequiv (CF_G1 D D_ll)=>//=/#.
     have/#:Pr[G1(DRestr(D)).main() @ &m : G1.bcol \/ G1.bext]
             <= Pr[G1(DRestr(D)).main() @&m: G1.bcol]
             + Pr[G1(DRestr(D)).main() @&m: G1.bext].
-    rewrite Pr[mu_or];smt(Distr.mu_bounded).
+    by rewrite Pr[mu_or];smt(Distr.mu_bounded).
   qed.
 
 end section.

@@ -91,9 +91,9 @@ module DColl (A : AdvCollision) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section Collision.
 
-  declare module A : AdvCollision{Bounder, SRO.RO.RO, SRO.RO.FRO}.
+  declare module A <: AdvCollision {Bounder, SRO.RO.RO, SRO.RO.FRO}.
   
-  axiom D_ll (F <: Oracle { A }) :
+  declare axiom D_ll (F <: Oracle { A }) :
     islossless F.get => islossless A(F).guess.
 
   lemma coll_resistant_if_indifferentiable
@@ -136,9 +136,9 @@ module DPre (A : AdvPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section Preimage.
 
-  declare module A : AdvPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, DPre}.
+  declare module A <: AdvPreimage {Bounder, SRO.RO.RO, SRO.RO.FRO, DPre}.
   
-  axiom D_ll (F <: Oracle{A}) :
+  declare axiom D_ll (F <: Oracle{A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma preimage_resistant_if_indifferentiable
@@ -182,9 +182,9 @@ module D2Pre (A : AdvSecondPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section SecondPreimage.
 
-  declare module A : AdvSecondPreimage{Bounder, SRO.RO.RO, SRO.RO.FRO, D2Pre}.
+  declare module A <: AdvSecondPreimage {Bounder, SRO.RO.RO, SRO.RO.FRO, D2Pre}.
   
-  axiom D_ll (F <: Oracle{A}) :
+  declare axiom D_ll (F <: Oracle{A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma second_preimage_resistant_if_indifferentiable

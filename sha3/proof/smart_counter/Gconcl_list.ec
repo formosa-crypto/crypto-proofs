@@ -1739,9 +1739,9 @@ end section Real.
 
 section Real_Ideal.
   (* REAL & IDEAL *)
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
 
-  axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 
@@ -1785,9 +1785,9 @@ require import AdvAbsVal.
 
 section Real_Ideal_Abs.
 
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
 
-  axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 
@@ -1986,9 +1986,9 @@ module Simulator (F : DFUNCTIONALITY) = {
 
 section Simplify_Simulator.
 
-declare module D : DISTINGUISHER{Simulator, F.RO, BIRO.IRO, C, S, BIRO2.IRO}.
+declare module D <: DISTINGUISHER {Simulator, F.RO, BIRO.IRO, C, S, BIRO2.IRO}.
 
-axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
   islossless P0.f => islossless P0.fi => islossless F0.f => 
   islossless D(F0, P0).distinguish.
 
@@ -2179,9 +2179,9 @@ end section Simplify_Simulator.
 
 
 section Real_Ideal.
-  declare module D : DISTINGUISHER{SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
+  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
 
-  axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 

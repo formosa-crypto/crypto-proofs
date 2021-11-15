@@ -42,9 +42,9 @@ module PF = {
 module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
      
 section.
-  declare module D : DISTINGUISHER {Perm, C, PF, Redo}.
+  declare module D <: DISTINGUISHER {Perm, C, PF, Redo}.
 
-  axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
@@ -383,7 +383,7 @@ section.
     + by move=> [b c]; rewrite supp_dprod /= Block.DBlock.dunifin_fu Capacity.DCapacity.dunifin_fu.
     have f_ll : islossless SqueezelessSponge(Perm).f.
     + proc; while true (size p - i)=> //=.
-      * move=> z; wp;if;auto; 2:call p_ll; auto=>/#. 
+      * by move=> z; wp;if;auto; 2:call (p_ll); auto=>/#. 
       by auto; smt w=size_ge0.
     apply (@ler_trans _ _ _ 
              (Pr_restr Perm SqueezelessSponge D p_ll pi_ll f_ll D_ll &m)).

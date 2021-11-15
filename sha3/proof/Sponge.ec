@@ -90,7 +90,7 @@ case: (r %| n).
 + move=> ^/dvdzE n_mod_r /needed_blocks_eq_div_r <-.
   by rewrite -(ltr_pmul2r r gt0_r (i + 1)) divzE n_mod_r /#.
 move=> r_ndvd_n. rewrite -ltr_subr_addr -(addzC (-1)).
-rewrite -divzMDr 1:[smt(gt0_r)] Ring.IntID.mulN1r.
+rewrite -divzMDr 1:#smt:(gt0_r) Ring.IntID.mulN1r.
 have ->: n + r - 1 - r = (n - r) + r - 1 by smt().
 case: (0 <= n - r)=> [n_ge_r|/ltzNge n_lt_r /#].
 by rewrite -ih /#.
@@ -366,7 +366,7 @@ lemma HybridIROExper_Lazy_Eager
 
 section.
 
-declare module D : HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}.
+declare module D <: HYBRID_IRO_DIST {HybridIROEager, HybridIROLazy}.
 
 local clone PROM.FullRO as ERO with
   type in_t    <- block list * int,
@@ -1913,8 +1913,8 @@ end HybridIRO.
 
 section.
 
-declare module BlockSim : BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO}.
-declare module Dist : DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
+declare module BlockSim <: BlockSponge.SIMULATOR {IRO, BlockSponge.BIRO.IRO}.
+declare module Dist <: DISTINGUISHER {Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
 
 local clone HybridIRO as HIRO.
 

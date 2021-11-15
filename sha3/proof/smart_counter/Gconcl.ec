@@ -65,7 +65,7 @@ module S(F : DFUNCTIONALITY) = {
 
 section.
 
-declare module D: DISTINGUISHER{C, Perm, F.RO, F.FRO, S, Redo}.
+declare module D <: DISTINGUISHER{C, Perm, F.RO, F.FRO, S, Redo}.
 local clone import Gext as Gext0.
 
 
@@ -361,7 +361,7 @@ proof.
   by auto.
 qed.
 
-axiom D_ll :
+declare axiom D_ll :
  forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
    islossless P.f =>
    islossless P.fi => islossless F.f => islossless D(F, P).distinguish.

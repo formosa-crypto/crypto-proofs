@@ -189,7 +189,7 @@ import FullEager.
 
 section Preimage.
 
-  declare module A : SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, 
+  declare module A <: SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, 
     Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO, 
     Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO, 
     Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr, 
@@ -912,7 +912,7 @@ end section Preimage.
 section SecondPreimage.
 
 
-  declare module A : SH.AdvSecondPreimage { Perm, Counter, Bounder, F.RO,
+  declare module A <: SH.AdvSecondPreimage { Perm, Counter, Bounder, F.RO,
     F.FRO, Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO,
     Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
     Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr,
@@ -1792,7 +1792,7 @@ end section SecondPreimage.
 section Collision.
 
 
-  declare module A : SH.AdvCollision { Perm, Counter, Bounder, F.RO,
+  declare module A <: SH.AdvCollision { Perm, Counter, Bounder, F.RO,
     F.FRO, Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO,
     Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
     Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr,

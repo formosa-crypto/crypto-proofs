@@ -168,8 +168,8 @@ module ODRestr (D : ODISTINGUISHER) (F : ODFUNCTIONALITY) (P : ODPRIMITIVE) = {
 }.
 
 section.
-declare module Dist :
-  ODISTINGUISHER{Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
+declare module Dist <:
+  ODISTINGUISHER {Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
                 Simulator, BlockSponge.C, Gconcl.S,
                 SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
