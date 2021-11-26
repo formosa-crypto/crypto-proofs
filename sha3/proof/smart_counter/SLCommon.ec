@@ -1010,44 +1010,6 @@ section COUNT.
 
 end section COUNT.
 
-(* -------------------------------------------------------------------------- *)
-op has (P : 'a -> 'b -> bool) (m : ('a,'b) fmap) =
-  List.has (fun x=> x \in m /\ P x (oget m.[x])) (elems (fdom m)).
-
-lemma hasP (P : 'a -> 'b -> bool) (m : ('a,'b) fmap):
-  has P m <=> exists x, x \in m /\ P x (oget m.[x]).
-proof.
-rewrite /has hasP; split=> [] [x] [#].
-+ by move=> _ x_in_m Pxmx; exists x.
-by move=> x_in_m Pxmx; exists x; rewrite -memE mem_fdom.
-qed.
-
-op find (P : 'a -> 'b -> bool) (m : ('a,'b) fmap) =
-  onth (elems (fdom m)) (find (fun x=> x \in m /\ P x (oget m.[x])) (elems (fdom m))).
-
-lemma find_none (P : 'a -> 'b -> bool) (m : ('a,'b) fmap):
-  has P m <=> find P m <> None.
-proof.
-rewrite /find /has has_find; split=> [h|].
-+ by rewrite (onth_nth witness) 1:find_ge0 /=.
-by apply/contraLR=> h; rewrite onth_nth_map nth_default 1:size_map 1:lezNgt.
-qed.
-
-lemma findP (P : 'a -> 'b -> bool) (m : ('a,'b) fmap):
-  (exists x, find P m = Some x /\ x \in m /\ P x (oget m.[x])) \/
-  (find P m = None /\ forall x, x \in m => !P x (oget m.[x])).
-proof.
-case: (has P m)=> ^ => [hasPm|nothasPm]; rewrite hasP.
-+ move=> [x] [] x_in_m Pxmx; left.
-  exists (nth witness (elems (fdom m)) (find (fun x=> x \in m /\ P x (oget m.[x])) (elems (fdom m)))).
-  rewrite /find (onth_nth witness) /=.
-  + by rewrite find_ge0 /=; apply/has_find/hasPm.
-  by move: hasPm=> /(nth_find witness) /=.
-rewrite negb_exists /=.
-move: nothasPm; rewrite find_none=> /= -> h; right=> /= x.
-by move: (h x); rewrite negb_and=> /#.
-qed.
-
 (** Operators and properties of handles *)
 op hinv (handles:handles) (c:capacity) = 
    find (fun _ => pred1 c \o fst) handles.
@@ -1066,11 +1028,9 @@ lemma hinvP handles c:
   else exists f, handles.[oget (hinv handles c)] = Some(c,f).
 proof.
 move=> @/hinv.
-have @/pred1@/(\o)/=[[h []->[]Hmem <<-]|[]->H h f]/= := 
-  findP (fun (_ : handle) => pred1 c \o fst) handles.
-+ exists (oget handles.[h]).`2.
-  by move: Hmem; rewrite domE; case: (handles.[h])=> //= - [].
-by have := H h;rewrite domE /#.
+have @/pred1 @/(\o) /> [-> /= + h f|h [] /> f -> //= Hmem] := findP (fun _=> pred1 c \o fst) handles.
++ by move=> /(_ h); rewrite domE; case: (handles.[h])=> /#.
+by exists f.
 qed.
 
 lemma huniq_hinv (handles:handles) (h:handle): 
@@ -1089,23 +1049,23 @@ lemma hinvKP handles c:
   if hinvK handles c = None then forall h, handles.[h] <> Some(c,Known)
   else handles.[oget (hinvK handles c)] = Some(c,Known).
 proof.
-  rewrite /hinvK.
-  have @/pred1/= [[h]|][->/=]:= findP (+ pred1 c) (restr Known handles).
-  + by rewrite domE restrP;case (handles.[h])=>//= /#.
-  by move=>+h-/(_ h);rewrite domE restrP => H1/#. 
+rewrite /hinvK.
+have @/pred1 /= [-> /= + h|h /> -> /=]:= findP (+ pred1 c) (restr Known handles).
++ by move=> /(_ h); rewrite domE restrP=> /#.
+by rewrite restrP; case: (handles.[h])=> //= - [] /#.
 qed.
 
 lemma huniq_hinvK (handles:handles) c: 
   huniq handles => rng handles (c,Known) => handles.[oget (hinvK handles c)] = Some(c,Known).
 proof.
-  move=> Huniq;rewrite rngE=> -[h]H;case: (hinvK _ _) (Huniq h) (hinvKP handles c)=>//=.
-  by move=>_/(_ h);rewrite H.
+move=> Huniq;rewrite rngE=> -[h]H;case: (hinvK _ _) (Huniq h) (hinvKP handles c)=>//=.
+by move=>_/(_ h);rewrite H.
 qed.
 
 lemma huniq_hinvK_h h (handles:handles) c: 
   huniq handles => handles.[h] = Some (c,Known) => hinvK handles c = Some h.
 proof.
-  by move=> Huniq;case: (hinvK _ _) (hinvKP handles c)=>/= [ H | h' /Huniq H/H //]; apply H.
+by move=> Huniq;case: (hinvK _ _) (hinvKP handles c)=>/= [ H | h' /Huniq H/H //]; apply H.
 qed.
 
 (* -------------------------------------------------------------------------- *)
