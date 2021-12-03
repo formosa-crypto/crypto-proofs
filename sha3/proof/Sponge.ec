@@ -368,13 +368,12 @@ section.
 
 declare module D <: HYBRID_IRO_DIST {HybridIROEager, HybridIROLazy}.
 
-local clone PROM.FullRO as ERO with
+local clone import PROM.FullRO as ERO with
   type in_t    <- block list * int,
   type out_t   <- bool,
   op   dout _  <- dbool,
   type d_in_t  <- unit,
   type d_out_t <- bool.
-import ERO.FullEager.
 
 local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
   proc main() : bool = {
@@ -391,7 +390,7 @@ local lemma LRO_RO (D <: ERO.RO_Distinguisher{ERO.RO, ERO.FRO}) &m :
 proof.
 byequiv=> //; proc.
 seq 1 1 : (={glob D, ERO.RO.m}); first sim.
-by symmetry; call (RO_LRO_D D _); auto; rewrite dbool_ll.
+by symmetry; call (FullEager.RO_LRO_D D _); auto; rewrite dbool_ll.
 qed.
 
 (* make a Hybrid IRO out of a random oracle *)

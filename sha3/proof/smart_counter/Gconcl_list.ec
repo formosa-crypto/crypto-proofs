@@ -327,9 +327,9 @@ section Ideal.
   }.
 
   local equiv Ideal_equiv_valid (D <: DISTINGUISHER{SLCommon.C, C, IF, S}) :
-      L(D,F.FullEager.LRO).distinguish
+      L(D,F.LRO).distinguish
       ~
-      L2(D,F.FullEager.LRO).distinguish
+      L2(D,F.LRO).distinguish
       :
       ={glob D} ==> ={glob D, res}.
   proof.
@@ -339,7 +339,7 @@ section Ideal.
     call(: ={glob S,glob F.RO});auto.
     sp;if;auto;if;auto;sp.
     call(: ={glob F.RO});2:auto;2:smt(). 
-    inline F.FullEager.LRO.sample;call(: ={glob IF});auto;progress.
+    inline F.LRO.sample;call(: ={glob IF});auto;progress.
     by while{1}(true)(n{1}-i{1});auto;smt().
   + by proc;sim.
   proc;sp;if;auto;sp;call(: ={glob IF,glob S});auto.
@@ -836,7 +836,7 @@ section Ideal.
   
 
   local equiv equiv_L4_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, F2.RO, BIRO.IRO, BIRO2.IRO}) :
-      L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish
+      L4(D,F.LRO,F2.LRO).distinguish
       ~
       IdealIndif(BIRO.IRO,SimLast(S),DRestr(D)).main
       :
@@ -912,7 +912,7 @@ section Ideal.
     D(FC(FValid(DSqueeze2(F, F2.RO))), PC(S(Last(DSqueeze2(F, F2.RO))))).
 
   local module D6 (D : DISTINGUISHER) (F2 : F2.RO) = 
-    D(FC(FValid(DSqueeze2(F.FullEager.LRO, F2))), PC(S(Last(DSqueeze2(F.FullEager.LRO, F2))))).
+    D(FC(FValid(DSqueeze2(F.LRO, F2))), PC(S(Last(DSqueeze2(F.LRO, F2))))).
 
   lemma equiv_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, 
       F.FRO, F2.RO, F2.FRO, BIRO.IRO, BIRO2.IRO}) &m:
@@ -926,17 +926,17 @@ section Ideal.
         Pr[SLCommon.IdealIndif(IF,S,A(D)).main() @ &m : res].
   + by byequiv(ideal_equiv2 D). 
   have->:Pr[L2(D, F.RO).distinguish() @ &m : res] = 
-        Pr[L2(D,F.FullEager.LRO).distinguish() @ &m : res].
+        Pr[L2(D,F.LRO).distinguish() @ &m : res].
   + byequiv=>//=;proc;sp;inline*;sp;wp.
     call(F.FullEager.RO_LRO_D (D2(D)) _);auto.
     by move=> _; exact/dunifin_ll.
   have->:Pr[IdealIndif(BIRO.IRO, SimLast(S), DRestr(D)).main() @ &m : res] =
-        Pr[L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish() @ &m : res].
+        Pr[L4(D,F.LRO,F2.LRO).distinguish() @ &m : res].
   + by rewrite eq_sym;byequiv(equiv_L4_ideal D)=>//=.
   have<-:Pr[L4(D, F.RO, F2.RO).distinguish() @ &m : res] = 
-        Pr[L4(D,F.FullEager.LRO,F2.FullEager.LRO).distinguish() @ &m : res].
+        Pr[L4(D,F.LRO,F2.LRO).distinguish() @ &m : res].
   + have->:Pr[L4(D, F.RO, F2.RO).distinguish() @ &m : res] = 
-          Pr[L4(D,F.FullEager.LRO, F2.RO).distinguish() @ &m : res].
+          Pr[L4(D,F.LRO, F2.RO).distinguish() @ &m : res].
     - byequiv=>//=;proc;sp;inline*;sp;wp.
       call(F.FullEager.RO_LRO_D (D5(D)) _); auto.
       by move=> _; exact/dunifin_ll.
@@ -950,7 +950,7 @@ section Ideal.
         Pr[L3(D, F.RO).distinguish() @ &m : res].
   + by byequiv(Ideal_equiv3 D).
   have->:Pr[L(D, F.RO).distinguish() @ &m : res] = 
-        Pr[L(D,F.FullEager.LRO).distinguish() @ &m : res].
+        Pr[L(D,F.LRO).distinguish() @ &m : res].
   + byequiv=>//=;proc;sp;inline*;sp;wp.
     call(F.FullEager.RO_LRO_D (D3(D)) _); auto.
     by move=> _; exact/dunifin_ll.
@@ -2136,7 +2136,7 @@ qed.
 
 local lemma equal2 &m :
   Pr [ IdealIndif(BIRO.IRO, Simulator, DRestr(D)).main() @ &m : res ] =
-  Pr [ L(IRO2.FullEager.LRO).distinguish() @ &m : res ].
+  Pr [ L(IRO2.LRO).distinguish() @ &m : res ].
 proof.
 byequiv=>//=; proc; inline*; auto. 
 call (: ={BIRO.IRO.mp,C.c,Simulator.m,Simulator.mi,Simulator.paths} /\
