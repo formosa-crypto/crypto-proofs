@@ -58,7 +58,7 @@ section PROOF.
           } else {
             if (counter < size p - prefix p (get_max_prefix p (elems (fdom C.queries)))) {
               sc                        <@ sample_c();
-              sa'                       <- F.RO.get(take (i+1) p);
+              sa'                       <@ F.RO.get(take (i+1) p);
               sa                        <- sa +^ nth witness p i;
               G1.mh.[(sa,h)]            <- (sa', G1.chandle);
               G1.mhi.[(sa',G1.chandle)] <- (sa, h);
@@ -70,7 +70,7 @@ section PROOF.
           }
           i        <- i + 1;
         }
-        sa <- F.RO.get(p);
+        sa <@ F.RO.get(p);
         return sa;
       }
     }
@@ -89,7 +89,7 @@ section PROOF.
           hx2 <- oget (hinvK FRO.m x.`2);
           if (x.`2 \in G1.paths) {
             (p,v) <- oget G1.paths.[x.`2]; 
-            y1    <- F.RO.get (rcons p (v +^ x.`1));
+            y1    <@ F.RO.get (rcons p (v +^ x.`1));
             y2    <@ sample_c();
           } else {
             y1 <$ bdistr;

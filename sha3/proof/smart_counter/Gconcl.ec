@@ -28,7 +28,7 @@ module S(F : DFUNCTIONALITY) = {
     if (x \notin m) {
       if (x.`2 \in paths) {
         (p,v) <- oget paths.[x.`2]; 
-        y1    <- F.f (rcons p (v +^ x.`1));
+        y1    <@ F.f (rcons p (v +^ x.`1));
       } else {
         y1 <$ bdistr;
       }
@@ -97,7 +97,7 @@ local module G3(RO:F.RO) = {
         }
         i        <- i + 1;
       }
-      sa <- RO.get(p);
+      sa <@ RO.get(p);
       return sa;
     }
   }
@@ -110,7 +110,7 @@ local module G3(RO:F.RO) = {
       if (x \notin G1.m) {
         if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- RO.get (rcons p (v +^ x.`1));
+          y1    <@ RO.get (rcons p (v +^ x.`1));
         } else {
           y1 <$ bdistr;
         }
@@ -121,7 +121,7 @@ local module G3(RO:F.RO) = {
           RRO.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <- RRO.allKnown();
+        handles_ <@ RRO.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
         t        <@ RRO.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if ((x.`1, hx2) \in G1.mh /\ t) {
@@ -263,7 +263,7 @@ local module G4(RO:F.RO) = {
         RO.sample(take (i+1) p);
         i        <- i + 1;
       }
-      sa <- RO.get(p);
+      sa <@ RO.get(p);
       return sa;
     }
   }
@@ -276,7 +276,7 @@ local module G4(RO:F.RO) = {
       if (x \notin G1.m) {
         if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- RO.get (rcons p (v +^ x.`1));
+          y1    <@ RO.get (rcons p (v +^ x.`1));
         } else {
           y1 <$ bdistr;
         }

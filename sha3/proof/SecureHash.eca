@@ -62,7 +62,7 @@ module FBounder (F : OFUNCTIONALITY) : OFUNCTIONALITY = {
     var y : to option <- None;
     if (increase_counter Bounder.bounder x <= bound) {
       Bounder.bounder <- increase_counter Bounder.bounder x;
-      y <- F.f(x);
+      y <@ F.f(x);
     }
     return y;
   }
@@ -77,7 +77,7 @@ module PBounder (P : OPRIMITIVE) : OPRIMITIVE = {
   proc f (x : block) : block option = {
     var y <- None;
     if (Bounder.bounder < bound) {
-      y <- P.f(x);
+      y <@ P.f(x);
       Bounder.bounder <- Bounder.bounder + 1;
     }
     return y;
@@ -85,7 +85,7 @@ module PBounder (P : OPRIMITIVE) : OPRIMITIVE = {
   proc fi (x : block) : block option = {
     var y <- None;
     if (Bounder.bounder < bound) {
-      y <- P.fi(x);
+      y <@ P.fi(x);
       Bounder.bounder <- Bounder.bounder + 1;
     }
     return y;

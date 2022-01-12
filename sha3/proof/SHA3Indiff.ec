@@ -40,7 +40,7 @@ module Simulator (F : DFUNCTIONALITY) = {
           cs <@ F.f(oget (unpad_blocks q), k * r);
           z <- bits2blocks cs;
         } else {
-          z <- Gconcl_list.BIRO2.IRO.f(q,k);
+          z <@ Gconcl_list.BIRO2.IRO.f(q,k);
         }
         y1 <- last b0 z;
       } else {

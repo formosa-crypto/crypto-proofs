@@ -54,7 +54,7 @@ module Bounder (F : RF) : RF = {
       bounder <- bounder + 1;
       if (increase_counter Counter.c x < bound_counter) {
         Counter.c <- increase_counter Counter.c x;
-        y <- F.get(x);
+        y <@ F.get(x);
       }
     }
     return y;

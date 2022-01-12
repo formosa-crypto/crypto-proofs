@@ -52,7 +52,7 @@ module Bounder (F : RF) : RF = {
     var y : to option <- None;
     if (bounder < bound) {
       bounder <- bounder + 1;
-      y <- F.get(x);
+      y <@ F.get(x);
     }
     return y;
   }

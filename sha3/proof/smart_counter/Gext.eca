@@ -40,7 +40,7 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
         }
         i        <- i + 1;
       }
-      sa <- F.RO.get(p);
+      sa <@ F.RO.get(p);
       return sa;
     }
   }
@@ -53,7 +53,7 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
       if (x \notin G1.m) {
         if (x.`2 \in G1.paths) {
           (p,v) <- oget G1.paths.[x.`2]; 
-          y1    <- F.RO.get (rcons p (v +^ x.`1));
+          y1    <@ F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
         } else {
           y1    <$ bdistr;
@@ -66,7 +66,7 @@ module G2(D:DISTINGUISHER,HS:FRO) = {
           HS.set(G1.chandle, x.`2);
           G1.chandle <- G1.chandle + 1;
         }
-        handles_ <- HS.allKnown();
+        handles_ <@ HS.allKnown();
         hx2      <- oget (hinvc handles_ x.`2);
         t        <@ HS.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
         if ((x.`1, hx2) \in G1.mh /\ t) {
@@ -371,7 +371,7 @@ section EXT.
           }
           i        <- i + 1;
         }
-        sa <- F.RO.get(p);
+        sa <@ F.RO.get(p);
         return sa;
       }
     }
@@ -384,7 +384,7 @@ section EXT.
         if (x \notin G1.m) {
           if (x.`2 \in G1.paths) {
             (p,v) <- oget G1.paths.[x.`2]; 
-            y1    <- F.RO.get (rcons p (v +^ x.`1));
+            y1    <@ F.RO.get (rcons p (v +^ x.`1));
           } else {
             y1    <$ bdistr;
           }
@@ -397,7 +397,7 @@ section EXT.
             RRO.set(G1.chandle, x.`2);
             G1.chandle <- G1.chandle + 1;
           }
-          handles_ <- RRO.allKnown();
+          handles_ <@ RRO.allKnown();
           hx2      <- oget (hinvc handles_ x.`2);
           t        <@ RRO.queried((oget G1.mh.[(x.`1,hx2)]).`2, Unknown);
           if ((x.`1, hx2) \in G1.mh /\ t) {

@@ -50,7 +50,7 @@ module G1(D:DISTINGUISHER) = {
         }
         i        <- i + 1;
       }
-      sa <- F.RO.get(p);
+      sa <@ F.RO.get(p);
       return sa;
     }
   }
@@ -63,7 +63,7 @@ module G1(D:DISTINGUISHER) = {
       if (x \notin m) {
         if (x.`2 \in paths) {
           (p,v) <- oget paths.[x.`2]; 
-          y1    <- F.RO.get (rcons p (v +^ x.`1));
+          y1    <@ F.RO.get (rcons p (v +^ x.`1));
           y2    <$ cdistr;
         } else {
           y1    <$ bdistr;

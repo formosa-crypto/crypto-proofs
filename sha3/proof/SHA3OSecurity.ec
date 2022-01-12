@@ -2631,5 +2631,3 @@ by have/#:=leq_ideal &m.
 qed.
 
 end section Collision.
-
-

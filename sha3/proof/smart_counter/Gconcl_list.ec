@@ -2021,7 +2021,7 @@ local module Simu (FRO : IRO2.RO) (F : DFUNCTIONALITY) = {
               FRO.sample(q,i);
               i <- i + 1;
             }
-            y1 <- FRO.get(q,k-1);
+            y1 <@ FRO.get(q,k-1);
           } else {
             y1 <- b0;
           }
