@@ -929,20 +929,20 @@ module DRestr(D:DISTINGUISHER, F:DFUNCTIONALITY, P:DPRIMITIVE) = {
   }
 }.
 
-lemma rp_ll (P<:DPRIMITIVE{C}): islossless P.f => islossless DPRestr(P).f.
+lemma rp_ll (P<:DPRIMITIVE{-C}): islossless P.f => islossless DPRestr(P).f.
 proof. move=>Hll;proc;sp;if;auto;call Hll;auto. qed.
 
-lemma rpi_ll (P<:DPRIMITIVE{C}): islossless P.fi => islossless DPRestr(P).fi.
+lemma rpi_ll (P<:DPRIMITIVE{-C}): islossless P.fi => islossless DPRestr(P).fi.
 proof. move=>Hll;proc;sp;if;auto;call Hll;auto. qed.
 
-lemma rf_ll (F<:DFUNCTIONALITY{C}): islossless F.f => islossless DFRestr(F).f.
+lemma rf_ll (F<:DFUNCTIONALITY{-C}): islossless F.f => islossless DFRestr(F).f.
 proof. move=>Hll;proc;sp;if;auto;if=>//;auto;call Hll;auto. qed.
 
-lemma DRestr_ll (D<:DISTINGUISHER{C}): 
-  (forall (F<:DFUNCTIONALITY{D})(P<:DPRIMITIVE{D}),
+lemma DRestr_ll (D<:DISTINGUISHER{-C}): 
+  (forall (F<:DFUNCTIONALITY{-D})(P<:DPRIMITIVE{-D}),
      islossless P.f => islossless P.fi => islossless F.f =>
      islossless D(F,P).distinguish) =>
-  forall (F <: DFUNCTIONALITY{DRestr(D)}) (P <: DPRIMITIVE{DRestr(D)}),
+  forall (F <: DFUNCTIONALITY{-DRestr(D)}) (P <: DPRIMITIVE{-DRestr(D)}),
     islossless P.f =>
     islossless P.fi => islossless F.f => islossless DRestr(D, F, P).distinguish.
 proof.
@@ -954,9 +954,9 @@ qed.
 
 section RESTR. 
 
-  declare module F <: FUNCTIONALITY{C}.
-  declare module P <: PRIMITIVE{C,F}.
-  declare module D <: DISTINGUISHER{F,P,C}.
+  declare module F <: FUNCTIONALITY{-C}.
+  declare module P <: PRIMITIVE{-C, -F}.
+  declare module D <: DISTINGUISHER{-F, -P, -C}.
 
   lemma swap_restr &m: 
     Pr[Indif(FRestr(F), PRestr(P), D).main()@ &m: res] =
@@ -971,16 +971,16 @@ end section RESTR.
 
 section COUNT.
 
-  declare module P  <: PRIMITIVE{C}.
-  declare module CO <: CONSTRUCTION{C,P}.
-  declare module D  <: DISTINGUISHER{C,P,CO}.
+  declare module P  <: PRIMITIVE{-C}.
+  declare module CO <: CONSTRUCTION{-C, -P}.
+  declare module D  <: DISTINGUISHER{-C, -P, -CO}.
 
   declare axiom f_ll  : islossless P.f.
   declare axiom fi_ll : islossless P.fi.
 
   declare axiom CO_ll : islossless CO(P).f.
 
-  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 

@@ -499,7 +499,7 @@ split=> [xa0 xc0 ya0 yc0|xa0 hx0 ya0 hy0]; rewrite get_setE.
   by exists hx0 fx0 hy0 fy0; rewrite !get_setE /#.
 case: ((xa0,hx0) = (xa,hx))=> [[#] <*>> [#] <<*>|] /=.
 + by exists xc f yc f'; rewrite !get_setE /= /#.
-move=>/= /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
+move=> /= /negb_and xahx0_neq_xahx /Hmh_m [xc0 fx0 yc0 fy0] [#] hs_hx0 hs_hy0 Pm_xaxc0.
 exists xc0 fx0 yc0 fy0; rewrite !get_setE; do !split=> [/#|/#|/=].
 move: xahx0_neq_xahx; case: (xa0 = xa)=> [/= <*>>|//=]; case: (xc0 = xc)=> [<*>>|//=].
 by move: hs_hx=> /(Hhuniq _ _ _ _ hs_hx0).
@@ -1273,7 +1273,7 @@ proof.
   rewrite get_setE /=;case (h' = ch) => [->> | ].
   + by rewrite (@eq_sym ch) Hha /= => _ /Hch.
   case (v' +^ x = xa /\ h' = ha) => [[!<<-] /= ?? [!->>] /=| ].
-  + by exists p v';rewrite xorwA xorwK xorwC xorw0.
+  + by exists p v'; rewrite xorwA xorwK xorwC xorw0.
   case (hx = ch)=> [->> |??? Hbu Hg].
   + by move=> ??? /= /Hch.
   by rewrite build_hpath_prefix;exists v' h';smt().
@@ -1346,7 +1346,7 @@ qed.
 (* we should do a lemma to have the equivalence *)
 
 
-equiv eq_fi (D <: DISTINGUISHER {PF, RO, G1}): DPRestr(PF).fi ~ DPRestr(G1(DRestr(D)).S).fi:
+equiv eq_fi (D <: DISTINGUISHER {-PF, -RO, -G1}): DPRestr(PF).fi ~ DPRestr(G1(DRestr(D)).S).fi:
          !G1.bcol{2}
       /\ !G1.bext{2}
       /\ ={arg} /\ ={glob C}
@@ -1485,7 +1485,7 @@ by move=> /> &1 &2 -> ->.
 qed.
 
 
-equiv eq_f (D <: DISTINGUISHER {PF, RO, G1}): DPRestr(PF).f ~ DPRestr(G1(DRestr(D)).S).f:
+equiv eq_f (D <: DISTINGUISHER {-PF, -RO, -G1}): DPRestr(PF).f ~ DPRestr(G1(DRestr(D)).S).f:
          !G1.bcol{2}
       /\ !G1.bext{2}
       /\ ={x} /\ ={glob C}
@@ -1700,8 +1700,8 @@ call(: !G1.bcol{2}
       + by apply incl_addm. + by apply incl_addm.
       + split.
         + move=> xa hx ya hy;rewrite get_setE;case ((xa, hx) = (x1, hx2))=> /=.
-          + move=> [] !-> [] !<-; exists x2 Known y2L Known.
-            by rewrite !get_set_sameE /= get_set_neqE // eq_sym; apply (dom_hs_neq_ch _ _ _ Hhs hs_hx2).
+          + move=> [] !->> [] !<<-; exists x2 Known y2L Known.
+            by rewrite /= !get_set_sameE /= get_set_neqE.
           move=> Hdiff Hxa; case Hmh=> /(_ _ _ _ _ Hxa) [] xc fx yc fy [#] Hhx Hhy HG1 _ _.
           exists xc fx yc fy;rewrite !get_set_neqE //.
           + by apply (dom_hs_neq_ch _ _ _ Hhs Hhx).
@@ -2421,7 +2421,7 @@ proof.
           have:=hh3 _ _ _ _ _ H_path h_build_hpath_p0. 
           have->:bn = sa{2} +^ sa{2} +^ bn;smt(@Block).
         move=>help;have h_neq:! (v +^ bn = sa{2} +^ nth witness bs{1} i{2} /\ hx = h{2}) by rewrite/#.
-        move:help. rewrite h_neq/==>h_g1_v_bn_hx.
+        move: help. rewrite h_neq/==>h_g1_v_bn_hx.
         have[]hh1 hh2 hh3:=H_mh_spec.
         have:=build_hpath_upd_ch_iff h{2} G1.chandle{2} G1.mh{2} (sa{2} +^ nth witness bs{1} i{2}) y1L p0 v hx.
         rewrite h_build_hpath_set/=h_g1/=.
@@ -2561,9 +2561,9 @@ qed.
 
 section AUX.
 
-  declare module D <: DISTINGUISHER {PF, RO, G1, Redo, C}.
+  declare module D <: DISTINGUISHER {-PF, -RO, -G1, -Redo, -C}.
 
-  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
@@ -2669,9 +2669,9 @@ end section AUX.
 
 section.
 
-  declare module D <: DISTINGUISHER{Perm, C, PF, G1, RO, Redo}.
+  declare module D <: DISTINGUISHER{-Perm, -C, -PF, -G1, -RO, -Redo}.
   
-  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}):
     islossless P.f => islossless P.fi =>
     islossless F.f => islossless D(F, P).distinguish.
 

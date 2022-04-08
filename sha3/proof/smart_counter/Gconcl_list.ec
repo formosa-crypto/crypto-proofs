@@ -174,7 +174,7 @@ section Ideal.
       m1.[x <- y] <= m2.[x <- y] by smt(domE get_setE mem_set in_fsetU1).
 
 
-  local equiv ideal_equiv (D <: DISTINGUISHER{SLCommon.C, C, IF, S}) :
+  local equiv ideal_equiv (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S}) :
       SLCommon.IdealIndif(IF, S, SLCommon.DRestr(A(D))).main
       ~
       SLCommon.IdealIndif(IF, S, A(D)).main
@@ -326,7 +326,7 @@ section Ideal.
     proc distinguish = SLCommon.IdealIndif(Valid2(F), S, A(D)).main
   }.
 
-  local equiv Ideal_equiv_valid (D <: DISTINGUISHER{SLCommon.C, C, IF, S}) :
+  local equiv Ideal_equiv_valid (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S}) :
       L(D,F.LRO).distinguish
       ~
       L2(D,F.LRO).distinguish
@@ -357,7 +357,7 @@ section Ideal.
   qed.  
 
 
-  local equiv ideal_equiv2 (D <: DISTINGUISHER{SLCommon.C, C, IF, S}) :
+  local equiv ideal_equiv2 (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S}) :
     L2(D,F.RO).distinguish ~ SLCommon.IdealIndif(IF,S,A(D)).main
     : ={glob D} ==> ={glob D, res}.
   proof.
@@ -468,7 +468,7 @@ section Ideal.
   qed.
 
 
-  local equiv Ideal_equiv3 (D <: DISTINGUISHER{SLCommon.C, C, IF, S, F2.RO}) :
+  local equiv Ideal_equiv3 (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S, -F2.RO}) :
       L(D,F.RO).distinguish ~ L3(D,F.RO).distinguish
       : ={glob D} ==> ={glob D, res}.
   proof.
@@ -657,7 +657,7 @@ section Ideal.
     proc distinguish = IdealIndif(DSqueeze2(F,F2),S2,DValid(DRestr(D))).main
   }.
 
-  local equiv equiv_L3_L4 (D <: DISTINGUISHER{SLCommon.C, C, IF, S, F2.RO, BIRO.IRO, BIRO2.IRO}) :
+  local equiv equiv_L3_L4 (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S, -F2.RO, -BIRO.IRO, -BIRO2.IRO}) :
       L3(D,F.RO).distinguish
       ~
       L4(D,F.RO,F2.RO).distinguish
@@ -835,7 +835,7 @@ section Ideal.
 
   
 
-  local equiv equiv_L4_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, F2.RO, BIRO.IRO, BIRO2.IRO}) :
+  local equiv equiv_L4_ideal (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S, -F2.RO, -BIRO.IRO, -BIRO2.IRO}) :
       L4(D,F.LRO,F2.LRO).distinguish
       ~
       IdealIndif(BIRO.IRO,SimLast(S),DRestr(D)).main
@@ -914,8 +914,7 @@ section Ideal.
   local module D6 (D : DISTINGUISHER) (F2 : F2.RO) = 
     D(FC(FValid(DSqueeze2(F.LRO, F2))), PC(S(Last(DSqueeze2(F.LRO, F2))))).
 
-  lemma equiv_ideal (D <: DISTINGUISHER{SLCommon.C, C, IF, S, 
-      F.FRO, F2.RO, F2.FRO, BIRO.IRO, BIRO2.IRO}) &m:
+  lemma equiv_ideal (D <: DISTINGUISHER{-SLCommon.C, -C, -IF, -S, -F.FRO, -F2.RO, -F2.FRO, -BIRO.IRO, -BIRO2.IRO}) &m:
     Pr[SLCommon.IdealIndif(IF,S,SLCommon.DRestr(A(D))).main() @ &m : res] =
     Pr[IdealIndif(BIRO.IRO,SimLast(S),DRestr(D)).main() @ &m : res].
   proof.
@@ -1088,7 +1087,7 @@ section Real.
   qed.
 
 
-  local lemma equiv_sponge (D <: DISTINGUISHER {P, Redo, C, SLCommon.C}) :
+  local lemma equiv_sponge (D <: DISTINGUISHER {-P, -Redo, -C, -SLCommon.C}) :
     equiv [ GReal(A(D)).main
       ~ NIndif(Squeeze(SqueezelessSponge(P)),P,DRestr(D)).main
       : ={glob D} ==> ={res, glob D, glob P, C.c} /\ SLCommon.C.c{1} <= C.c{2} <= max_size].
@@ -1469,7 +1468,7 @@ section Real.
 
 
 
-  local lemma squeeze_squeezeless (D <: DISTINGUISHER {P, Redo, C, SLCommon.C}) :
+  local lemma squeeze_squeezeless (D <: DISTINGUISHER {-P, -Redo, -C, -SLCommon.C}) :
     equiv [ NIndif(Squeeze(SqueezelessSponge(P)),P,DRestr(D)).main
         ~ RealIndif(Sponge,P,DRestr(D)).main
         : ={glob D} ==> ={res, glob P, glob D, C.c} /\ C.c{1} <= max_size].
@@ -1724,7 +1723,7 @@ section Real.
 
 
 
-  lemma pr_real (D <: DISTINGUISHER{SLCommon.C, C, Perm, Redo}) &m :
+  lemma pr_real (D <: DISTINGUISHER{-SLCommon.C, -C, -Perm, -Redo}) &m :
       Pr [ GReal(A(D)).main() @ &m : res /\ SLCommon.C.c <= max_size] =
       Pr [ RealIndif(Sponge,P,DRestr(D)).main() @ &m : res].
   proof.
@@ -1739,15 +1738,15 @@ end section Real.
 
 section Real_Ideal.
   (* REAL & IDEAL *)
-  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D <: DISTINGUISHER {-SLCommon.C, -C, -Perm, -Redo, -F.RO, -F.FRO, -S, -BIRO.IRO, -BIRO2.IRO, -F2.RO, -F2.FRO}.
 
-  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{-D}) (P0 <: DPRIMITIVE{-D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 
 
-  lemma A_lossless (F <: SLCommon.DFUNCTIONALITY{A(D)})
-                   (P0 <: SLCommon.DPRIMITIVE{A(D)}) :
+  lemma A_lossless (F <: SLCommon.DFUNCTIONALITY{-A(D)})
+                   (P0 <: SLCommon.DPRIMITIVE{-A(D)}) :
       islossless P0.f =>
       islossless P0.fi => islossless F.f => islossless A(D, F, P0).distinguish.
   proof.
@@ -1785,9 +1784,9 @@ require import AdvAbsVal.
 
 section Real_Ideal_Abs.
 
-  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO}.
+  declare module D <: DISTINGUISHER {-SLCommon.C, -C, -Perm, -Redo, -F.RO, -F.FRO, -S, -BIRO.IRO, -BIRO2.IRO, -F2.RO, -F2.FRO}.
 
-  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{-D}) (P0 <: DPRIMITIVE{-D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 
@@ -1801,7 +1800,7 @@ section Real_Ideal_Abs.
   }.
  
 
-  local lemma Neg_D_lossless (F <: DFUNCTIONALITY{Neg_D(D)}) (P <: DPRIMITIVE{Neg_D(D)}) :
+  local lemma Neg_D_lossless (F <: DFUNCTIONALITY{-Neg_D(D)}) (P <: DPRIMITIVE{-Neg_D(D)}) :
        islossless P.f => islossless P.fi =>
        islossless F.f => islossless Neg_D(D, F, P).distinguish.
   proof.
@@ -1986,9 +1985,9 @@ module Simulator (F : DFUNCTIONALITY) = {
 
 section Simplify_Simulator.
 
-declare module D <: DISTINGUISHER {Simulator, F.RO, BIRO.IRO, C, S, BIRO2.IRO}.
+declare module D <: DISTINGUISHER {-Simulator, -F.RO, -BIRO.IRO, -C, -S, -BIRO2.IRO}.
 
-declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+declare axiom D_lossless (F0 <: DFUNCTIONALITY{-D}) (P0 <: DPRIMITIVE{-D}) :
   islossless P0.f => islossless P0.fi => islossless F0.f => 
   islossless D(F0, P0).distinguish.
 
@@ -2179,9 +2178,9 @@ end section Simplify_Simulator.
 
 
 section Real_Ideal.
-  declare module D <: DISTINGUISHER {SLCommon.C, C, Perm, Redo, F.RO, F.FRO, S, BIRO.IRO, BIRO2.IRO, F2.RO, F2.FRO, Simulator}.
+  declare module D <: DISTINGUISHER {-SLCommon.C, -C, -Perm, -Redo, -F.RO, -F.FRO, -S, -BIRO.IRO, -BIRO2.IRO, -F2.RO, -F2.FRO, -Simulator}.
 
-  declare axiom D_lossless (F0 <: DFUNCTIONALITY{D}) (P0 <: DPRIMITIVE{D}) :
+  declare axiom D_lossless (F0 <: DFUNCTIONALITY{-D}) (P0 <: DPRIMITIVE{-D}) :
     islossless P0.f => islossless P0.fi => islossless F0.f => 
     islossless D(F0, P0).distinguish.
 

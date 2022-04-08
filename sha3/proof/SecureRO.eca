@@ -86,7 +86,7 @@ module Preimage (A : AdvPreimage, F : RF) = {
 
 section Preimage.
 
-  declare module A <: AdvPreimage {RO,Preimage}.
+  declare module A <: AdvPreimage {-RO, -Preimage}.
 
   local module FEL (A : AdvPreimage, F : RF) = {
     proc main (hash : to) : from = {
@@ -212,7 +212,7 @@ module SecondPreimage (A : AdvSecondPreimage, F : RF) = {
 section SecondPreimage.
 
 
-  declare module A <: AdvSecondPreimage {Bounder,RO,FRO}.
+  declare module A <: AdvSecondPreimage {-Bounder, -RO, -FRO}.
     
   local module FEL (A : AdvSecondPreimage, F : RO) = {
     proc main (m1 : from) : from = {
@@ -392,7 +392,7 @@ module Collision (A : AdvCollision, F : RO) = {
 
 section Collision.
 
-  declare module A <: AdvCollision {RO, FRO, Bounder}.
+  declare module A <: AdvCollision {-RO, -FRO, -Bounder}.
 
   local module FEL (A : AdvCollision, F : RO) = {
     proc main () : from * from = {

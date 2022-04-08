@@ -161,8 +161,8 @@ module RaiseSim (S : BlockSponge.SIMULATOR, F : DFUNCTIONALITY) =
 (* Our main result will be:
 
    lemma conclusion
-         (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
-         (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
+         (BlockSim <: BlockSponge.SIMULATOR{-IRO, -BlockSponge.BIRO.IRO})
+         (Dist <: DISTINGUISHER{-Perm, -BlockSim, -IRO, -BlockSponge.BIRO.IRO})
          &m :
      `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] -
        Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =
@@ -359,14 +359,14 @@ module HybridIROEager : HYBRID_IRO = {
 (* we are going to use PROM.GenEager to prove:
 
 lemma HybridIROExper_Lazy_Eager
-      (D <: HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}) &m :
+      (D <: HYBRID_IRO_DIST{-HybridIROEager, -HybridIROLazy}) &m :
   Pr[HybridIROExper(HybridIROLazy, D).main() @ &m : res] =
   Pr[HybridIROExper(HybridIROEager, D).main() @ &m : res].
 *)
 
 section.
 
-declare module D <: HYBRID_IRO_DIST {HybridIROEager, HybridIROLazy}.
+declare module D <: HYBRID_IRO_DIST {-HybridIROEager, -HybridIROLazy}.
 
 local clone import PROM.FullRO as ERO with
   type in_t    <- block list * int,
@@ -384,7 +384,7 @@ local module EROExper(O : ERO.RO, D : ERO.RO_Distinguisher) = {
   }
 }.
 
-local lemma LRO_RO (D <: ERO.RO_Distinguisher{ERO.RO, ERO.FRO}) &m :
+local lemma LRO_RO (D <: ERO.RO_Distinguisher{-ERO.RO, -ERO.FRO}) &m :
   Pr[EROExper(LRO, D).main() @ &m : res] =
   Pr[EROExper(ERO.RO, D).main() @ &m : res].
 proof.
@@ -542,7 +542,7 @@ qed.
 end section.
 
 lemma HybridIROExper_Lazy_Eager
-      (D <: HYBRID_IRO_DIST{HybridIROEager, HybridIROLazy}) &m :
+      (D <: HYBRID_IRO_DIST{-HybridIROEager, -HybridIROLazy}) &m :
   Pr[HybridIROExper(HybridIROLazy, D).main() @ &m : res] =
   Pr[HybridIROExper(HybridIROEager, D).main() @ &m : res].
 proof. by apply (HybridIROExper_Lazy_Eager' D &m). qed.
@@ -1912,8 +1912,8 @@ end HybridIRO.
 
 section.
 
-declare module BlockSim <: BlockSponge.SIMULATOR {IRO, BlockSponge.BIRO.IRO}.
-declare module Dist <: DISTINGUISHER {Perm, BlockSim, IRO, BlockSponge.BIRO.IRO}.
+declare module BlockSim <: BlockSponge.SIMULATOR {-IRO, -BlockSponge.BIRO.IRO}.
+declare module Dist <: DISTINGUISHER {-Perm, -BlockSim, -IRO, -BlockSponge.BIRO.IRO}.
 
 local clone HybridIRO as HIRO.
 
@@ -1950,7 +1950,6 @@ auto.
 qed.
 
 (* the Real side of main result *)
-
 local lemma RealIndif_Sponge_BlockSponge &m :
   Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] =
   Pr[BlockSponge.RealIndif
@@ -2152,8 +2151,8 @@ end section.
 (*----------------------------- Conclusion -----------------------------*)
 
 lemma conclusion
-      (BlockSim <: BlockSponge.SIMULATOR{IRO, BlockSponge.BIRO.IRO})
-      (Dist <: DISTINGUISHER{Perm, BlockSim, IRO, BlockSponge.BIRO.IRO})
+      (BlockSim <: BlockSponge.SIMULATOR{-IRO, -BlockSponge.BIRO.IRO})
+      (Dist <: DISTINGUISHER{-Perm, -BlockSim, -IRO, -BlockSponge.BIRO.IRO})
       &m :
   `|Pr[RealIndif(Sponge, Perm, Dist).main() @ &m : res] -
     Pr[IdealIndif(IRO, RaiseSim(BlockSim), Dist).main() @ &m : res]| =

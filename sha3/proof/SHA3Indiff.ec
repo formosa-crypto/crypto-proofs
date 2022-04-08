@@ -146,13 +146,9 @@ module DRestr (D : DISTINGUISHER) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 section.
 
 declare module Dist <:
-  DISTINGUISHER {Perm, Gconcl_list.SimLast, IRO, Cntr, BlockSponge.BIRO.IRO,
-                Simulator, BlockSponge.C, Gconcl.S,
-                SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
-                Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
-                Gconcl_list.Simulator}.
+  DISTINGUISHER {-Perm, -Gconcl_list.SimLast, -IRO, -Cntr, -BlockSponge.BIRO.IRO, -Simulator, -BlockSponge.C, -Gconcl.S, -SLCommon.F.RO, -SLCommon.F.FRO, -SLCommon.Redo, -SLCommon.C, -Gconcl_list.BIRO2.IRO, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator}.
 
-declare axiom Dist_lossless (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }) :
+declare axiom Dist_lossless (F <: DFUNCTIONALITY {-Dist}) (P <: DPRIMITIVE {-Dist}) :
   islossless P.f => islossless P.fi => islossless F.f =>
   islossless Dist(F,P).distinguish.
 
@@ -226,7 +222,7 @@ qed.
 
 op wit_pair : block * capacity = witness.
 
-local equiv equiv_sim_f (F <: DFUNCTIONALITY{Gconcl.S, Simulator}) :
+local equiv equiv_sim_f (F <: DFUNCTIONALITY{-Gconcl.S, -Simulator}) :
   RaiseSim(Gconcl_list.SimLast(Gconcl.S),F).f
   ~
   Simulator(F).f
@@ -244,7 +240,7 @@ by sp;wp;rcondt{1}1;auto;call(: true);auto;smt(BlockSponge.parseK BlockSponge.fo
 qed.
 
 
-local equiv equiv_sim_fi (F <: DFUNCTIONALITY{Gconcl.S, Simulator}) :
+local equiv equiv_sim_fi (F <: DFUNCTIONALITY{-Gconcl.S, -Simulator}) :
   RaiseSim(Gconcl_list.SimLast(Gconcl.S),F).fi
   ~
   Simulator(F).fi
@@ -309,14 +305,9 @@ qed.
 end section.
 
 lemma SHA3Indiff
-      (Dist <: DISTINGUISHER{
-                 Perm, IRO, BlockSponge.BIRO.IRO, Cntr, Simulator,
-                 Gconcl_list.SimLast(Gconcl.S), BlockSponge.C, Gconcl.S,
-                 SLCommon.F.RO, SLCommon.F.FRO, SLCommon.Redo, SLCommon.C,
-                 Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
-                 Gconcl_list.Simulator})
+      (Dist <: DISTINGUISHER{-Perm, -IRO, -BlockSponge.BIRO.IRO, -Cntr, -Simulator, -Gconcl_list.SimLast(Gconcl.S), -BlockSponge.C, -Gconcl.S, -SLCommon.F.RO, -SLCommon.F.FRO, -SLCommon.Redo, -SLCommon.C, -Gconcl_list.BIRO2.IRO, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator})
         &m :
-      (forall (F <: DFUNCTIONALITY { Dist }) (P <: DPRIMITIVE { Dist }),
+      (forall (F <: DFUNCTIONALITY {-Dist}) (P <: DPRIMITIVE {-Dist}),
         islossless P.f => 
         islossless P.fi => 
         islossless F.f =>

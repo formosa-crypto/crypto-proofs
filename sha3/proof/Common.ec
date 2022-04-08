@@ -138,8 +138,8 @@ qed.
 lemma needed_blocks_suff (n : int) :
   n <= (n + r - 1) %/ r * r.
 proof.
-have -> : (n + r - 1) %/r * r = (n + r - 1) - (n + r - 1)%% r
-  by rewrite {2}(@divz_eq (n + r - 1) r) #ring.
+have -> : (n + r - 1) %/r * r = (n + r - 1) - (n + r - 1)%% r.
++ by rewrite {2}(@divz_eq (n + r - 1) r) #ring.
 by rewrite -(@addzA n) -(@addzA n) lez_addl subz_ge0 -ltzS -(@addzA r) /=
            ltz_pmod gt0_r.
 qed.

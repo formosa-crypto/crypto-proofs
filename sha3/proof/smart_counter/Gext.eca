@@ -157,7 +157,7 @@ clone include EagerCore
 proof * by (move=> _; exact/Capacity.DCapacity.dunifin_ll).
 
 section.
-  declare module D <: DISTINGUISHER{G1, G2, FRO, C}.
+  declare module D <: DISTINGUISHER{-G1, -G2, -FRO, -C}.
 
   op inv_ext (m mi:smap) (FROm:handles) = 
      exists x h, mem (fdom m `|` fdom mi) x /\ FROm.[h] = Some (x.`2, Unknown).
@@ -315,7 +315,7 @@ end section.
 
 section EXT.
 
-  declare module D <: DISTINGUISHER{C, PF, G1, G2, Perm, RO, Redo}.
+  declare module D <: DISTINGUISHER{-C, -PF, -G1, -G2, -Perm, -RO, -Redo}.
 
   local module ReSample = {
     var count:int  
@@ -536,7 +536,7 @@ section EXT.
   proof. by rewrite fdom0 fcards0. qed.
 
   local equiv RROset_inv_lt : RRO.set ~ RRO.set :  
-     ={x,y,FRO.m} /\ inv_lt G1.m{2} G1.mi{2} C.c{1} FRO.m{2} ReSample.count{2} ==>
+     ={x, y, FRO.m} /\ inv_lt G1.m{2} G1.mi{2} C.c{1} FRO.m{2} ReSample.count{2} ==>
      ={res,FRO.m} /\ inv_lt G1.m{2} G1.mi{2} C.c{1} FRO.m{2} ReSample.count{2}.
   proof.
     proc;auto=> &ml&mr[#]3!-> /= @/inv_lt [*].
@@ -694,7 +694,7 @@ section EXT.
   qed.
 
   declare axiom D_ll:
-   forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
+   forall (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}),
      islossless P.f => islossless P.fi => islossless F.f => islossless D(F, P).distinguish.
 
   lemma Real_G2 &m: 

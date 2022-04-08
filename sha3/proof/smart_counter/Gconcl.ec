@@ -27,9 +27,8 @@ module S(F : DFUNCTIONALITY) = {
 
     if (x \notin m) {
       if (x.`2 \in paths) {
-        (p,v) <- oget paths.[x.`2]; 
-        y1    <@ F.f (rcons p (v +^ x.`1));
-      } else {
+        (p, v) <- oget paths.[x.`2]; 
+        y1 <@ F.f (rcons p (v +^ x.`1));} else {
         y1 <$ bdistr;
       }
       y2 <$ cdistr;
@@ -65,7 +64,7 @@ module S(F : DFUNCTIONALITY) = {
 
 section.
 
-declare module D <: DISTINGUISHER{C, Perm, F.RO, F.FRO, S, Redo}.
+declare module D <: DISTINGUISHER{-C, -Perm, -F.RO, -F.FRO, -S, -Redo}.
 local clone import Gext as Gext0.
 
 
@@ -362,7 +361,7 @@ proof.
 qed.
 
 declare axiom D_ll :
- forall (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}),
+ forall (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}),
    islossless P.f =>
    islossless P.fi => islossless F.f => islossless D(F, P).distinguish.
 

@@ -124,12 +124,9 @@ module (DSetSize (D : Indiff0.DISTINGUISHER) : DISTINGUISHER)
 
 section Preimage.
 
-  declare module A <: SRO.AdvPreimage {SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
-    Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
-    Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
-    Gconcl_list.F2.FRO, Gconcl_list.Simulator, DPre}.
+  declare module A <: SRO.AdvPreimage {-SRO.RO.RO, -SRO.RO.FRO, -SRO.Bounder, -Perm, -Gconcl_list.BIRO2.IRO, -Simulator, -Cntr, -BIRO.IRO, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator, -DPre}.
 
-  declare axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
+  declare axiom A_ll (F <: SRO.Oracle {-A}) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -272,7 +269,7 @@ section Preimage.
       by apply eq_in_map=> j;rewrite mem_range=>[][]hj1 hj2/=; rewrite H4//=h1//=.
     by move=><<-; rewrite get_set_eqE//=.
   alias{1} 1 l = [<:bool>].
-  transitivity{1} {
+  transitivity {1} {
       l <@ Sample.sample(size_out);
       r <- oget (of_list l);
     }
@@ -481,12 +478,9 @@ end section Preimage.
 
 section SecondPreimage.
 
-  declare module A <: SRO.AdvSecondPreimage {SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
-    Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
-    Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
-    Gconcl_list.F2.FRO, Gconcl_list.Simulator, D2Pre}.
+  declare module A <: SRO.AdvSecondPreimage {-SRO.RO.RO, -SRO.RO.FRO, -SRO.Bounder, -Perm, -Gconcl_list.BIRO2.IRO, -Simulator, -Cntr, -BIRO.IRO, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator, -D2Pre}.
 
-  declare axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
+  declare axiom A_ll (F <: SRO.Oracle {-A}) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -619,7 +613,7 @@ section SecondPreimage.
       by apply eq_in_map=> j;rewrite mem_range=>[][]hj1 hj2/=; rewrite H4//=h1//=.
     by move=><<-; rewrite get_set_eqE//=.
   alias{1} 1 l = [<:bool>].
-  transitivity{1} {
+  transitivity {1} {
       l <@ Sample.sample(size_out);
       r <- oget (of_list l);
     }
@@ -874,12 +868,9 @@ end section SecondPreimage.
 
 section Collision.
 
-  declare module A <: SRO.AdvCollision {SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
-    Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
-    Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
-    Gconcl_list.F2.FRO, Gconcl_list.Simulator}.
+  declare module A <: SRO.AdvCollision {-SRO.RO.RO, -SRO.RO.FRO, -SRO.Bounder, -Perm, -Gconcl_list.BIRO2.IRO, -Simulator, -Cntr, -BIRO.IRO, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator}.
 
-  declare axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
+  declare axiom A_ll (F <: SRO.Oracle {-A}) : islossless F.get => islossless A(F).guess.
 
   local lemma invm_dom_rng (m mi : (state, state) fmap) :
       invm m mi => dom m = rng mi.
@@ -1011,7 +1002,7 @@ section Collision.
       by apply eq_in_map=> j;rewrite mem_range=>[][]hj1 hj2/=; rewrite H4//=h1//=.
     by move=><<-; rewrite get_set_eqE//=.
   alias{1} 1 l = [<:bool>].
-  transitivity{1} {
+  transitivity {1} {
       l <@ Sample.sample(size_out);
       r <- oget (of_list l);
     }
@@ -1265,12 +1256,9 @@ module AdvCollisionSHA3 (A : SRO.AdvCollision) (F : SRO.Oracle) = {
 
 section SHA3_Collision.
 
-  declare module A <: SRO.AdvCollision {SRO.RO.RO, SRO.RO.FRO, SRO.Bounder, Perm, 
-    Gconcl_list.BIRO2.IRO, Simulator, Cntr, BIRO.IRO, F.RO, F.FRO, Redo, C, 
-    Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, Gconcl_list.F2.RO,
-    Gconcl_list.F2.FRO, Gconcl_list.Simulator}.
+  declare module A <: SRO.AdvCollision {-SRO.RO.RO, -SRO.RO.FRO, -SRO.Bounder, -Perm, -Gconcl_list.BIRO2.IRO, -Simulator, -Cntr, -BIRO.IRO, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator}.
 
-  declare axiom A_ll (F <: SRO.Oracle { A }) : islossless F.get => islossless A(F).guess.
+  declare axiom A_ll (F <: SRO.Oracle {-A}) : islossless F.get => islossless A(F).guess.
 
   lemma SHA3_coll_resistant &m :
       Pr[SRO.Collision(AdvCollisionSHA3(A), FM(CSetSize(Sponge), Perm)).main() @ &m : res] <=

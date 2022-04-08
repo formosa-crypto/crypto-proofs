@@ -189,11 +189,7 @@ import FullEager.
 
 section Preimage.
 
-  declare module A <: SH.AdvPreimage { Perm, Counter, Bounder, F.RO, F.FRO, 
-    Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO, 
-    Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO, 
-    Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr, 
-    SORO.Bounder, SORO.RO.RO, RO, FRO }.
+  declare module A <: SH.AdvPreimage {-Perm, -Counter, -Bounder, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -BIRO.IRO, -Gconcl_list.BIRO2.IRO, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator, -SHA3Indiff.Simulator, -SHA3Indiff.Cntr, -SORO.Bounder, -SORO.RO.RO, -RO, -FRO}.
 
   local module FInit (F : OIndif.ODFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
     proc init () = {}
@@ -912,11 +908,7 @@ end section Preimage.
 section SecondPreimage.
 
 
-  declare module A <: SH.AdvSecondPreimage { Perm, Counter, Bounder, F.RO,
-    F.FRO, Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO,
-    Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
-    Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr,
-    SORO.Bounder, SORO.RO.RO, SORO.RO.FRO, RO, FRO }.
+  declare module A <: SH.AdvSecondPreimage {-Perm, -Counter, -Bounder, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -BIRO.IRO, -Gconcl_list.BIRO2.IRO, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator, -SHA3Indiff.Simulator, -SHA3Indiff.Cntr, -SORO.Bounder, -SORO.RO.RO, -SORO.RO.FRO, -RO, -FRO}.
 
   local module FInit (F : OIndif.ODFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
     proc init () = {}
@@ -1792,11 +1784,7 @@ end section SecondPreimage.
 section Collision.
 
 
-  declare module A <: SH.AdvCollision { Perm, Counter, Bounder, F.RO,
-    F.FRO, Redo, C, Gconcl.S, BlockSponge.BIRO.IRO, BlockSponge.C, BIRO.IRO,
-    Gconcl_list.BIRO2.IRO, Gconcl_list.F2.RO, Gconcl_list.F2.FRO,
-    Gconcl_list.Simulator, SHA3Indiff.Simulator, SHA3Indiff.Cntr,
-    SORO.Bounder, SORO.RO.RO, SORO.RO.FRO, RO, FRO }.
+  declare module A <: SH.AdvCollision {-Perm, -Counter, -Bounder, -F.RO, -F.FRO, -Redo, -C, -Gconcl.S, -BlockSponge.BIRO.IRO, -BlockSponge.C, -BIRO.IRO, -Gconcl_list.BIRO2.IRO, -Gconcl_list.F2.RO, -Gconcl_list.F2.FRO, -Gconcl_list.Simulator, -SHA3Indiff.Simulator, -SHA3Indiff.Cntr, -SORO.Bounder, -SORO.RO.RO, -SORO.RO.FRO, -RO, -FRO}.
 
   local module FInit (F : OIndif.ODFUNCTIONALITY) : OIndif.OFUNCTIONALITY = {
     proc init () = {}

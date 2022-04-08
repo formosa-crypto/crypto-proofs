@@ -42,9 +42,9 @@ module PF = {
 module CF(D:DISTINGUISHER) = Indif(SqueezelessSponge(PF), PF, D).
      
 section.
-  declare module D <: DISTINGUISHER {Perm, C, PF, Redo}.
+  declare module D <: DISTINGUISHER {-Perm, -C, -PF, -Redo}.
 
-  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}):
     islossless P.f => islossless P.fi => islossless F.f => 
     islossless D(F, P).distinguish.
 
@@ -81,12 +81,11 @@ section.
     proc distinguish () : bool = {
       var b : bool;
       Redo.init();
-      b <@ DRestr(D,SqueezelessSponge(P'),P').distinguish();
-      return b;
-    }
+      b <@ DRestr(D, SqueezelessSponge(P'), P').distinguish();
+      return b;}
   }.
 
-  local lemma DoubleBounding (P <: PRPSec.PRP {D, C, DBounder, Redo}) &m:
+  local lemma DoubleBounding (P <: PRPSec.PRP {-D, -C, -DBounder, -Redo}) &m:
     Pr[PRPSec.IND(P,D').main() @ &m: res]
     = Pr[PRPSec.IND(P,DBounder(D')).main() @ &m: res].
   proof.
@@ -270,7 +269,7 @@ section.
           by rewrite -H4; move: (H3 _ H9 (size bs0)); rewrite take_size //= H.
       * smt(mem_set take_size oget_some get_setE domE take_oversize take_le0).
       * elim: (H6 _ H10).
-        + elim: H=> _; rewrite andaE=> [#] _ /(_ bs0 i0 H9) h /h [l2] hl2.
+        + elim: H=> /> _ _ /(_ bs0 i0 H9) h /h [] l2 hl2.
           by exists l2; rewrite mem_set hl2.
         by move=> [j] [] hj ->; exists (drop j bs{2}); rewrite cat_take_drop mem_set.
       * smt(mem_set take_size oget_some get_setE domE take_oversize take_le0 take_take cat_take_drop).

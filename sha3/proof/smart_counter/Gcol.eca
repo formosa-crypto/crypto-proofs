@@ -24,9 +24,9 @@ import ROhandle.
   qed.
 
 section PROOF.
-  declare module D <: DISTINGUISHER{C, PF, G1}.
+  declare module D <: DISTINGUISHER{-C, -PF, -G1}.
 
-  declare axiom D_ll (F <: DFUNCTIONALITY{D}) (P <: DPRIMITIVE{D}):
+  declare axiom D_ll (F <: DFUNCTIONALITY{-D}) (P <: DPRIMITIVE{-D}):
     islossless P.f => islossless P.fi =>
     islossless F.f => islossless D(F, P).distinguish.
 

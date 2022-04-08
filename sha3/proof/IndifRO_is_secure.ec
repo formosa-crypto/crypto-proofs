@@ -91,15 +91,15 @@ module DColl (A : AdvCollision) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section Collision.
 
-  declare module A <: AdvCollision {Bounder, SRO.RO.RO, SRO.RO.FRO}.
+  declare module A <: AdvCollision {-Bounder, -SRO.RO.RO, -SRO.RO.FRO}.
   
-  declare axiom D_ll (F <: Oracle { A }) :
+  declare axiom D_ll (F <: Oracle {-A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma coll_resistant_if_indifferentiable
-      (C <: CONSTRUCTION{A, Bounder})
-      (P <: PRIMITIVE{C, A, Bounder}) &m :
-      (exists (S <: SIMULATOR{Bounder, A}),
+      (C <: CONSTRUCTION{-A, -Bounder})
+      (P <: PRIMITIVE{-C, -A, -Bounder}) &m :
+      (exists (S <: SIMULATOR{-Bounder, -A}),
         (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
         `|Pr[GReal(C,P,DColl(A)).main() @ &m : res] - 
           Pr[GIdeal(RO,S,DColl(A)).main() @ &m : res]| <= bound) =>
@@ -110,7 +110,7 @@ section Collision.
   have->: Pr[Collision(A, FM(C,P)).main() @ &m : res] = 
          Pr[GReal(C, P, DColl(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sim.
-    by swap{1} [1..2] 2; sim.
+    by swap {1} [1..2] 2; sim.
   have/#:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] <= 
          (limit * (limit - 1) + 2)%r / 2%r * mu1 sampleto witness.
   have->:Pr[GIdeal(RO, S, DColl(A)).main() @ &m : res] =
@@ -136,16 +136,16 @@ module DPre (A : AdvPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section Preimage.
 
-  declare module A <: AdvPreimage {Bounder, SRO.RO.RO, SRO.RO.FRO, DPre}.
+  declare module A <: AdvPreimage {-Bounder, -SRO.RO.RO, -SRO.RO.FRO, -DPre}.
   
-  declare axiom D_ll (F <: Oracle{A}) :
+  declare axiom D_ll (F <: Oracle{-A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma preimage_resistant_if_indifferentiable
-      (C <: CONSTRUCTION{A, Bounder, DPre})
-      (P <: PRIMITIVE{C, A, Bounder, DPre}) &m hash :
+      (C <: CONSTRUCTION{-A, -Bounder, -DPre})
+      (P <: PRIMITIVE{-C, -A, -Bounder, -DPre}) &m hash :
       (DPre.h{m} = hash) =>
-      (exists (S <: SIMULATOR{Bounder, A, DPre}),
+      (exists (S <: SIMULATOR{-Bounder, -A, -DPre}),
         (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
         `|Pr[GReal(C,P,DPre(A)).main() @ &m : res] - 
           Pr[GIdeal(RO,S,DPre(A)).main() @ &m : res]| <= bound) =>
@@ -156,7 +156,7 @@ section Preimage.
   have->: Pr[Preimage(A, FM(C,P)).main(hash) @ &m : res] = 
          Pr[GReal(C, P, DPre(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
-    by swap{2} [1..2] 4; sim; auto; smt(). 
+    by swap {2} [1..2] 4; sim; auto; smt(). 
   have/#:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] <= 
          (limit + 1)%r * mu1 sampleto hash.
   have->:Pr[GIdeal(RO, S, DPre(A)).main() @ &m : res] =
@@ -182,16 +182,16 @@ module D2Pre (A : AdvSecondPreimage) (F : DFUNCTIONALITY) (P : DPRIMITIVE) = {
 
 section SecondPreimage.
 
-  declare module A <: AdvSecondPreimage {Bounder, SRO.RO.RO, SRO.RO.FRO, D2Pre}.
+  declare module A <: AdvSecondPreimage {-Bounder, -SRO.RO.RO, -SRO.RO.FRO, -D2Pre}.
   
-  declare axiom D_ll (F <: Oracle{A}) :
+  declare axiom D_ll (F <: Oracle{-A}) :
     islossless F.get => islossless A(F).guess.
 
   lemma second_preimage_resistant_if_indifferentiable
-      (C <: CONSTRUCTION{A, Bounder, D2Pre})
-      (P <: PRIMITIVE{C, A, Bounder, D2Pre}) &m mess :
+      (C <: CONSTRUCTION{-A, -Bounder, -D2Pre})
+      (P <: PRIMITIVE{-C, -A, -Bounder, -D2Pre}) &m mess :
       (D2Pre.m2{m} = mess) =>
-      (exists (S <: SIMULATOR{Bounder, A, D2Pre}),
+      (exists (S <: SIMULATOR{-Bounder, -A, -D2Pre}),
         (forall (F <: FUNCTIONALITY), islossless F.f => islossless S(F).init) /\
         `|Pr[GReal(C,P,D2Pre(A)).main() @ &m : res] - 
           Pr[GIdeal(RO,S,D2Pre(A)).main() @ &m : res]| <= bound) =>
@@ -202,7 +202,7 @@ section SecondPreimage.
   have->: Pr[SecondPreimage(A, FM(C,P)).main(mess) @ &m : res] = 
          Pr[GReal(C, P, D2Pre(A)).main() @ &m : res].
   + byequiv=>//=; proc; inline*; wp; sp; wp; sim.
-    by swap{2} [1..2] 3; sim; auto; smt(). 
+    by swap {2} [1..2] 3; sim; auto; smt(). 
   have/#:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] <= 
          (limit + 1)%r * mu1 sampleto witness.
   have->:Pr[GIdeal(RO, S, D2Pre(A)).main() @ &m : res] =
