@@ -236,10 +236,11 @@ have->: Pr[OGIdeal(FSome(IRO), OSimulator, ODRestr(Dist)).main() @ &m : res] =
   call(: ={glob IRO, glob Simulator, glob Counter} /\ ={c}(Counter,Cntr)); auto.
   - proc; inline*; auto; sp; if; auto; sp.
     rcondt{2} 1; auto; sp; if; 1, 3: auto; sim; if; 1, 3: auto; sp; sim.
-    if; 1, 3: auto; 1: smt(); sp.
-    * if; auto=> />. 
-      by conseq(:_==> ={IRO.mp} /\ bs0{1} = bs{2})=> />; sim=> />; smt().
-    by if; auto=> />; sim; smt().
+    if; [1:by auto=> /> &1 &2 <- /> <- />|3:auto=> />]; sp.
+    * if; auto=> />.
+      conseq(:_==> ={IRO.mp} /\ bs0{1} = bs{2})=> />; sim=> />.
+      by move=> &1 &2 <- /> <- />.
+    by if; auto=> />; sim=> &1 &2 /> <- /> <- /= ->.
   - proc; inline*; sp; auto; if; auto; sp.
     by rcondt{2} 1; auto; sp; if; auto.
   proc; inline*; sp; auto; if; auto; sp.

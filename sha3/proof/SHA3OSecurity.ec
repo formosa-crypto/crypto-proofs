@@ -446,23 +446,25 @@ if{1}; sp.
   while(={k, bs, n, x2} /\ i{1} = i0{2} /\ n{1} = size_out /\
       0 <= i{1} <= n{1} /\ size bs{1} = i{1} /\
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_eq0 size_out_gt0).
+  - by sp; if; auto=> />; smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_eq0 size_out_gt0).
 rcondt{1} 1; 1: auto.
 splitwhile{1} 1 : i0 < size_out; auto=> /=.
 while( (i0, n0, x3){1} = (i, k, x){2} /\ bs0{1} = prefix{2} ++ suffix{2} /\
     size_out <= i{2} <= k{2} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(domE get_setE size_out_gt0 rcons_cat).
++ sp; if; auto=> />; 1,3:smt(domE rcons_cat).
+  move=> &1 &2 out_le_i _ ih1 ih2 ih3 i_lt_k xi_notin_mp r _.
+  by rewrite !get_set_sameE /= rcons_cat //= #smt:(get_setE size_out_gt0).
 auto=> //=.
 conseq(:_==> ={i0} /\ size bs{2} = i0{1} /\ (i0, x3){1} = (n, x2){2} /\
     bs0{1} = bs{2} /\ size bs{2} = size_out /\
-    eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}). 
-+ smt(cats0 take_oversize spec_dout to_listK spec2_dout).
+    eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
++ move=> />; smt(cats0 take_oversize spec_dout to_listK spec2_dout).
 while(={i0} /\ x3{1} = x2{2} /\ 0 <= i0{1} <= n{2} /\ n{2} = size_out /\
     bs0{1} = bs{2} /\ size bs{2} = i0{1} /\ size_out <= n0{1} /\
     eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(size_rcons domE get_setE size_rcons mem_set).
-by auto; smt(size_out_gt0).
++ by sp; if; auto=> />; smt(size_rcons domE get_setE size_rcons mem_set).
+by auto=> />; smt(size_out_gt0).
 qed.
 
 
@@ -516,7 +518,7 @@ proc; inline*; sp.
 if{1}; sp.
 + rcondt{1} 1; auto=> /=/>.
   conseq(:_==> take k{1} bs{1} = l{2} /\ BIRO.IRO.mp{1} = RO.m{2}).
-  * smt().
+  * by move=> /> /#.
   case: (0 <= n{2}); last first.
   + rcondf{2} 1; 1: by auto; smt(). 
     conseq(:_==> BIRO.IRO.mp{1} = RO.m{2} /\ ={i} /\ n{1} = size_out /\ x2{1} = x0{2})=> />.
@@ -530,8 +532,8 @@ if{1}; sp.
   while(={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       take k{1} bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} <= i{1} <= size_out).
   * sp; if{1}.
-    - by rcondt{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
-    by rcondf{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    - by rcondt{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    by rcondf{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
   conseq(:_==> ={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} = i{1}).
   + smt(take_size).
@@ -539,12 +541,12 @@ if{1}; sp.
       0 <= i{1} <= k{1} <= size_out /\ bs{1} = l{2} /\ size bs{1} = i{1} /\
       BIRO.IRO.mp{1} = RO.m{2}).
   + sp; if{1}.
-    - by rcondt{2} 2; auto; smt(size_rcons).
-    by rcondf{2} 2; auto; smt(size_rcons dbool_ll).
-  by auto; smt(size_ge0 size_out_gt0).
+    - by rcondt{2} 2; auto=> />; smt(size_rcons).
+    by rcondf{2} 2; auto=> />; smt(size_rcons dbool_ll).
+  by auto=> />; smt(size_ge0 size_out_gt0).
 rcondt{1} 1; auto.
 rcondf{2} 2; 1: auto.
-+ conseq(:_==> i = n); 1: smt().
++ conseq(:_==> i = n)=> [/> /#|].
   by while(i <= n); auto=> />; smt(size_out_gt0).
 while(i0{1} = i{2} /\ x3{1} = x0{2} /\ n0{1} = n{2} /\ bs0{1} = l{2} /\ 
     BIRO.IRO.mp{1} = RO.m{2}).
@@ -601,10 +603,10 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
+    if; [1:by auto=> /> &1 &2 <- /> <- />]; sim.
     * inline{1} 1; inline{2} 1; sp; sim.
-      by call eq_eager_ideal; auto; smt().
-    smt().
+      by call eq_eager_ideal; auto=> /> &1 &2 <- /> <- />.
+    by move=> /> &1 &2 <- /> <- />.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -631,9 +633,9 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
-    * by call eq_eager_ideal2; auto; smt().
-    smt().
+    if; [1:by auto=> /> &1 &2 <- /> <- />]; sim.
+    * by call eq_eager_ideal2; auto=> /> &1 &2 <- /> <- />.
+    by move=> /> &1 &2 <- /> <- />.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -664,12 +666,12 @@ have->:Pr[SORO.Preimage(SORO_P1(A), RFList).main() @ &m : res] =
   call(: ={glob SORO.Bounder, glob RFList, glob OSimulator, glob OPC, glob Log}); auto.
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto; sim.
-    if; 1: auto; sim; sp; sim; if; auto=> />; 1: smt(); sim.
+    if; 1: auto; sim; sp; sim; if; auto=> [/> &1 &2 <- /> <- />||]; sim.
     + inline{1} 1; inline{2} 1; sp; sim.
       inline{1} 1; inline{2} 1; sp; if; auto=> />.
-      - by call(rw_RF_List_While); auto; smt(). 
-      smt().
-    smt().
+      - by call(rw_RF_List_While); auto=> /> &1 &2 <- /> <- />.
+      by move=> /> &1 &2 <- /> <- />.
+    by move=> /> &1 &2 <- /> <- />.
   - by sim. 
   proc; sim; inline{1} 1; inline{2} 1; sp; if; auto.
   inline{1} 1; inline{2} 1; sp; sim.
@@ -690,8 +692,8 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
       while(={i, n, bs, x3} /\ size bs{1} = i{1} /\
            eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2} /\
            n{1} = size_out /\ 0 <= i{1} <= n{1}); auto.
-      * by sp; if; auto; smt(domE get_setE size_rcons).
-      smt(size_out_gt0 take_oversize size_out_gt0).
+      * by sp; if; auto=> />; smt(domE get_setE size_rcons).
+      move=> />; smt(size_out_gt0 take_oversize size_out_gt0).
     * by auto; rcondf{1} 1; auto.
     * rcondt{2} 1; 1: auto; move=> />; auto.
       by while(={i0, n0}); auto; sp; if{1}; if{2}; auto; smt(dbool_ll).
@@ -701,11 +703,11 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
   + proc; sp; if; auto. 
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto.
     if; 1, 3: auto; sp.
-    if; 1: auto; 1: smt(); last first.
-    - by conseq=> />; sim; smt().
+    if; [1:auto=> /> &1 &2 <- /> <- />]; last first.
+    - by conseq=> />; sim=> /> &1 &2 <- /> <- />.
     wp=> />; 1: smt().
     rnd; auto=> />. 
-    call(eq_extend); last by auto; smt().
+    call(eq_extend); last by auto=> /> &1 &2 <- /> <- /> /#.
   + by proc; sp; if; auto; inline{1} 1; inline{2} 1; sp; if; auto.
   proc; sp; inline{1} 1; inline{2} 1; sp; if; auto.
   inline*; sp.
@@ -715,8 +717,12 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     1: by auto.
   while(={i, n, x3, bs} /\ 0 <= i{1} <= size_out /\ n{1} = size_out /\ 
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_out_gt0).
+  + sp; if; auto=> />.
+    + smt(domE get_setE size_rcons).
+    + move=> + + + + + + + + + + _.
+      smt(domE get_set_sameE get_setE size_rcons).
+    smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_out_gt0).
 byequiv=> //=; proc.
 inline{1} 1; inline{2} 2; sp.
 inline{1} 1; inline{2} 3; swap{2}[1..2]1; sp.
@@ -745,9 +751,9 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
 + proc; sp; if; auto=> />; 1: smt(). 
   inline{1} 1; inline{2} 1; sp; auto.
   if; 1, 3: auto; -1: smt().
-  if; 1, 3: auto; -1: smt().
-  sp; if; 1: auto; 1: smt(); last first.
-  - by conseq(:_==> ={y, glob OSimulator}); 1: smt(); sim; smt().
+  if; 1,3:auto=> /> + + + + + + + + + + + _ + _ /#.
+  sp; if; [1:by auto=> /> &1 &2 <- /> <-]; last first.
+  + by conseq (: ={y, glob OSimulator}); [|sim]=> /> &1 &2 <- /> <- /#.
   inline{1} 1; inline{2} 1; sp.
   inline{1} 1; inline{2} 1; sp.
   rcondt{2} 1; 1: by auto; smt().
@@ -757,7 +763,7 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
       SORO.Bounder.bounder{2} <= Counter.c{2} + 1); last first.
   - by conseq(:_==> ={y, x1, glob OSimulator, Log.m}); 1: smt(); sim=> />.
   inline{1} 1; auto.
-  by call(eq_IRO_RFWhile); auto; smt().
+  by call(eq_IRO_RFWhile); auto=> /> &1 &2 + <- /> <- /#.
 + by proc; inline*; sp; if; auto; sp; if; auto=> />; smt().
 proc.
 inline{1} 1; inline{2} 1; sp; if; auto=> /=.
@@ -805,20 +811,22 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     inline *; sp; sim.
     if; 1: auto; sim. 
     if; 1: auto; sim.
-    sp; if; 1: (auto; smt()); sim; 2: smt(). 
+    sp; if; [2,3:sim]; [1,3:by auto=> /> &1 &2 <- /> <- />].
     sp; if; 1: auto; sim; -1: smt().
     sp; if{1}.
-    * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
+    * rcondt{2} 2.
+      + by auto=> /> + + <- /> <- />.
+      auto.
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 11?; split; 1: smt(of_listK).
+      move=> &l &r + <- /> <- /> - 7?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/=dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/=dout_full/= => h.
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
-    by auto; smt(dout_ll).
+    by auto=> /> + + + <- /> <-; smt(dout_ll).
   - by proc; inline*; sp; if; auto; sp; if; auto.
   - proc; inline*; sp; if; auto; sp; if; auto; sp; sim.
     if{1}.
@@ -830,7 +838,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
       by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
-  by auto; smt(dout_ll).
+  by auto=> />; smt(dout_ll).
 sp; if; 1, 3: auto; sp; wp 1 2.
 if{1}.
 + wp=> />.
@@ -1155,23 +1163,26 @@ if{1}; sp.
   while(={k, bs, n, x2} /\ i{1} = i0{2} /\ n{1} = size_out /\
       0 <= i{1} <= n{1} /\ size bs{1} = i{1} /\
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_eq0 size_out_gt0).
+  - by sp; if; auto=> />; smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_eq0 size_out_gt0).
 rcondt{1} 1; 1: auto.
 splitwhile{1} 1 : i0 < size_out; auto=> /=.
 while( (i0, n0, x3){1} = (i, k, x){2} /\ bs0{1} = prefix{2} ++ suffix{2} /\
     size_out <= i{2} <= k{2} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(domE get_setE size_out_gt0 rcons_cat).
++ sp; if; auto=> />.
+  + smt().
+  + move=> + + + + + + + + + + _; smt(domE get_setE size_out_gt0 rcons_cat).
+  smt(domE get_setE size_out_gt0 rcons_cat).
 auto=> //=.
 conseq(:_==> ={i0} /\ size bs{2} = i0{1} /\ (i0, x3){1} = (n, x2){2} /\
     bs0{1} = bs{2} /\ size bs{2} = size_out /\
     eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}). 
-+ smt(cats0 take_oversize spec_dout to_listK spec2_dout).
++ move=> />; smt(cats0 take_oversize spec_dout to_listK spec2_dout).
 while(={i0} /\ x3{1} = x2{2} /\ 0 <= i0{1} <= n{2} /\ n{2} = size_out /\
     bs0{1} = bs{2} /\ size bs{2} = i0{1} /\ size_out <= n0{1} /\
     eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(size_rcons domE get_setE size_rcons mem_set).
-by auto; smt(size_out_gt0).
++ by sp; if; auto=> />; smt(size_rcons domE get_setE size_rcons mem_set).
+by auto=> />; smt(size_out_gt0).
 qed.
 
 
@@ -1225,7 +1236,7 @@ proc; inline*; sp.
 if{1}; sp.
 + rcondt{1} 1; auto=> /=/>.
   conseq(:_==> take k{1} bs{1} = l{2} /\ BIRO.IRO.mp{1} = RO.m{2}).
-  * smt().
+  * by move=> />; smt().
   case: (0 <= n{2}); last first.
   + rcondf{2} 1; 1: by auto; smt(). 
     conseq(:_==> BIRO.IRO.mp{1} = RO.m{2} /\ ={i} /\ n{1} = size_out /\ x2{1} = x0{2})=> />.
@@ -1239,21 +1250,21 @@ if{1}; sp.
   while(={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       take k{1} bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} <= i{1} <= size_out).
   * sp; if{1}.
-    - by rcondt{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
-    by rcondf{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    - by rcondt{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    by rcondf{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
   conseq(:_==> ={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} = i{1}).
-  + smt(take_size).
+  + by move=> />; smt(take_size).
   while(={i} /\ x2{1} = x0{2} /\ n{1} = size_out /\ k{1} = n{2} /\
       0 <= i{1} <= k{1} <= size_out /\ bs{1} = l{2} /\ size bs{1} = i{1} /\
       BIRO.IRO.mp{1} = RO.m{2}).
   + sp; if{1}.
-    - by rcondt{2} 2; auto; smt(size_rcons).
-    by rcondf{2} 2; auto; smt(size_rcons dbool_ll).
-  by auto; smt(size_ge0 size_out_gt0).
+    - by rcondt{2} 2; auto=> />; smt(size_rcons).
+    by rcondf{2} 2; auto=> />; smt(size_rcons dbool_ll).
+  by auto=> />; smt(size_ge0 size_out_gt0).
 rcondt{1} 1; auto.
 rcondf{2} 2; 1: auto.
-+ conseq(:_==> i = n); 1: smt().
++ conseq(:_==> i = n); 1:by move=> />; smt().
   by while(i <= n); auto=> />; smt(size_out_gt0).
 while(i0{1} = i{2} /\ x3{1} = x0{2} /\ n0{1} = n{2} /\ bs0{1} = l{2} /\ 
     BIRO.IRO.mp{1} = RO.m{2}).
@@ -1336,10 +1347,10 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
+    if; [1:auto; [1:by move=> /> + + <- /> <-]]; sim.
     * inline{1} 1; inline{2} 1; sp; sim.
-      by call eq_eager_ideal; auto; smt().
-    smt().
+      by call eq_eager_ideal; auto=> /> + + <- /> <- /#.
+    by move=> /> + + <- /> <- /#.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -1390,9 +1401,9 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
-    * by call eq_eager_ideal2; auto; smt().
-    smt().
+    if; [1:auto; [1:by move=> /> + + <- /> <-]]; sim.
+    * by call eq_eager_ideal2; auto=> /> + + <- /> <- /#.
+    by move=> /> + + <- /> <- /#.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -1413,8 +1424,8 @@ proc; inline*; sp; if; auto; sp; if; auto; sp; (rcondt{1} 1; 1: auto; rcondt{2} 
 + conseq(:_==> ={bs} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}); auto.
   while(={i, bs, n, x3} /\ 0 <= i{1} <= size_out /\ n{1} = size_out /\ 
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_out_gt0).
-  by auto; smt(size_out_gt0).
+  + by sp; if; auto=> /> => [|+ + + + + + + + + + _|]; smt(domE get_setE size_out_gt0).
+  by auto=> />; smt(size_out_gt0).
 by conseq(:_==> true); auto; sim.
 qed.
 
@@ -1487,12 +1498,12 @@ have->:Pr[SORO.SecondPreimage(SORO_P2(A), RFList).main(mess) @ &m : res] =
          glob Dist_of_P2Adv}); auto.
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto; sim.
-    if; 1: auto; sim; sp; sim; if; auto=> />; 1: smt(); sim.
+    if; [1:by auto]; sim; sp; sim; if; auto=> /> => [+ + <- /> <- //||]; sim.
     + inline{1} 1; inline{2} 1; sp; sim.
       inline{1} 1; inline{2} 1; sp; if; auto=> />.
-      - by call(rw_RF_List_While); auto; smt(). 
-      smt().
-    smt().
+      - by call(rw_RF_List_While); auto=> /> + + <- /> <-. 
+      by move=> /> + + <- /> <-.
+    by move=> /> + + <- /> <-.
   - by sim. 
   proc; sim; inline{1} 1; inline{2} 1; sp; if; auto.
   inline{1} 1; inline{2} 1; sp; sim.
@@ -1521,11 +1532,11 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
   + proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto.
     if; 1, 3: auto; sp.
-    if; 1: auto; 1: smt(); last first.
-    - by conseq=> />; sim; smt().
-    wp=> />; 1: smt().
+    if; [1:by auto=> /> + + <- /> <-]; last first.
+    - by conseq=> />; sim=> /> + + <- /> <-.
+    wp=> />; [1:by auto=> /> + + <- /> <-].
     rnd; auto.
-    call(eq_extend); by auto; smt().
+    by call(eq_extend); auto=> /> + + <- /> <- /#.
   + by proc; sp; if; auto; inline{1} 1; inline{2} 1; sp; if; auto.
   proc; sp; inline{1} 1; inline{2} 1; sp; if; auto.
   inline*; sp.
@@ -1535,8 +1546,8 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     1: by auto.
   while(={i, n, x3, bs} /\ 0 <= i{1} <= size_out /\ n{1} = size_out /\ 
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_out_gt0).
+  - by sp; if; auto=> /> => [|+ + + + + + + + + + _|]; smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_out_gt0).
 byequiv=> //=; proc.
 inline{1} 1; inline{2} 1; sp.
 inline{1} 1; inline{2} 1; sp.
@@ -1579,9 +1590,11 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
 + proc; sp; if; auto=> />; 1: smt(). 
   inline{1} 1; inline{2} 1; sp; auto.
   if; 1, 3: auto; -1: smt().
-  if; 1, 3: auto; -1: smt().
-  sp; if; 1: auto; 1: smt(); last first.
-  - by conseq(:_==> ={y, glob OSimulator}); 1: smt(); sim; smt().
+  if; [1,3:auto]; [2:move=> /> + + + + + + + + + + + _ + _ - /#].
+  sp; if; [1:by auto=> /> + + <- /> <-]; last first.
+  - conseq(:_==> ={y, glob OSimulator}).
+    + by auto=> /> + + <- /> <- /#.
+    by sim=> /> + + <- /> <-.
   inline{1} 1; inline{2} 1; sp.
   inline{1} 1; inline{2} 1; sp.
   rcondt{2} 1; 1: by auto; smt().
@@ -1591,7 +1604,7 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
       SORO.Bounder.bounder{2} <= Counter.c{2} + 1); last first.
   - by conseq(:_==> ={y, x1, glob OSimulator, Log.m}); 1: smt(); sim=> />.
   inline{1} 1; auto.
-  by call(eq_IRO_RFWhile); auto; smt().
+  by call(eq_IRO_RFWhile); auto=> /> + + + <- /> <- /#.
 + by proc; inline*; sp; if; auto; sp; if; auto=> />; smt().
 proc.
 inline{1} 1; inline{2} 1; sp; if; auto=> /=.
@@ -1628,20 +1641,20 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     inline *; sp; sim.
     if; 1: auto; sim. 
     if; 1: auto; sim.
-    sp; if; 1: (auto; smt()); sim; 2: smt(). 
+    sp; if; [1:by auto=> /> + + <- /> <-]; sim; 2:by auto=> /> + + <- /> <-.
     sp; if; 1: auto; sim; -1: smt().
     sp; if{1}.
-    * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
+    * rcondt{2} 2; auto; [1:by auto=> /> + + <- /> <-; smt(BlockSponge.parse_valid)].
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 11?; split; 1: smt(of_listK).
+      move=> /> &l &r + <- /> <- /> - 7?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/=dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/=dout_full/= => h.
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
-    by auto; smt(dout_ll).
+    by auto=> /> + + + <- /> <-; smt(dout_ll).
   - by proc; inline*; sp; if; auto; sp; if; auto.
   - proc; inline*; sp; if; auto; sp; if; auto; sp; sim.
     if{1}.
@@ -1653,7 +1666,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
       by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
-  by auto; smt(dout_ll).
+  by auto=> />; smt(dout_ll).
 sp.
 seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
   RFList.m{1} = SORO.RO.RO.m{2}); last first.
@@ -2030,23 +2043,23 @@ if{1}; sp.
   while(={k, bs, n, x2} /\ i{1} = i0{2} /\ n{1} = size_out /\
       0 <= i{1} <= n{1} /\ size bs{1} = i{1} /\
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_eq0 size_out_gt0).
+  - by sp; if; auto=> />; smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_eq0 size_out_gt0).
 rcondt{1} 1; 1: auto.
 splitwhile{1} 1 : i0 < size_out; auto=> /=.
 while( (i0, n0, x3){1} = (i, k, x){2} /\ bs0{1} = prefix{2} ++ suffix{2} /\
     size_out <= i{2} <= k{2} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(domE get_setE size_out_gt0 rcons_cat).
++ by sp; if; auto=> /> => [|+ + + + + + + + + + _|]; smt(domE get_setE size_out_gt0 rcons_cat).
 auto=> //=.
 conseq(:_==> ={i0} /\ size bs{2} = i0{1} /\ (i0, x3){1} = (n, x2){2} /\
     bs0{1} = bs{2} /\ size bs{2} = size_out /\
-    eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}). 
-+ smt(cats0 take_oversize spec_dout to_listK spec2_dout).
+    eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
++ by auto=> />; smt(cats0 take_oversize spec_dout to_listK spec2_dout).
 while(={i0} /\ x3{1} = x2{2} /\ 0 <= i0{1} <= n{2} /\ n{2} = size_out /\
     bs0{1} = bs{2} /\ size bs{2} = i0{1} /\ size_out <= n0{1} /\
     eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-+ by sp; if; auto; smt(size_rcons domE get_setE size_rcons mem_set).
-by auto; smt(size_out_gt0).
++ by sp; if; auto=> /> => [|+ + + + + + + + + + + + _|]; smt(size_rcons domE get_setE size_rcons mem_set).
+by auto=> />; smt(size_out_gt0).
 qed.
 
 
@@ -2100,7 +2113,7 @@ proc; inline*; sp.
 if{1}; sp.
 + rcondt{1} 1; auto=> /=/>.
   conseq(:_==> take k{1} bs{1} = l{2} /\ BIRO.IRO.mp{1} = RO.m{2}).
-  * smt().
+  * by auto=> />; smt().
   case: (0 <= n{2}); last first.
   + rcondf{2} 1; 1: by auto; smt(). 
     conseq(:_==> BIRO.IRO.mp{1} = RO.m{2} /\ ={i} /\ n{1} = size_out /\ x2{1} = x0{2})=> />.
@@ -2114,8 +2127,8 @@ if{1}; sp.
   while(={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       take k{1} bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} <= i{1} <= size_out).
   * sp; if{1}.
-    - by rcondt{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
-    by rcondf{2} 2; auto; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    - by rcondt{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
+    by rcondf{2} 2; auto=> />; smt(dbool_ll cats1 take_cat cats0 take_size size_rcons).
   conseq(:_==> ={i} /\ n{1} = size_out /\ x2{1} = x0{2} /\  BIRO.IRO.mp{1} = RO.m{2} /\
       bs{1} = l{2} /\ size bs{1} = i{1} /\ k{1} = i{1}).
   + smt(take_size).
@@ -2123,12 +2136,12 @@ if{1}; sp.
       0 <= i{1} <= k{1} <= size_out /\ bs{1} = l{2} /\ size bs{1} = i{1} /\
       BIRO.IRO.mp{1} = RO.m{2}).
   + sp; if{1}.
-    - by rcondt{2} 2; auto; smt(size_rcons).
-    by rcondf{2} 2; auto; smt(size_rcons dbool_ll).
-  by auto; smt(size_ge0 size_out_gt0).
+    - by rcondt{2} 2; auto=> />; smt(size_rcons).
+    by rcondf{2} 2; auto=> />; smt(size_rcons dbool_ll).
+  by auto=> />; smt(size_ge0 size_out_gt0).
 rcondt{1} 1; auto.
 rcondf{2} 2; 1: auto.
-+ conseq(:_==> i = n); 1: smt().
++ conseq(:_==> i = n)=> />; 1:smt().
   by while(i <= n); auto=> />; smt(size_out_gt0).
 while(i0{1} = i{2} /\ x3{1} = x0{2} /\ n0{1} = n{2} /\ bs0{1} = l{2} /\ 
     BIRO.IRO.mp{1} = RO.m{2}).
@@ -2211,10 +2224,10 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
+    if; [1:by auto=> /> + + <- /> <-]; sim.
     * inline{1} 1; inline{2} 1; sp; sim.
-      by call eq_eager_ideal; auto; smt().
-    smt().
+      by call eq_eager_ideal; auto=> /> + + <- /> <-.
+    by auto=> /> + + <- /> <-.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -2265,9 +2278,9 @@ have->:
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
     if; 1: auto; sim; sp.
-    if; 1: auto; 1: smt(); sim.
-    * by call eq_eager_ideal2; auto; smt().
-    smt().
+    if; [1:by auto=> /> + + <- /> <-]; sim.
+    * by call eq_eager_ideal2; auto=> /> + + <- /> <-.
+    by auto=> /> + + <- /> <-.
   - by proc; inline*; sim.
   proc; sim.
   inline{1} 1; inline{2} 1; sp; sim; if; 1: auto; sim.
@@ -2287,8 +2300,8 @@ proc; inline*; sp; if; auto; sp; if; auto; sp; (rcondt{1} 1; 1: auto; rcondt{2} 
 + conseq(:_==> ={bs} /\ eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}); auto.
   while(={i, bs, n, x3} /\ 0 <= i{1} <= size_out /\ n{1} = size_out /\ 
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_out_gt0).
-  by auto; smt(size_out_gt0).
+  - by sp; if; auto=> /> => [|+ + + + + + + + + + _|]; smt(domE get_setE size_out_gt0).
+  by auto=> />; smt(size_out_gt0).
 by conseq(:_==> true); auto; sim.
 qed.
 
@@ -2358,12 +2371,12 @@ have->:Pr[SORO.Collision(SORO_Coll(A), RFList).main() @ &m : res] =
   call(: ={glob SORO.Bounder, glob RFList, glob OSimulator, glob OPC, glob Log}); auto.
   - proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto; sim.
-    if; 1: auto; sim; sp; sim; if; auto=> />; 1: smt(); sim.
+    if; [1:by auto]; sim; sp; sim; if; auto=> /> => [+ + <- /> <- //||]; sim.
     + inline{1} 1; inline{2} 1; sp; sim.
       inline{1} 1; inline{2} 1; sp; if; auto=> />.
-      - by call(rw_RF_List_While); auto; smt(). 
-      smt().
-    smt().
+      - by call(rw_RF_List_While); auto=> /> + + <- /> <-.
+      by auto=> /> + + <- /> <-.
+    by auto=> /> + + <- /> <-.
   - by sim. 
   proc; sim; inline{1} 1; inline{2} 1; sp; if; auto.
   inline{1} 1; inline{2} 1; sp; sim.
@@ -2392,12 +2405,12 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
   + proc; sp; if; auto.
     inline{1} 1; inline{2} 1; sp; if; 1, 3: auto.
     if; 1, 3: auto; sp.
-    if; 1: auto; 1: smt(); last first.
-    - by conseq=> />; sim; smt().
+    if; [1:by auto=> /> + + <- /> <-]; last first.
+    - by conseq=> />; sim=> /> + + <- /> <-.
     wp=> />; 1: smt().
     rnd; auto.
-    call(eq_extend); by auto; smt().
-  + by proc; sp; if; auto; inline{1} 1; inline{2} 1; sp; if; auto.
+    by call(eq_extend); auto=> /> + + <- /> <- /#.
+  by proc; sp; if; auto; inline{1} 1; inline{2} 1; sp; if; auto.
   proc; sp; inline{1} 1; inline{2} 1; sp; if; auto.
   inline*; sp.
   rcondt{1} 1; 1: auto; rcondt{2} 1; 1: auto; sp.
@@ -2406,8 +2419,8 @@ have->:Pr[SHA3_OIndiff.OIndif.OIndif(ExtendSample(FSome(BIRO.IRO)),
     1: by auto.
   while(={i, n, x3, bs} /\ 0 <= i{1} <= size_out /\ n{1} = size_out /\ 
       eq_extend_size BIRO.IRO.mp{1} BIRO.IRO.mp{2} Log.m{2}).
-  - by sp; if; auto; smt(domE get_setE size_rcons).
-  by auto; smt(size_out_gt0).
+  - by sp; if; auto=> /> => [|+ + + + + + + + + + _|]; smt(domE get_setE size_rcons).
+  by auto=> />; smt(size_out_gt0).
 byequiv=> //=; proc.
 inline{1} 1; inline{2} 1; sp.
 inline{1} 1; inline{2} 1; sp.
@@ -2447,9 +2460,9 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
 + proc; sp; if; auto=> />; 1: smt(). 
   inline{1} 1; inline{2} 1; sp; auto.
   if; 1, 3: auto; -1: smt().
-  if; 1, 3: auto; -1: smt().
-  sp; if; 1: auto; 1: smt(); last first.
-  - by conseq(:_==> ={y, glob OSimulator}); 1: smt(); sim; smt().
+  if; [1,3:auto]; 2:by move=> /> + + + + + + + + + + + _ + _ /#.
+  sp; if; [1:by auto=> /> + + <- /> <-]; last first.
+  - by conseq(:_==> ={y, glob OSimulator}); [2:sim]; auto=> /> + + <- /> <- /#.
   inline{1} 1; inline{2} 1; sp.
   inline{1} 1; inline{2} 1; sp.
   rcondt{2} 1; 1: by auto; smt().
@@ -2459,7 +2472,7 @@ auto; call(: ={glob OSimulator, glob Counter, glob Log} /\
       SORO.Bounder.bounder{2} <= Counter.c{2} + 1); last first.
   - by conseq(:_==> ={y, x1, glob OSimulator, Log.m}); 1: smt(); sim=> />.
   inline{1} 1; auto.
-  by call(eq_IRO_RFWhile); auto; smt().
+  by call(eq_IRO_RFWhile); auto=> /> + + + <- /> <- /#.
 + by proc; inline*; sp; if; auto; sp; if; auto=> />; smt().
 proc.
 inline{1} 1; inline{2} 1; sp; if; auto=> /=.
@@ -2494,20 +2507,20 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
     inline *; sp; sim.
     if; 1: auto; sim. 
     if; 1: auto; sim.
-    sp; if; 1: (auto; smt()); sim; 2: smt(). 
+    sp; if; [3:sim]; [1,3:by auto=> /> + + <- /> <-].
     sp; if; 1: auto; sim; -1: smt().
     sp; if{1}.
-    * rcondt{2} 2; auto; 1: smt(BlockSponge.parse_valid).
+    * rcondt{2} 2; auto; [1:by auto=> /> + + <- /> <-; smt(BlockSponge.parse_valid)].
       rnd (fun l => oget (of_list l)) to_list; auto=> />.
-      move=> &l &r 11?; split; 1: smt(of_listK).
+      move=> /> &l &r + <- /> <- /> 6?; split; 1: smt(of_listK).
       rewrite -dout_equal_dlist=> ?; split=> ?.
       + by rewrite dmapE=> h{h}; apply mu_eq=> x; smt(to_list_inj).
       move=> sample.
-      rewrite !get_setE/= dout_full/= => h; split; 2: smt(). 
+      rewrite !get_setE/= dout_full/= => h.
       rewrite eq_sym to_listK; apply some_oget.
       apply spec2_dout.
       by move:h; rewrite supp_dmap; smt(spec_dout).
-    by auto; smt(dout_ll).
+    by auto=> /> + + + <- /> <-; smt(dout_ll).
   - by proc; inline*; sp; if; auto; sp; if; auto.
   - proc; inline*; sp; if; auto; sp; if; auto; sp; sim.
     if{1}.
@@ -2519,7 +2532,7 @@ seq 1 1 : (={glob A, glob SHA3Indiff.Simulator, glob SORO.Bounder, glob Counter,
       move=> sample.
       rewrite supp_dmap dout_full/= =>/> a.
       by rewrite get_setE/= dout_full/=; congr; rewrite of_listK oget_some.
-  by auto; smt(dout_ll). 
+  by auto=> />; smt(dout_ll). 
 sp.
 seq 4 4 : (={SORO.Bounder.bounder, x0, m1, m2, hash1, y0} /\ y0{1} = None /\
   RFList.m{1} = SORO.RO.RO.m{2}); last first.
