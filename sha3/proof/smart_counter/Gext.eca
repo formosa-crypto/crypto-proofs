@@ -667,7 +667,8 @@ section EXT.
              prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1}))) /\
              c0R + size p{1} -
              prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1}))) <= max_size /\
-             inv_le G1.m{2} G1.mi{2} (c0R + counter){2} FRO.m{2} ReSample.count{2});1:smt(List.size_ge0).
+             inv_le G1.m{2} G1.mi{2} (c0R + counter){2} FRO.m{2} ReSample.count{2}).
+      + by auto=> />; smt(List.size_ge0).
       while (={bs,i,p,G1.mh,sa,h,FRO.m,F.RO.m,G1.mh,G1.mhi,G1.chandle,counter,C.queries} /\
              bs{1} = p{1} /\ 0 <= i{1} <= size p{1} /\ 
              0 <= counter{1} <= size p{1} -
@@ -675,7 +676,8 @@ section EXT.
              c0R + size p{1} -
              prefix bs{1} (get_max_prefix bs{1} (elems (fdom C.queries{1}))) <= max_size /\
              inv_le G1.m{2} G1.mi{2} (c0R + counter){2} FRO.m{2} ReSample.count{2});
-        last by auto;smt(List.size_ge0 prefix_sizel).
+        last first.
+      + by auto=> />;smt(List.size_ge0 prefix_sizel).
       if=> //;1:by auto=>/#.  
       if=> //;2:by auto=>/#.  
       auto;call (_: ={F.RO.m});1:by sim.

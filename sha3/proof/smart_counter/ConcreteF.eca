@@ -118,8 +118,14 @@ section.
         /\ (forall y, y \in pref{1} => pref{1}.[y] = Redo.prefixes{1}.[y])
         /\ (forall y, y \in Redo.prefixes{1} <=> (y \in pref{1} \/
              (exists j, 0 <= j <= i{1} /\ y = take j bs{1})))
-        /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1});
-    progress;..-2:smt(domE mem_set get_setE oget_some take_size cat_take_drop).
+        /\ DBounder.FBounder.c{2} = C.c{2} - size bs{1} + i{1}).
+    + auto=> />; progress.
+      + smt(domE mem_set get_setE take_size cat_take_drop).
+      + smt(domE mem_set get_setE take_size cat_take_drop).
+      + smt(domE mem_set get_setE take_size cat_take_drop).
+      + smt(domE mem_set get_setE take_size cat_take_drop).
+      + by move: H15=> /H11 []; smt(domE mem_set get_setE take_size cat_take_drop).
+      smt(domE mem_set get_setE take_size cat_take_drop).
     while( ={sa, Redo.prefixes, glob P, i, C.c, p, sc} /\ p{1} = bs{1}
         /\ all_prefixes Redo.prefixes{2}
         /\ Redo.prefixes{2}.[[]] = Some (b0, c0)

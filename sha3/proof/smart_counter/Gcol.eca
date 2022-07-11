@@ -236,7 +236,8 @@ section PROOF.
                G1.mh, FRO.m, C.c, C.queries}
             /\ (G1.bcol{1} => G1.bcol{2})
             /\ card (frng FRO.m{2}) <= 2 * C.c{2}
-            /\ Gcol.count{2} + 1 <= C.c{2} <= max_size);1: by if;auto;smt(card_rng_set). 
+            /\ Gcol.count{2} + 1 <= C.c{2} <= max_size).
+      + by if; auto=> /> &1 &2; smt(card_rng_set).
       if;1:auto.
       - inline Gcol.sample_c;rcondt{2}4.
         * auto;inline*;auto;progress. 
@@ -328,7 +329,8 @@ section PROOF.
           prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{1})))
           - counter{2} <= C.c{2} + size p{2} - 
           prefix p{2} (get_max_prefix p{2} (elems (fdom C.queries{1})))
-          <= max_size);last by auto;smt(size_ge0 prefix_sizel prefix_ge0).
+          <= max_size);last first.
+      + by auto=> />; smt(size_ge0 prefix_sizel prefix_ge0).
       if=>//;auto;1:smt ml=0 w=size_ge0.
       if=>//;2:auto;2:smt(size_ge0 prefix_sizel).
       auto;call (_: ={F.RO.m})=>/=;1:by sim.
