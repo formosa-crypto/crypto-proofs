@@ -11,9 +11,6 @@ pragma +implicits.
 op r : { int | 2 <= r } as ge2_r.
 op c : { int | 0 <  c } as gt0_c.
 
-type block.    (* ~ bitstrings of size r *)
-type capacity. (* ~ bitstrings of size c *)
-
 (* -------------------------------------------------------------------- *)
 
 lemma gt0_r : 0 < r.
@@ -27,7 +24,6 @@ proof. by apply/ltrW/gt0_c. qed.
 
 (* -------------------------------------------------------------------- *)
 clone export BitWord as Capacity with
-  type word <- capacity,
     op n    <- c
   proof gt0_n by apply/gt0_c
 
@@ -38,7 +34,6 @@ clone export BitWord as Capacity with
 export Capacity DCapacity.
 
 clone export BitWord as Block with
-  type word <- block,
     op n    <- r
   proof gt0_n by apply/gt0_r
 
