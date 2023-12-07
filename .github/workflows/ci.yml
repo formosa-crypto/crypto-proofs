@@ -8,7 +8,21 @@ env:
   OPAMJOBS: 2
 
 jobs:
+  pre_job:
+    name: Check for Duplicates Jobs
+    runs-on: ubuntu-20.04
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+    - uses: fkirc/skip-duplicate-actions@v5
+      id: skip_check
+      with:
+        concurrent_skipping: 'same_content_newer'
+        skip_after_successful_duplicate: 'true'
+
   easycrypt:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
     name: Compile & Cache EasyCrypt
     runs-on: ubuntu-20.04
     container:
