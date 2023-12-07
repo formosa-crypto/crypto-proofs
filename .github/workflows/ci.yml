@@ -1,0 +1,37 @@
+name: Crypto Proofs Check
+
+on: [push,pull_request]
+
+env:
+  HOME: /home/charlie
+  OPAMYES: true
+  OPAMJOBS: 2
+
+jobs:
+  easycrypt:
+    name: Compile & Cache EasyCrypt
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/easycrypt/ec-build-box
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile & Cache EasyCrypt
+      uses: ./.github/actions/easycrypt 
+
+  project:
+    name: Compile Project
+    needs: easycrypt
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/easycrypt/ec-build-box
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ [ 'ci-test', 'config/tests.config', 'all' ] ]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile & Cache EasyCrypt
+      uses: ./.github/actions/easycrypt
+    - name: Compile project
+      working-directory: ${{ matrix.target[0] }}
+      run: opam exec -- easycrypt runtest ${{ matrix.target[1] }} ${{ matrix.target[2] }}

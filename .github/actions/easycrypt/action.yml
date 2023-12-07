@@ -1,0 +1,34 @@
+name: EasyCrypt compilation & cache
+
+runs:
+  using: "composite"
+  steps:
+  - uses: actions/checkout@v4
+    with:
+      path: 'easycrypt'
+      repository: easycrypt/EasyCrypt
+  - run: |
+      echo -n "VERSION=" >> "$GITHUB_OUTPUT"
+      git -C easycrypt rev-parse HEAD >> "$GITHUB_OUTPUT"
+    id: easycrypt-version
+    shell: bash
+  - name: Cache opam/easycrypt installation
+    id: cache-easycrypt
+    uses: actions/cache@v3
+    with:
+      path: |
+        ~/.opam
+        ~/.config/easycrypt
+      key: easycrypt-dev-${{ runner.os }}-${{ steps.easycrypt-version.outputs.VERSION }}
+  - name: Install EasyCrypt
+    if: ${{ steps.cache-easycrypt.outputs.cache-hit != 'true' }}
+    run: |
+      opam update
+      opam pin add -n easycrypt easycrypt
+      opam install easycrypt
+      rm -f ~/.why3.conf ~/.config/easycrypt/why3.conf
+      opam exec -- easycrypt why3config
+    shell: bash
+  - name: Display EasyCrypt configuration
+    run: opam exec -- easycrypt config
+    shell: bash
