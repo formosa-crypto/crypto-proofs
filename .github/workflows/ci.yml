@@ -27,7 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ [ 'ci-test', 'config/tests.config', 'all' ] ]
+        target: [ [ 'ci-test', 'config/tests.config', 'all' ]
+                , [ 'sha3', 'config/tests.config', 'sha3' ] ]
     steps:
     - uses: actions/checkout@v4
     - name: Compile & Cache EasyCrypt
